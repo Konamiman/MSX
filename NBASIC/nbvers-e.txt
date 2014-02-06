@@ -1,0 +1,108 @@
+Version information file for NestorBASIC 1.xx
+By Nestor Soriano (Konami Man), December 2.004
+
+
+* Changes from NestorBASIC 1.11 to NestorBASIC 1.10
+
+Internal changes:
+
+- The method for detecting the presence of InterNestor Lite has been updated 
+to the new method required by InterNestor Lite 1.0 (see function 86 
+description of NestorBASIC manual for details).
+
+
+* Changes from NestorBASIC 1.0 to NestorBASIC 1.10
+
+Internal changes:
+
+- Corrected a bug in function 54 (graphic decompression), which caused the 
+graphics to be always decompressed on the VRAM block 1.
+- Corrected a bug that caused function 80 not to work under DOS 1.
+- Corrected a bug that caused the sequence of loading NestorBASIC, 
+uninstalling it, CALL SYSTEM, returning to BASIC, and CALL SYSTEM to fail 
+(the last step caused the computer to hang, or did not return to DOS).
+- Corrected a bug that caused the computer to hang when entering a 
+turbo-block in Panasonic WSX computers.
+- Sound chips are now searched only once, when NestorBASIC is installed. 
+Previously, a sound chip search was made every time a replayer was loaded 
+with function 71.
+
+Functionality changes:
+
+- Added function 86 (InterNestor Lite routine execution).
+- Now function 72 (obtain information about the music being replayed) always 
+returns information about the sound chips detected in parameters P(9) to 
+P(11), even when no music replayer is loaded.
+
+Documentation changes and other:
+
+- Added section 9.4 (Using InterNestor Lite).
+- Added the sample program TCPCON-L.NPR (TCP console for InterNestor Lite). 
+The InterNestor Suite version, TCPCON.NPR, has been renamed to TCPCON-S.NPR.
+
+
+* Changes from NestorBASIC 0.07 to NestorBASIC 1.0
+
+Internal changes:
+
+- The routine for correct detection of all mapped memory under DOS 1, 
+previously distributed as a sepparate file (NBPATCH.BIN), is now built-in on 
+NestorBASIC main file, NBASIC.BIN.
+- Now external japanese FM-PACs are correctly detected.
+- In previous versions, when a reset was made with NestorBASIC installed and 
+DOS 1 present, it was not possible to load again NestorBASIC (an "Illegal 
+function call" error appeared); a hard computer power-off was needed. Now 
+this is corrected.
+- Corrected a bug in the routine for calling routines in segment 5 (for the 
+music replayer). Calls were made to the physical segment 5, instead of the 
+logical segment 5.
+- Corrected a bug in the routine that checks if there is a music replayer 
+installed: now it checks if logical segment 5 actually exists before trying 
+to check if it contains a replayer.
+- Corrected a bug in function 71 (Moonblaster replayer install). Now 
+autodetect option (when P(0)=3 at input) works correctly.
+- Wavekit load routine has been modified to use NestorBASIC buffer segment to 
+store temporary data, instead of using NestorBASIC segment itself.
+- Now function 10 does not hang the computer when the block size to be 
+transferred has length zero.
+- Corrected a bug in function 62, that occasionally caused Syntax Error in 
+normal BASIC when the string to be retrieved had length zero.
+
+Functionality changes:
+
+- The roles for segments 2 and 4 have been swapped: now segment 2 is the page 
+2 BASIC RAM, and segment 4 is the internal buffer used by NestorBASIC.
+- Functions 58 and 59 (machine code routines execution) now return the A 
+register output value in P(12), in addition to returning it in the high byte 
+of P(2).
+- Function 58 now does not check that the address of the routine to be 
+executed is in the range 0-&H3FFF when P(0)=0 at input. This means that now 
+this function can be used to execute not only BIOS and SUB-BIOS routines, but 
+also any routine placed on p
+age 2 or on page 3.
+- Function 71 (music replayer load) now also allows to uninstall the 
+replayer, by using P(0)=-1 at input.
+- Added functions 80 to 85.
+- Added new routines and variables usable by the user machine code routines 
+(GETF01 and the ones following).
+- From now on, at least 600 free bytes are guaranteed at the end part of the 
+NestorBASIC segment.
+- If NestorMan is installed, segment 4 is reserved using NestorMan functions. 
+Therefore, that segment is common to NestorBASIC and NestorMan.
+
+Documentation changes:
+
+- Descriptions for functions 58, 59 and 71 have been expanded, in orded to 
+reflect the changes made on these functions.
+- Section 3.1 and function 49 description have been modified, now they 
+mention function 80.
+- Added descriptions for the new functions 80 to 85, and for the new routines 
+and variables usable by the user machine code routines.
+- Added section 9, "Interaction with NestorMan and InterNestor Suite". The 
+section that describes the functions has now the number 10.
+- References to Moonblaster for Moonsound FM version have been supressed, 
+since this replayer will never be implemented.
+- References to konamiman@geocities.com have been changed to 
+konamiman@konamiman.com.
+- Made some minor corrections and cosmetic improvements.
+

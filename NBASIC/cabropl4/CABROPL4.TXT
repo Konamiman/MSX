@@ -1,0 +1,51 @@
+CABROPL4 - NestorBASIC extension for direct control of OPL4
+By Konami Man, 9-1998
+
+How to use:
+
+- Load it in any free segment, using NestorBASIC file access functions (refer 
+to NestorBASIC manual). Note that load address must be equal to the address 
+in which the code has been assembled (0 or #8000 for the supplied 
+CABROPL4.BIN file, but you can assemble it in another address by just 
+changing the ORG directive in the source code).
+
+- Set input parameters (see below) and execute it with the NestorBASIC 
+function 59 (user machine code routine execution): P(0)=Segment, P(1)=Address 
+(0 or #8000 until you assemble source code in a different address), ?USR(59).
+
+- 14 parameters can be set for each channel, and for only one channel at 
+once; when you set the note parameter, you will cause the OPL4 to play it. 
+Parameters 14 and 15 allows you to make up to 4 channels to play a note 
+simultaneously.
+
+Input parameters are as follows:
+
+P(2)=Channel number (1-24)
+P(3)=Parameter to be set
+     0: OPL4 reset, no channel nor value set is necessary
+     1: Instrument number (0-511)
+	0-383 are ROM instruments, 384-511 are SRAM instruments
+     2: Note (0-1023), makes OPL4 to play it
+     3: Octave (-7 - 7)
+     4: Volume (0-127)
+     5: Stereo (-7 - 7)
+     6: Vibrato (0-7)
+     7: LFO speed (0-7)
+     8: Tremolo (0-7)
+     9: Pseudo reverb on/off/invert (1/0/-1)
+    10: Channel on/off/invert (1/0/-1)
+    11: Silences channel, no value set is necessary
+    12: LFO reset, no value set is necessary
+    13: OPL4 master volume (0-7), no channel set is necessary
+P(4)=Value
+
+If P(3)=14,
+    P(8) to P(11) = Notes for channels 1 to 4, respectively
+    P(7) = &B4321, 0 causes the channel to be silent (so &B1111 plays all 
+channels, &B0011 only channels 1 and 2...)
+
+If P(3)=15,
+    P(4) to P(7)  = Channels A, B, C, D (1-24, 0=none)
+    P(8) to P(11) = Notes for channels A, B, C, D
+
+

@@ -1,0 +1,188 @@
+--- NestorMIF - NestorBASIC extension for MIF format decompression ---
+--- By Konami Man, 12-1999 ---
+
+
+1. WHAT IS THIS?
+
+You don't know yet the MIF graphic format? It was created by Noldas and it 
+enables you to compress any SCREEN 5, 6, 7, 8, 11 or 12 image with a good 
+compression ratio, especially when the image is interlaced.
+
+NestorMIF is an extension for NestorBASIC which enables you to decompress any 
+MIF image to VRAM. Like all NestorBASIC extensions, it is used via the 
+"execute machine code routine stored in a segment" function (function number 
+59). NestorMIF itself contains three subfunctions: getting information about 
+screen parameters of a MIF image, restoring the palette of a MIF image, and 
+decompressing a MIF image.
+
+
+2. HOW TO USE?
+
+The procedure for decompressing a MIF image using NestorMIF can be summarized 
+in the following way:
+
+- First load the NestorBASIC run-time patch NBPATCH.BIN, next load 
+NestorBASIC itself. Don't forget the patch!
+- Load NestorMIF, file NMIF.BIN, in the address 0 of any RAM segment. Note 
+that loading address must be 0, else NestorMIF will not work!
+- Load the MIF file in any address of any RAM segment. If there is not enough 
+room in one segment to load the whole file, you must load it using 
+consecutive segments. Refer to NestorBASIC manual, or better look at 
+the supplied NestorMIF sample BASIC program for details about how to load 
+files across consecutive segments. Note that VRAM segments are not supported 
+by NestorMIF.
+- Set the appropriate screen parameters (screen mode, interlaced or not, and 
+border colour) for the image. If you don't know these parameters a priori, 
+use NestorMIF subfunction 1 to get it. If the image is interlaced, do a SET 
+PAGE 1 to display it correctly.
+- Restore the image palette using subfunction 2, unless you are sure that the 
+image is SCREEN 8 or 12.
+- Finally, decompress the image to VRAM using subfunction 3.
+
+Please take a look at the supplied example program NMIFSAM.BAS, it follows 
+all the mentioned steps with detail. The source for NestorPreTer, 
+NMIFSAM.ASC, is also supplied.
+
+
+3. SUBFUNCTIONS AND PARAMETERS
+
+Once NestorMIF is loaded, the general way to call it is as follows:
+
+	p(0)= Segment where NestorMIF is loaded
+	p(1)= Address where NestorMIF is loaded (must be 0!!)
+	p(2)= Subfunction number
+	p(3) to p(11): Depends on the subfunction
+	e=usr(59)
+
+The output parameters are also subfunction dependant; p(2) will contain value 
+-1 if any subfunction number different from 1, 2 or 3 was specified, else it 
+will remain unchanged.
+
+Subfunctions parameters and working are as follows:
+
+
+*** Getting information about a MIF image
+
+Input:	p(2)= 1
+	p(3)= Segment where the MIF file is stored
+	p(4)= Address of p(3) where the MIF file is stored
+	p(5)= Color number to get information about (0-15)
+
+Output: p(3)=-1 if the segment specified in p(3) don't exists,
+		else unchanged
+	p(6)= Screen mode
+	p(7)= -1 if it is an interlaced image, else 0
+	p(8)= Border colour for the image
+	p(9)= Value of Red for the color specified in p(5)
+	p(10)=Value of Green for the color specified in p(5)
+	p(11)=Value of Blue for the color specified in p(5)
+
+Note: if the screen is 8 or 12 (so it has no palette), or if an invalid 
+colour code (greater than 15) was specified in p(5), p(9) to p(11) will have 
+output value -1.
+
+
+*** Restoring the palette of a MIF image
+
+Input:	p(2)= 2
+	p(3)= Segment where the MIF file is stored
+	p(4)= Address of p(3) where the MIF file is stored
+
+Output: p(3)=-1 if the segment specified in p(3) don't exists,
+		else unchanged
+
+This function restores the palette of the MIF image, as the COLOR=RESTORE 
+instruction does with the normal images. If the image screen mode is 8 or 12 
+(so it has no palette), this subfunction does just nothing, and no error is 
+generated.
+
+Note that palette data is not only sent to VDP registers, but also copied in 
+VRAM, in the appropriate palette address depending on the graphic mode. So if 
+you want to save the palette in a separate file, just use this function and 
+next do
+
+bsave "PALETTE.SCx", address, address+31, S
+
+where the address is #7680 for SCREEN 5 and 6, and #FA80 for SCREEN 7 and 11.
+Then it is enough to do a further bload"PALETTE.SCx",S: COLOR=RESTORE to 
+restore the palette alone, without having to load the MIF file.
+
+
+*** Decompressing a MIF image
+
+Input:	p(2)= 3
+	p(3)= Segment where the MIF file is stored
+	p(4)= Address of p(3) where the MIF file is stored
+	p(5)= Destination VRAM 64K block (0 or 1)
+	      (only if the image is not interlaced)
+	p(6)= Destination VRAM address
+	      (only if the image is not interlaced)
+
+Output: P(7)= 0 if success
+	     -1 if the specified segment don't exists
+	     -2 if NestorMIF runs out of segments while decompressing
+		(that is, the last address of the last segment is reached
+		but the end of the compreesed data was not reached yet)
+	     -3 if the specified VRAM address don't exists
+		(that is, VRAM block 1 was specified but the computer has
+		only 64K of VRAM capacity)
+
+Note that when the image is interlaced, input parameters p(5) and p(6) are 
+ignored, and the image is always decompressed to the begin of the VRAM (block 
+0, address 0).
+
+WARNING: NestorMIF itself is only 1.5K long, but when executing subfunction 3 
+it uses the remaining space on the segment where it is stored as a temporary 
+compressed data buffer. Therefore, don't use the NestorMIF segment to store 
+also any other data or programs, or you will lose it!
+
+
+4. USEFUL NOTES
+
+- Watch the available memory, it determines the maximum size of the MIF file 
+you can decompress. In a 128K computer under DOS 1, you can't decompress MIF 
+files bigger than 32K. In a 128K computer under DOS 2, you just can't use 
+NestorMIF. Error -2 when decompressing normally means a lack of memory.
+
+- If you have a Turbo-R with external memory expansion, try to load NestorMIF 
+in a segment of the internal mapper instead of using the external one; 
+otherwise NestorMIF will be very slow when decompressing. To almost ensure 
+that the internal mapper is used, take the lowest possible segment number for 
+NestorMIF (the best option is to use segment 5, or segment 6 if you use any 
+NestorBASIC moonblaster replayer).
+
+- Remember to do a SET PAGE 1 if the image is interlaced, else it is not 
+displayed correctly.
+
+- Setting screen and interlaced mode is easy in normal BASIC mode, it is 
+enough to do the following after executing subfunction 1:
+
+	screen p(6),,,,,-p(7)
+
+However, inside of a turbo-block it is a little more difficult, because 
+TurboBASIC don't supports interlaced switch in the SCREEN function, and 
+besides you can't set any graphic mode higher than 8. Then, the way to set 
+screen parameters from inside of a turbo-block is as follows (a previous 
+subfunction 1 execution is assumed):
+
+	'Set graphic mode
+	if p(6)<9 then screen p(6) else
+	if p(6)=11 then screen 8: vdp(26)= vdp(26) or 24 else
+	if p(6)=12 then screen 8: vdp(26)= vdp(26) or 8
+
+	'Set interlaced
+	if p(7) then vdp(10)= vdp(10) or 12
+
+- In the original MIF viewer program, color 0 has the transparent function 
+disabled. To obtain the same effect from (turbo)BASIC, just do the following:
+
+	vdp(9)= vdp(9) or 32
+
+- Also, it may be useful to disable sprites. Do the following for this:
+
+	vdp(9)= vdp(9) or 2
+
+and for enabling again,
+
+	vdp(9)= vdp(9) and 253
+

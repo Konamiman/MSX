@@ -1,0 +1,323 @@
+NestorCadenas 1.0 - By Konami Man, 8-2000
+-----------------------------------------
+
+1. OVERVIEW
+
+NestorCadenas (NestorStrings) is an expansion for NestorBASIC, intended to be 
+loaded into any mapped memory segment and used via NestorBASIC function 59 
+(execution of a user machine code routine).
+
+NestorCadenas is useful for programs using several text strings, which would 
+consume a lot of memory if they were saved into the BASIC program itself. Now 
+you can edit all your strings using any text editor, load the resulting text 
+file into mapped memory and, using NestorCadenas, recover them sequentially 
+(recovering consecutively one text line each time) or via random access (you 
+can identify any point of your text file via a label, and then use this label 
+to set up the NestorCadenas internal pointer).
+
+
+2. INSTALLING AND CALLING PROCEDURE
+
+To install NestorCadenas, load it (file NCADS.DAT) at address 0 of any mapped 
+memory segment (VRAM segments can't be used), using NestorBASIC disk access 
+routines; for example, to load into segment 6:
+
+F$(0)="NCADS.DAT": ?USR(31): P(2)=6: P(3)=0: P(4)=&H4000: ?USR(33): ?USR(32)
+
+Refer to NestorBASIC manual for details about NestorBASIC disk access 
+functions.
+
+To use NestorCadenas, NestorBASIC function 59 must be used. NestorCadenas 
+consists of 5 subfunctions; to specify the desired subfunction to be 
+executed, set its number into P(2). P(3) and P(4) are for input parameters 
+whose meaning depends on each subfunction. So, the complete procedure for 
+using NestorCadenas is as follows:
+
+P(0) = NetorCadenas segment:
+P(1) = 0 (NestorCadenas address):
+P(2) = Subfunction number:
+P(3) = input parameter (optional):
+P(4) = input parameter (optional):
+?USR(59)
+
+All subfunctions are listed and explained in section 4.
+
+
+3. NESTORCADENAS BEHAVIOR. TEXT FILES FORMAT
+
+Once NestorCadenas is installed, load your text file into mapped memory using 
+also NestorBASIC disk access functions. If the file does not fit in one 
+segment, you must load it across consecutive segments (refer to NestorBASIC 
+manual for details about how to load a big file across consecutive segments); 
+the use of VRAM segments is allowed for this.
+
+Once your text file is loaded, you must intialize the NestorCadenas internal 
+pointer (use subfunction 1 for this; see next section for subfunctions 
+details). This pointer is used by NestorCadenas to know where in memory 
+(segment and address) the string to be extracted next is placed, and it is 
+automatically updated when a string is recovered, so it points to the next 
+string. A string is considered finished when a CR+LF mark is found, or when 
+80 characters are recovered. If a string is longer than 80 characters, only 
+the first 80 are extracted, and the pointer remains pointing at character 
+81th.
+
+To search for a concrete string you can manually set up this pointer to any 
+segment and address using subfunction 2, but the most useful is the use of 
+labels. A text line is considered a label when it starts with a "~" 
+character; it can have up to 80 characters and must finish with CR+LF. Any 
+leading or tailing spaces are considered as being part of the label.
+
+The use of labels allows you to easily find a concrete line or a group of 
+lines in the text. For example if your text contains this:
+
+~GmOv
+Game over!!
+Please try again!!
+
+you can search for "GmOv" label using subfunction 3, and then the pointer 
+will be placed at the beginning of the "Game over!!" string. After extracting 
+it with subfunction 5, pointer will point at the beginning of "Please try 
+again!!" string.
+
+Of course labels will not be considered part of the text when doing 
+sequential access. For example if your text contains this:
+
+~Start
+Line one.
+~Label
+Line two.
+
+after searching for label "Start", two consecutive calls to subfunction 5 
+will extract "Line one." first, and then "Line two." next.
+
+You can also use remarks. A line is considered a remark, and therefore not 
+extracted, when it starts with a "#" character. So you can for example have 
+the following:
+
+~Start
+#Next is line one.
+Line one.
+#...and next is line two.
+Line two.
+
+and, like in the preovious example, "Line one." and "Line two." are extracted 
+sequentially.
+
+
+So, summarising, there is three types of string lines:
+
+- Normal lines, those which can be extracted with subfunction 5. These are 
+all the lines not starting with a "~" or "#" character. They end with a CR+LF 
+mark, space+CR+LF mark, or EOF character. Must have up to 80 characters; 
+characters 81th onwards are considered as another string.
+- Labels, starting with a "~" character. Can be used to set up the pointer 
+via subfunction 3. They end with a CR+LF mark or space+CR+LF mark. Must have 
+up to 80 characters. They are ignored when doing sequential string 
+extraction. Can contain any character; note that any leading or tailing 
+spaces will be considered as being part of the label.
+- Remarks, starting with a "#" character. They end with a CR+LF mark or 
+space+CR+LF mark. Must have up to 80 characters. They are ignored when doing 
+sequential string extraction.
+
+
+NOTE: If you set up the pointer manually (via subfunction 2) so it points to 
+inside of a label or remark line, then the line will NOT be considered as a 
+label or remark, but a normal line, and then subfunction 5 will extract it 
+from the character pointed until the CR+LF mark. Labels and remarks are 
+ignored by subfunction 5 only if the pointer is pointing at the start of the 
+line.
+
+
+You can insert direct ASCII codes in your text lines by simply inserting a 
+"^" character followed by the ASCII code number in decimal format. For 
+example:
+
+Beep!^7Beep!^7Let's change line.^13^10This is another line.
+
+Mind the following when using this method to insert direct ASCII codes:
+
+- If you want to insert a "^" character itself, use "^^".
+- Use numbers in the range 0-255. If you insert a greater number, the 
+character with ASCII code equal to the number modulo 255 will be actually 
+inserted.
+- If you want to put numeric characters immediately after a direct ASCII 
+code, separate them with a "!" character. For example the following line:
+
+Current date:^13^10!15-8-2000
+
+will be extracted as:
+
+Current date:
+15-8-2000
+
+
+4. SUBFUNCTIONS LIST
+
+Below is a list and description of the NestorCadenas subfunctions. Refer to 
+section 2 for the detailed procedure to use them.
+
+
+* Initializing the pointer
+
+Input:	P(2) = 1
+	P(3) = Text begin segment
+	P(4) = Text begin address
+Output: P(2) = 0: Pointer initialized OK
+	       1: Error: the specified segment does not exist
+
+This function sets up the starting address of the user text in an internal 
+variable, and also sets the pointer to the same address. This starting 
+address information is used by subfunction 3 when searching for a label as a 
+reference of where the search must start.
+
+It is mandatory to call this function at least once, else the other functions 
+will always return an error. If you load a new text in memory you must 
+initialize the pointer again.
+
+
+* Set the pointer manually
+
+Input:	P(2) = 2
+	P(3) = Segment to be pointed
+	P(4) = Address to be pointed
+Output: P(2) = 0: Pointer set OK
+	       1: Error: the specified segment does not exist
+	       2: Error: the pointer is not initialized
+
+This subfunction enables you to directly set up the text pointer to any 
+address of any existing segment. Remember that if you set the pointer to 
+inside of a label or a remark, it will be considered as a normal line; see 
+section 3 for details.
+
+
+* Set the pointer by searching for a label
+
+Input:	P(2) = 3
+	Label copied to address &H1F00 of NestorCadenas segment,
+	ending with a 0 character
+Output: P(2) = 0: Label found, pointer set OK
+	       1: Error: the specified label was not found,
+			 the pointer is unchanged
+	       2: Error: the pointer is not initialized
+
+This function searches for a label and if it is found, the pointer is set at 
+the immediately following line. Note that searching is case sensitive.
+
+The label to search must have been previously stored (not including the 
+initial "~") in the addess &H1F00 of the segment where NestorCadenas is load; 
+use NestorBASIC function 61 for this.
+
+
+* Obtain the current pointer
+
+Input:	P(2) = 4
+Output: P(2) = 0: No error
+	       1: Error: the pointer is not initialized
+	P(3) = Current pointer segment
+	P(4) = Current pointer address
+
+This function will just return the current pointer value: a segment number in 
+P(3), and an address in the range &H0000-&H3FFF in P(4).
+
+
+* Recover a string
+
+Input:	P(2) = 5
+Output: String copied to address &H1F80 of NestorCadenas segment,
+	ending with a 0 character
+	P(2) = String termination information if 0-4,
+	       error if 5-7:
+
+	       0: The string finishes with a CR+LF mark
+	       1: The string finishes with a space+CR+LF mark
+	       2: The string is larger than 80 characters,
+		  only the first 80 have been extracted
+		  and the pointer remains at 81th character
+	       3: The string finishes with an EOF character,
+		  pointer remains at it
+	       4: Address &H3FFF of the last segment has been
+		  reached when extracting text,
+		  as much text as possible has been extracted
+
+	       5: ERROR: Pointer is not initialized
+	       6: ERROR: EOF was pointed, no more text can be extracted
+	       7: ERROR: Last address of the last segment was reached in
+		  a previous call, no more text can be extracted
+
+This subfunction extracts the currently pointed line, converting the direct 
+ASCII codes insertions, to address &H1F80 of the NestorCadenas segment. 
+NestorBASIC function 62 must then be used to recover the string to F$(1). The 
+line is skipped and the next line is extracted instead if it is a label or a 
+remark and its beginning address was pointed; see section 3 for details about 
+this.
+
+An output value of P(2) in the range 0-4 indicates that a text line has been 
+successfully recovered, and the concrete number indicates how the line 
+terminates. Checking for values 0 and 1 is useful if you want to extract a 
+paragraph composed by several lines: just extract lines while you get a value 
+of 0, and stop when you get a 1.
+
+Values in the range 5-7 are considered as errors, and no text is recovered 
+then (a 0 character is put on &H1F80). If you get 6 or 7 (also 3 or 4), you 
+must set the pointer again (using subfunction 1, 2 or 3) before trying to 
+recover more text.
+
+Note that if the pointed line consists of just a CR+LF mark, an empty string 
+will be recovered and this will not be considered an error (P(2) will have 
+output value 0).
+
+
+5. TIPS & INFO
+
+- Use the following subroutine to call NestorCadenas subfunctions, so you can 
+use F$(0) as input parameter (label to search) for subfunction 3, and F$(1) 
+as output parameter (recovered string) for subfunction 5, instead of having 
+to access memory via NestorBASIC functions 61 and 62 every time: (S is the 
+NestorCadenas segment)
+
+10000 IF P(2)=3 THEN P(0)=S: P(1)=&H1F00: ?USR(61): P(2)=3: GOTO 10020
+10010 IF P(2)=5 THEN GOSUB 10020: P(15)=P(2):
+      P(0)=S: P(1)=&H1F80: ?USR(62): P(2)=P(15): RETURN
+10020 P(0)=S: P(1)=0: ?USR(59): RETURN
+
+So for example, setting the pointer and extracting a string is as easy as:
+
+10 'Searches for "Label"
+20 P(2)=3: F$(0)="Label": GOSUB 10000: IF P(2)>0 THEN ?"Error!!"
+30 'Extracts string and prints it
+40 P(2)=5: GOSUB 10000: IF P(2)>4 THEN ?"Error!!" ELSE ?F$(1)
+
+
+- NestorCadenas code is 1K long, so it uses only addresses &H0000-&H03FF of 
+the segment where it is loaded. However addresses &H1F00-&H3FFF of this 
+segment are also used by NestorCadenas to store data, so you can't use it for 
+other data or code storage. Addresses &H0400-&H1EFF still free so you can use 
+this area for any purpose.
+
+
+- The NestorCadenas code supplied in file NCADS.DAT is assembled at address 
+&H8000, so you must load it into address 0 af the choosed segment, else it 
+will not work. However since the source code is provided, you can reassemble 
+it to other address by just changing the ORG directive. However remember that 
+addresses &H1F00-&H3FFF are used for data storage, so you can use only 
+addresses &H8000-&H9B00 as new assembling address.
+
+
+- Do you like NestorCadenas? Or do you think it can be improved or corrected? 
+Do you have any idea for making a NestorBASIC extension? How can I go to 
+Japan for free? Let me know! You can contact me by any of these ways:
+
+E-mail: konamiman@geocities.com
+
+ICQ: 18281450
+
+IRC: Server irc.arrakis.es, channel #msx, nick konamiman
+
+Snail mail:
+Nestor Soriano Vilchez
+C/. Ca'n Sbert, 7A
+Pont D'Inca (Marratxi)
+07009 - Baleares - SPAIN
+
+Have fun with Nestor*.*!
+

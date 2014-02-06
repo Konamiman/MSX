@@ -1,0 +1,143 @@
+NestorPlayer 1.0 user's manual
+By Nestor Soriano (Konami Man), july 1998
+
+1. WHAT THE HELL IS NestorPlayer?
+
+NestorPlayer is a simple MoonBlaster 1.4 and Wave 1.05 replayer programmed in 
+BASIC, using NestorBASIC. It allows you to brwose trough your drives and 
+directories for searching songfiles, and to enable/disable MSX-MUSIC and 
+MSX-AUDIO in MB 1.4 stereo songs.
+
+2. WHAT I NEED FOR USING THAT?
+
+System requirements for NestorPlayer are:
+
+- MSX2/2+/tR computer.
+- Under DOS 1, 128K of mapped RAM.
+- Under DOS 2, 256K of mapped RAM and at least 3 free RAM segments (4 if you 
+want to play songs larger than 16K). Two of these segments must be allocated 
+in primary mapper.
+- 128K VRAM are required only when, under DOS 2, you have only 3 free RAM 
+segments.
+- Any soundchip would be nice. 8-)
+
+Files needed for run NestorPlayer are:
+
+NBASIC.BIN: The best BASIC extension ever made. At least version 0.07 is 
+required.
+NPLAYER.BAS: NestorPlayer booting and initialization program. Run it!
+NPLAYER.PRG: NestorPlayer main program, executed by NPLAYER.BAS.
+NPLAYER.DAT: NestorPlayer data file. Contains operation screen, character 
+set, error messages and some other data.
+
+3. OPERATION SCREEN
+
+Once NestorPlayer is running, you will see a nice operation screen with the 
+following parts:
+
+- In the upper part, information about name and sample/wavekit of the 
+currently loaded song, name of the last sample/wavekit loaded and current 
+drive and directory.
+- In the middle part, four windows listing MBM, MBK, MWM, and MWK files in 
+the current directory. A fifth window shows the available drives and 
+subdirectories.
+- In the lower center part, some buttons for controlling music replay.
+- In the lower left corner, the status of each soundchip (Found or not found, 
+ON or OFF) is shown.
+- In the lower right corner, current step and position of the music beign 
+replayed are shown, as well as NestorPlayer general status.
+
+4. FILES MODE
+
+The files mode, activated by default when NestorPlayer is loaded, enables you 
+to browse your drives/directories and to load songs and sample/wavekits. 
+Following keys are available for doing this:
+
+- Cursor right/left: change window.
+- Cursor up/down: select next/previous song (or drive/directory) in the list.
+- CTRL + Cursor up/down: jumps to the 10th next/previous song (or 
+drive/directory) in the list.
+- HOME: Go to the first song (or drive) in the list.
+- SHIFT + HOME: Go to the last song (or drive/directory) in the list.
+- SPACE or ENTER: Loads the selected song or sample/wavekit, or changes to 
+the selected drive or directory.
+- TAB: Changes to the command mode.
+
+The maximum number of displayed files on each window is 1024. For 
+directories, it is 600.
+
+When a file or sample/wavekit is loaded, also the appropriate replayer is 
+loaded from NBASIC.BIN file if necessary (if the last song or kit was not of 
+the same type), so make sure that the file NBASIC.BIN actually can be found 
+in its original location! Else you will obtain an error. In such case, just 
+insert the disk containing NBASIC.BIN file and play the music (press F1). 
+Default replayer when NestorPlayer is loaded is the MoonBlaster 1.4 one.
+
+When a new drive or directory is selected, a new file searching is done, and 
+windows are updated. No files will be shown if a disk error occurs. For 
+refreshing the current directory, just select the current drive in the 
+drives/directories window.
+
+Keys for different commands are also available in this mode. See next 
+section.
+
+5. COMMAND MODE
+
+In this mode you can select a button with cursor key and activate it with 
+space bar or ENTER key, but you can also do it by just pressing the key 
+associated to each button. Available commands are:
+
+- ESC: Stops music, uninstalls NestorBASIC and quits NestorPlayer.
+- F1: Begins music replaying or pauses/continues the music beign replayed.
+- F2: Stops music beign replayed.
+- F3: Switches ON/OFF MSX-MUSIC. Song is stopped and restarted with the new 
+soundchips state activated.
+- F4: Switches ON/OFF MSX-AUDIO. Song is stopped and restarted with the new 
+soundchips state activated.
+- F5: Toggles 50Hz/60Hz mode. Don't search for a button for this option 
+because there is none! It is a last minute feature! 8-)
+
+Buttons F3 and F4 will have effect only if both soundchips (MSX-MUSIC and 
+MSX-AUDIO) are present. Note that you can't switch OFF both soundchips at the 
+same time!
+
+6. SOME BULLSHIT
+
+NestorPlayer is the first "serious" sample program I made for promote 
+NestorBASIC (how is possible to find so difficult to promote such good and 
+free software?! 8-), I will make more sample programs in the future but I 
+don't know yet what type of programs. Suggestions?
+
+Memory requirements looks a little strange... let's clear this a little. 
+Memory using of NestorPlayer is as follows:
+
+- Segments 0-4 are for BASIC and NestorBASIC own use (refer to NestorBASIC 
+manual for more details).
+- Segment 5 contains the music replayer code.
+- Segment 6 is the first music segment.
+- Segment 7 is the second music segment.
+- Segment 8 stores NPLAYER.DAT and many variables in the first 8K. The second 
+8K part is for storing directory names.
+- Segment 9 stores MBM and MBK filenames.
+- Segment 10 stores MWM and MWK filenames.
+
+Segments 0 to 6 (or 7) must be RAM segments, so if we discard the 64K TPA 
+segments we find the three (or four) required free segments. Under DOS 1, 
+with at least 128K RAM, segments 4-7 will be always free RAM, so segments 8 
+to 10 can be VRAM segments and therefore 64K VRAM is enough. Under DOS 2 with 
+only 3 free segments, segments 7 to 10 will be VRAM segments so 128K VRAM is 
+required (but in this case segment 7 remains unused... sorry, this is a 
+design failure! (^ ^!))
+
+Don't lose the opportunity to appear in the history books! Become now a 
+NestorBASIC beta tester! Thrill and suspense awaits you! (hum, too many 
+SD-Snatcher... (- -!)). Seriously, I need your help for debugging 
+NestorBASIC. For anything please contact me in <konamiman@geocities.com>. You 
+can find the lastest NestorBASIC version here:
+
+http://www.geocities.com/SiliconValley/Bay/9797/msx.htm
+
+And finally, consider Mallorca for your next holidays! ;-)
+
+Konami Man, 14-7-98
+

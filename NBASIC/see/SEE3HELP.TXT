@@ -1,0 +1,549 @@
+       --------------------------------------------------------------------
+       Sound Effect Editor v3.10 A (25/01/94)	    (c) FUZZY LOGIC 1991/95
+       --------------------------------------------------------------------
+       SEE  v3.xx is NOT a 100% Public Domain program, but it's SHAREWARE! 
+       This means that the program may never be sold for profit other than 
+       the costs  of the  disc/service. You can use SEE v3.xx just for zip 
+       and my copy it as much as necessary. However, when you use SEE 3.xx 
+       for  a commercial product, an amount of money has to be paid to the 
+       coders (that's us). Contact us at the addresses given at the end of 
+       this doc. For any update check your PD dealer.
+
+
+				 INSTALLING SEE
+
+       SEE v3.xx can be installed on every (MSX-DOS) disc and even on your 
+       hard disc. It's NOT (yet) fully DOS 2.x compatible, so use it under 
+       BASIC if you can. You should copy the folowing files to boot SEE:
+
+       - SEEv3_10.bin	The BASIC loader ( bload "SEEv3_10.bin",r )
+       - SEEv3_10.lib	The program itselves.
+       - SEE3	 .prf	The preference file (not realy necessary to copy)
+
+       On the  master disc there's also a SEE3 replay source_file which is 
+       originally written in WBass2, but we saved it as an ASCII file. The 
+       name of this file:
+
+       - SEE3PLAY.asc	The assembly source file (replayer)
+       We  fixed a major bug in this version, so you'd better use this one 
+       for correct SFX!
+
+       This time a PSG drumkit as an example for you lot, the name:
+
+       - SEEDRUMS.see	The example SEE3.10 file.
+
+
+		   UPDATE OUTLINES from SEE v2.xx to SEE v3.xx
+
+       Why  a new  version of  SEE you	might ask.  Well to be short, SEE2 
+       wasn't as  perfect as  we thought it was. This total new version is 
+       much  different from  all the other versions we've released before. 
+       Some advantages towards SEEv2.xx are:
+
+       o  Much easier and there for faster to edit.
+       o  More	than one  pattern on  your screen.
+       o  Block commands, which make editing much quicker.
+       o  New options that does a lotta work for ye.
+       o  A total new  file_format, which  will be  reduced in length when 
+	  saving it on disk.
+
+
+			   UPDATE from v3.00 to v3.10
+
+       o  It works 100% under DOS2 (BASIC!!).
+       o  You can boot from any drive and (sub)directory now.
+       o  Correct file checking when opening a .SEE file.
+       o  The nasty mouse shit has been removed (except in EDIT mode).
+	  The real mouse/PDM routs have to be coded some day.
+       o  The replayer had a bug in the Volume routine. (when you set
+	   MAXVOL on a lower scale than 15, some volume slides would be
+	   fucked up, I finally fixed it...)
+       o  I forgot to clear the Tuning Bits in the rustle channels, when
+	  they were displayed.
+
+
+
+
+			      THINX FOR THE FUTURE
+
+       o  Fully DOS 2 compatible, so it can be booted from the DOS shell.
+       o  Together with DOS 2, a directory select option (maybe).
+       o  The cruncher in Diskmode (together with the decrunch source?)
+	  or something simular to that.      
+       o  100% correct use of the mouse (I wrote this before....)
+       o  Printer  options  (altought  it sounds  unnecessary, it  can be 
+	  very usefull!).
+       o  A possibility to run more than just 1 SFX at the same time!
+
+
+				 BUGS WE KNOW OF
+
+       The .PRF file, who is not saved -IN- SEE but -WITH- SEE.
+       You can't enter a VARIABLE while CAPS is ON (stupid KB routs..)
+
+
+				MAIN EDIT SCREEN
+
+       In this	(main) screen, the SFX editor is stored. At the top of the 
+       screen  you'll find some options (main menu), which can be selected 
+       with you cursors.
+       At  the middle  of the  screen, there  are the  SFX patters. It can 
+       display a  maximum of  13 patterns  at the  time. When moving up or 
+       down,  the patterns  will scroll at the opposide direction. The 7nd 
+       pattern, which is lighted by a bar, is the current one to edit.
+       At the  bottem of  the screen  you'll always  find the STATUS line. 
+       Every action is displayed on this line.
+
+
+
+				    MAIN MENU
+
+       NEW		- Clear all pattern and SFX data [F4].
+       Preferences	- Goto pref screen [F10].
+       Diskop		- Goto disk screen [F5].
+       Quit		- Exit SEE3 (back to BASIC).
+
+       Play SFX 	- Play current SFX [F1].
+       Play SFX visual	- Idem, but show current playing patterns [F6].
+       Stop noise	- When a SFX is still playing press on this to
+			  cut it [stop].
+       Play status	- If ON, a SFX is still playing. Press on this
+			  to cut. (same as "Stop noise")
+
+       Sound FX nr	- Current selected Sound Effect [F2].
+       Start pattern	- Start pattern for this SFX [F3]. Press RETurn to
+			  reset this (OFF).
+       Set next FX pat	- If the current SFX is complete, press on this to
+			  set the start pattern for the next SFX. After
+			  this, the current SFX has increased [F9].
+       Pattern filter	-  <not yet in use>
+
+       Quant		- Set the pattern edit stepper. In edit:
+			  Y=Y+[Quant] after editing a channel [F7].
+       Poly		- When ON, the edit channel will increase with one
+			  after editing a channel (X=X+1) [F8].
+       Edit		- When ON, you're in the EDIT mode ([select]).
+       Block		- When not OFF, it displays the start/end patters
+			  of the edit block. Press RETurn to kill it.
+
+       Help me! 	- Check'em yerself.
+       About... 	- Some credits 'n stuff.
+       Max Volume	- A volume button for what use??
+       Print		-  <not yet in use>
+				  PATTERN EDIT
+
+       The  pattern  box  shows  13 patterns.  The one	you are  currently 
+       editing on, is lighted up with a bar.
+       One pattern contains 11 channels (Event and PSG data).
+
+				    CHANNELS:
+
+       - event (1)	In this extra channel you can set some commands. 
+			For further details look at "Event channel".
+       - snd# (2/3/4)	Same as PSG channels 0/1, 2/3 or 4/5. Here you can
+			set the pattern sound frequency. When there's no
+			data displayed, this channel is switched of auto-
+			maticly (see "Sound channels").
+       - rus# (5/6/7)	Same as PSG channel 6. This is the rustle channel 
+			for  this   pattern.  There  is  only  one  rustle 
+			register,  but	you  can  select  it for  each PSG 
+			sound  channel (1,2  or 3).  When there's  no data 
+			displayed the  rustle for  this channel  is turned 
+			off (see "Rustle channels").
+       - vol# (8/9/10)	Same as PSG channels 8/9/10. In these channels you 
+			can  set the volume for PSG channels 1,2 or 3 (see 
+			"Volume channels").
+       - wave (11)	Same as  PSG channel 13. Here you can select the 
+			Volume	envelope.  When it  contains no  data, the 
+			volume wave  mode has not been used in one of the
+			volume channels (see "Wave channel").
+       - time  (12)	Same  as PSG  channels 11/12.  This contains  the 
+			volume	envelope time.	If no volume wave has been 
+			used,  this  channel displays  no data	(see "Wave 
+			channel").
+
+
+       Event channel
+
+       In this channel can set some pattern commands like loop, speed etc. 
+       The folowing commands are included:
+
+	--	Empty. Does nothing extra, just play the pattern.
+       HALT (x) Wait for a little while BEFORE playing the CURRENT pattern
+		data.
+		In: x, total v_blanks (timed at 1/50 or 1/60 sec.)
+       FOR  (x) Set loop start pointer. A total of 4 loops can be mixed.
+		In: x, total reloops.
+       NEXT	Jump back to the pattern where you've set a FOR command if
+		FOR (x)>0.
+       START	Set rerun pointer.
+       RERUN	Go to pattern where you've set START.
+       TMP  (x) Set replay tempo (timed in v_blanks).
+       END	End of effect.
+
+       To  edit these  events, just press the first letter of the command. 
+       Like "E" for END, "R" for RERUN etc. Use Backspace to clear.
+
+
+		example FOR/NEXT event:
+
+			pat:	event:	psg data channels
+			+-------+------------ -- -  -
+			000	 FOR 7	xxx yyy zzz
+			001	  -	xxx yyy zzz
+			002	 NEXT	 -   -	 -
+			003	 END	 -   -	 -
+
+		Pattern 000+001 will be repeated 7 times.
+
+       Sound channel (1,2,3)
+
+       In this	channel you  can set  the sound frequency of each channel. 
+       There  are  3  sound  channels  available.  In  SEE2  and  previous 
+       versions,  you could  set both  the High  and Low  registers of the 
+       frequency.  In  SEE3,  these  two registers  are combined  into one 
+       register pare. It has a range from 000 to FFF.
+
+       In these sound channels you can also set some extra effects. To set 
+       these effects use SHIFT together with a key (first letter of com.).
+       The effects:
+	D:xxx	 Down slide (frequency Down)	[shift + "D"/"d"]
+	U:xxx	 Up slide (frequency Up)	[shift + "U"/"u"]
+	(xxx = slide rate)
+
+       Note:  Down slide means that the value will decrease, but the sound 
+       you'll hear will go UP and vice versa! (only in frq channels).
+ 
+       To switch the channel off, simply press on Backspace.
+
+
+       Rustle channel (1,2,3)
+
+       For every  sound channel  you can  set the rustle channel. However, 
+       there's  only one  PSG rustle register so all channels will use the 
+       same amount  of rustle.	But to use it in a channel you MUST define 
+       it!.
+
+       Like  the  sound  channels,  you  can slide  up and  down with  the 
+       following effects:
+	D:xx	 Down slide
+	U:xx	 Up slide
+	(xx = slide rate)
+
+       Backspace to switch 1 channel off.
+
+
+       Volume channel (1,2,3)
+
+       Each  channel uses  it's own volume range which can be set in these 
+       channels.
+
+       Also in this channel you can find some extra effects:
+	D:x	 Down slide
+	U:x	 Up slide
+	Wave	 Volume development (PSG standard)
+	(x = slide rate)
+
+       The PSG	has 15	standard volume  waves (development). When you use 
+       such  a wave,  set the  development pattern  & time  in the  last 2 
+       channels (wave/time).
+
+ 
+       Wave channel (pattern/time)
+
+       In this	channel the volume development pattern can be set. It will 
+       be  displayed only  when one  or more  volume channels  are using a 
+       (standard) wave. Other wise it will be switched of automatically.
+ 
+       The development	time for  such a  pattern, can	be set in the last 
+       channel. It's a combination of PSG regs 11 and 12 (000-FFF).
+
+       Maybe   in  a   next  version   I'll  remove  the  standard  volume 
+       development, 'cos  no one is using it anyway (atleast I don't) and 
+       I think it doesn't even work yet!!.
+
+				      BLOCK
+
+       In this	version we  finally added some block functions. This block 
+       is   very  usefull  for	quick  editing.  There's  only  one  block 
+       available, the  start/end pats  will be	displayed at the main-menu 
+       (Block: xxx-yyy x=start, y=end pat). When a block has been defined, 
+       the patterns in this block will be lichted up with a colour bar.
+
+       To  enter the  block commands  use the  [CODE] key. [CODE]+[S] will 
+       set the start pattern while [CODE]+[E] will set the end pattern. To 
+       remove this  block simply press [CODE]+space. For further functions 
+       see Appendix A (keys).
+
+
+				   PREFERENCES
+
+       At this	screen, you'll  be able to edit some (screen)-settings the 
+       way  you like'em  best. The preferences will be saved as "SEE3.prf" 
+       on the  current drive (the one you've selected in the DiskOp).
+       When this  file is present while booting SEE, it will automatically 
+       be included in.
+
+ 
+				   DISK MODE
+
+       In  this screen	you can save/load SFX files. Even a disk_format is 
+       included here. The disk mode contains 2 different file types:
+
+	- filename.SEE	 All SFX saved in 1 file.
+	- filename.SFX	 Save/Load only 1 SFX.
+
+       The .SEE file_format will be detailed at Appendix B.
+
+       When  loading  a .SFX  file, you've  gotta be  sure you've  set the 
+       current	SFX   start  pattern.	If  not,  SEE  will  prenounce	an 
+       error-message.
+       When saving  a .SFX file, be sure you set the start pattern and any 
+       End-Of-SFX  command  (event:  "END" or  "RERUN")! SEE3  will always 
+       check  if  you've  set  correct  pattern  data  otherwise  it  will 
+       prenounce a error-message.
+
+       SEE will check if a .SEE file you're trying to load, is one of the 
+       v3.xx type.
+
+       When  you're  using  more  than  1  drive,  you  can  increase  the 
+       default_drive by clicking on "DRIVE:".
+
+       If you want to check your disk directory, press on DIR .SEE/SFX. If 
+       you've done this before (and still using the same disk) then simply 
+       press RETurn  on any .SEE or .SFX item. SEE3 will remember the last 
+       DIRectory  from	both  filetypes!  When	entering DiskOp,  the last 
+       filetype DIR will be displayed (if present).
+
+       We  didn't include  the cruncher yet, that's why this option is not 
+       available. In  the next	update, it  will be fixed (hope so...). In 
+       the mean time you could try to crunch it yerself.
+
+
+       Well, what's  more to  say. If  you think  SEE3 could  be better or 
+       you've  found  any  buggies,  please  contact  us  at the  folowing 
+       addresses:
+
+       R. v/d Meulen		A. v/d Wal
+       Lijsterstraat 25 	Tormentil 15
+       8917 CX Leeuwarden	8445 RR Heerenveen
+       Holland. 		Holland.
+				APPENDIX A - Keys
+
+       Main screen (hotkeys)
+
+       F1	Play current SFX
+       F6	Idem but with pattern presentation
+       F2	Select SFX
+       F3	Set start pattern
+       F4	New
+       F5	Disk mode.
+       F7	Set quant
+       F8	Toggle Poly
+       F9	Set next SFX pattern (SFX up + start pattern set)
+       F10	Preferences
+       Select	Toggle frequency (50/60 Hz)
+       Stop	Cut SFX
+       [+]	SFX increase
+       [-]	SFX decrease
+       [ESC]	Quit SEE
+
+
+       Main menu
+
+       Arrows	Move cursor
+       Space	Confirm
+       Return	,,	special
+       Home	Goto top of screen
+       Graphic	Goto pattern edit
+       Trig B	,,	,,
+
+
+       Pattern edit
+
+       Arrows	Move cursor
+       Home	Goto pattern 0
+       Return	Goto channel 0 (event)
+       ESCape	Go back to main menu
+       Graphic	,,	,,
+       Trig B	,,	,,
+       Back sp. Clear current channel
+       DELete	Delete current pattern
+       INSert	Insert 1 pattern
+       [Q]	Set Quant
+       [P]	Goto Pattern...
+       0-9/A-F	Set channel data
+
+	SHIFT +
+       Home	Goto first pattern of current SFX
+       Back sp. Clear current pattern
+       DELete	As normal DELete, but with pattern Down.
+       INSert	As normal INSers, but with pattern Up.
+       [U]	Tuning up...
+       [D]	Tuning down...
+       [W]	Volume Wave (only in Volume Channels ofcourse!)
+
+	CTRL +
+       Home	(see shift)
+       [E]	Goto Event channel
+       [S]	Goto first Sound (frq) channel
+       [R]	Goto first Rustle channel
+       [V]	Goto first Volume channel
+       [W]	Goto Wave channel
+       [Q]	Set quant
+       [P]	Goto pattern...
+       space	Set start pattern of current SFX
+       RETurn	Kill current SFX (OFF)
+	CODE +	(block commands)
+       [S]	Set first pattern (Start)
+       [E]	Set last pattern (End)
+       [G]	Goto first block_pattern
+       [C]	Copy block to cursor position
+       [M]/ret	Replace block to cursor position
+       [Backsp] Clear block_patterns
+       [space]	Remove block
+
+
+       Disk mode
+
+       Arrows	Move cursor
+       Space	Confirm
+       Return	,,	special
+       Home	Go to top of screen
+       ESC/F5	Quit, go back to main
+       [+]	SFX increase
+       [-]	SFX decrease
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			   APPENDIX B - File structure
+
+       Here's how we build a .SEE file:
+
+       Offset	Contents:
+       --------+-----------------------------------------------------------
+       $0000	SEE identifier -> "SEEv3.xx" (xx, version number)
+		This is necessary for the replayer, which will only replay 
+		SEE  data made	with SEE v3.xx. Also the diskop will check 
+		this ID when opening a .SEE file.
+       $0008	Highest used pattern
+       $000A	Highest used pattern+1 offset_address
+       $000C	Highest used SFX
+       $000E	xx
+       $0010	SFX start pattern table (position_table).
+		Contains the  start pattern  for each  SFX. The  length of 
+		this table:  512 bytes. (HI_SFX)*2.
+       $xxxx	($0010 + position_tabel length) Pattern data.
+		Here are the patterns stored that are used in a SFX.
+		Length: (HI_PAT)*15.
+
+
+
+
+
+				Pattern format:
+
+       Offset	Contents:
+       --------+-----------------------------------------------------------
+	$00	Event.
+		MSB: event type.
+		0- Nothing (skip event)
+		1x Halt, x: total v_blanks
+		2x For,  x: total loops
+		3- Next
+		4- Start
+		5- Rerun (bit 7, high)
+		6x Tempo, x:v_blank delay
+		7- End of effect (bit 7, high)
+		(when bit 7 high, last pattern of SFX)
+		LSB: [event value].
+	$01/02	Frequency channel 1.
+		(12 bits, $01=low byte, $02=high byte).
+		b15	1: Tuning Up
+		b14	1: Tuning Down
+		b11-b0	Frequency value or tuning offset.
+	$03/04	Frequency channel 2.
+		See $01/02.
+	$05/06	Frequency channel 3.
+		See $01/02.
+	$07	Rustle.
+		b7	1: Tuning Up
+		b6	1: Tuning Down
+		b5-b0	Rustle value or tuning offset.
+	$08	Channel control.
+		b0	0: Frequency channel 1 ON
+		b1	0: ,,	     ,,      2 ON
+		b2	0: ,,	     ,,      3 ON
+		b3	0: Rustle    channel 1 ON
+		b4	0: ,,	     ,,      2 ON
+		b5	0: ,,	     ,,      3 ON
+
+
+
+
+
+	$09	Volume channel 1.
+		Contains the volume for channel 1,2 or 3.
+		b7	1: Tuning Up
+		b6	1: Tuning Down
+		b4	1: Standard volume development (wave ON)
+		b3-b0	Volume value or tuning offset.
+
+
+	$0A	Volume channel 2.
+		See $09
+	$0B	Volume channel 3.
+		See $09
+	$0C/0D	Wave time.
+		Contains  the standard volume development time. It will be 
+		used when one or more volume channels are using it.
+		b11-b0	time value.
+	$0E	Wave pattern.
+		The pattern  of a  standard volume  development is  stored 
+		here.
+
+

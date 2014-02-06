@@ -1,0 +1,109 @@
+Fichero de informaci¢n de versiones de NestorBASIC 1.xx
+Por N‚stor Soriano (Konami Man), Diciembre 2.004
+
+
+* Cambios de NestorBASIC 1.11 respecto a NestorBASIC 1.10
+
+Cambios internos:
+
+- El m‚todo para detectar la presencia de InterNestor Lite ha sido 
+actualizado al nuevo m‚todo requerido por InterNestor Lite 1.0 (ver la 
+descripci¢n de la funci¢n 86 en el manual de NestorBASIC para m s detalles).
+
+
+* Cambios de NestorBASIC 1.10 respecto a NestorBASIC 1.0
+
+Cambios internos:
+
+- Arreglado un fallo en la funci¢n 54 (descompresi¢n de gr ficos), que 
+causaba que la descompresi¢n siempre se efectuara en el bloque 1 de VRAM.
+- Arreglado un fallo que causaba que la funci¢n 80 no funcionara en DOS 1.
+- Arreglado un fallo que causaba que la secuencia de cargar NestorBASIC, 
+desinstalarlo, CALL SYSTEM, volver al BASIC, CALL SYSTEM fallara (el £ltimo 
+paso colgaba el ordenador o no volv¡a al DOS).
+- Arreglado un fallo que causaba que el ordenador se colgara el entrar en un 
+turbo-bloque en los ordenadores Panasonic WSX.
+- Los chips musicales ahora se buscan s¢lo una vez, cuando NestorBASIC es 
+instalado. Antes de buscaban cada vez que se cargaba un reproductor con la 
+funci¢n 71.
+
+Cambios de funcionalidad:
+
+- A¤adida la funci¢n 86 (ejecuci¢n de una rutina de InterNestor Lite).
+- La funci¢n 72 (obtenci¢n de informaci¢n sobre la m£sica en reproducci¢n) 
+ahora siempre devuelve los chips musicales detectados en los par metros P(9) 
+a P(11), incluso cuando no hay ning£n reproductor cargado.
+
+Cambios en la documentaci¢n y otros:
+
+- A¤adida la secci¢n 9.4 (Uso de InterNestor Lite).
+- A¤adido el programa de ejemplo TCPCON-L.NPR (c¢nsola TCP para InterNestor 
+Lite). La versi¢n para InterNestor Suite ha sido renombrada de TCPCON.NPR a 
+TCPCON-S.NPR.
+
+
+* Cambios de NestorBASIC 1.0 respecto a NestorBASIC 0.07
+
+Cambios internos:
+
+- La rutina para detectar correctamente toda la memoria mapeada en DOS 1, 
+anteriormente distribuida en un fichero aparte (NBPATCH.BIN), ahora est  
+integrada en el fichero principal de NestorBASIC, NBASIC.BIN.
+- Ahora detecta correctamente los FM-PAC japoneses externos.
+- Arreglado un fallo que causaba en DOS 1 que al hacer un reset estando 
+NestorBASIC instalado, no fuera posible cargar NestorBASIC de nuevo (daba un 
+error "Illegal function call") hasta que no se apagara el ordenador.
+- Arreglado un fallo en la rutina que realiza llamadas al segmento 5 (para el 
+reproductor musical). Antes realizaba las llamadas al segmento f¡sico 5, en 
+vez de al segmento l¢gico 5.
+- Arreglado un fallo en la rutina que comprueba si hay un reproductor 
+cargado: ahora comprueba si el segmento l¢gico 5 realmente existe antes de 
+comprobar si contiene alg£n reproductor.
+- Arreglado un fallo en la funci¢n 71 (carga del reproductor Moonblaster). 
+Ahora la detecci¢n autom tica (P(0)=3 a la entrada) funciona correctamente.
+- La rutina de carga de wavekits ha sido modificada para usar el segmento 
+b£fer de NestorBASIC para almacenar datos, en vez del propio segmento de 
+NestorBASIC.
+- La funci¢n 10 ya no cuelga el ordenador cuando el tama¤o del bloque a 
+copiar es cero.
+- Arreglado un fallo en la funci¢n 62, que en BASIC normal causaba "Syntax 
+Error" ocasionalmente cuando la cadena a recuperar ten¡a longitud cero.
+
+Cambios de funcionalidad:
+
+- Los papeles de los segmentos 2 y 4 han sido intercambiados: ahora el 
+segmento 2 corresponde a la memoria del BASIC situada en p gina 2, y el 
+segmento 4 es el usado internamente por NestorBASIC como bufer.
+- Las funciones 58 y 59 (ejecuci¢n de rutinas en c¢digo m quina) ahora 
+devuelven el valor del registro A a la salida en P(12), adem s de devolverlo 
+en el byte alto de P(2) como ya hac¡an antes.
+- La funci¢n 58 ahora no comprueba que la direcci¢n de la rutina a ejecutar 
+est‚ en el rango 0-&H3FFF si P(0)=0 a la entrada. Por tanto, ahora esta 
+funci¢n puede ejecutar no s¢lo rutinas de la BIOS y SUB-BIOS, sino tambi‚n 
+rutinas situadas en las p ginas 2 y 3.
+- La funci¢n 71 (carga de reproductor Moonblaster) ahora permite tambi‚n 
+desinstalar el reproductor, pas ndole P(0)=-1 a la entrada.
+- A¤adidas las funciones 80 a 85.
+- A¤adidas nuevas rutinas y variables accesibles a las rutinas de usuario en 
+c¢digo m quina (GETF01 y siguientes).
+- Desde ahora se garantizan al menos 600 bytes libres al final del segmento 
+de NestorBASIC.
+- Si NestorMan est  instalado, el segmento 4 se reserva usando las funciones 
+de NestorMan. Por tanto, dicho segmento es com£n a NestorBASIC y NestorMan.
+
+Cambios en la documentaci¢n:
+
+- Ampliadas las descripciones de las funciones 58, 59 y 71, para reflejar los 
+cambios en estas funciones.
+- Modificadas la secci¢n 3.1 y la descripci¢n de la funci¢n 49, ahora hacen 
+menci¢n a la funci¢n 80.
+- A¤adidas las descripciones de las funciones 80 a 85, y de las nuevas 
+rutinas y variables accesibles a las rutinas en c¢digo m quina de usuario.
+- A¤adida la secci¢n 9, "Interacci¢n con NestorMan e InterNestor Suite". La 
+secci¢n que describe las funciones tiene ahora el n£mero 10.
+- Suprimidas todas las referencias al reproductor de Moonblaster para 
+Moonsound versi¢n FM, ya que no va a ser implementado.
+- Cambiadas las referencias a konamiman@geocities.com por referencias a 
+konamiman@konamiman.com.
+- Realizadas varias correcciones menores y cambios est‚ticos.
+
