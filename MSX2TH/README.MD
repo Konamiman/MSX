@@ -31,29 +31,29 @@ perfectly readable.
 Files list:
 
 ```
-#!text    
-    TH-1	 PMA	 8192 bytes   Chapter 1  - MSX System Overview
-     Decompressed:	24930 bytes
-    TH-2	 TXT   117450 bytes   Chapter 2  - BASIC
-    TH-3	 TXT   108270 bytes   Chapter 3  - MSX-DOS
-    TH-4A	 TXT   131604 bytes   Chapter 4  - VDP and Display Screen (1-5)
-    TH-4B	 TXT	92922 bytes   Chapter 5  - VDP and Display Screen (6)
-    TH-5A	 TXT	97157 bytes   Chapter 5  - Access to Peripherals Through BIOS (1-6)
-    TH-5B	 TXT	46762 bytes   Chapter 6  - Access to Peripherals Through BIOS (7)
-    TH-AP	 TXT   106609 bytes   Appendix 1 - BIOS listing
-                                  Appendix 2 - MATH-PACK
-                                  Appendix 3 - Bit Block Transfer
-                                  Appendix 4 - Work Area Listing
-                                  Appendix 5 - VRAM Map
-                                  Appendix 6 - I/O Map
-                                  Appendix 8 - Control Codes
-                                  Appendix 10- Escape Sequences
-    
-    KUNBASIC TXT	 7379 bytes   MSX BASIC-KUN Compiler
-    
-    
-    ** NOT AVAILABLE  **	      Appendix 7 - Cartridge Hardware
-                                  Appendix 9 - Character Set
+#!text
+TH-1	 PMA	 8192 bytes   Chapter 1  - MSX System Overview
+ Decompressed:	24930 bytes
+TH-2	 TXT   117450 bytes   Chapter 2  - BASIC
+TH-3	 TXT   108270 bytes   Chapter 3  - MSX-DOS
+TH-4A	 TXT   131604 bytes   Chapter 4  - VDP and Display Screen (1-5)
+TH-4B	 TXT	92922 bytes   Chapter 5  - VDP and Display Screen (6)
+TH-5A	 TXT	97157 bytes   Chapter 5  - Access to Peripherals Through BIOS (1-6)
+TH-5B	 TXT	46762 bytes   Chapter 6  - Access to Peripherals Through BIOS (7)
+TH-AP	 TXT   106609 bytes   Appendix 1 - BIOS listing
+  Appendix 2 - MATH-PACK
+  Appendix 3 - Bit Block Transfer
+  Appendix 4 - Work Area Listing
+  Appendix 5 - VRAM Map
+  Appendix 6 - I/O Map
+  Appendix 8 - Control Codes
+  Appendix 10- Escape Sequences
+
+KUNBASIC TXT	 7379 bytes   MSX BASIC-KUN Compiler
+
+
+** NOT AVAILABLE  **	  Appendix 7 - Cartridge Hardware
+  Appendix 9 - Character Set
     
 ```
 Files are not compressed, then you can use this disk directly with any text 
