@@ -29,7 +29,9 @@ perfectly readable.
 
 
 Files list:
-    
+
+```
+#!text    
     TH-1	 PMA	 8192 bytes   Chapter 1  - MSX System Overview
      Decompressed:	24930 bytes
     TH-2	 TXT   117450 bytes   Chapter 2  - BASIC
@@ -53,7 +55,7 @@ Files list:
     ** NOT AVAILABLE  **	      Appendix 7 - Cartridge Hardware
                                   Appendix 9 - Character Set
     
-
+```
 Files are not compressed, then you can use this disk directly with any text 
 editor/viewer. Problem: there is not enough room in 713K to afford all the 
 files. Because of this, TH-1 (the less important chapter) is compressed.
