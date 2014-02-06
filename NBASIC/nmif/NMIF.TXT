@@ -41,7 +41,7 @@ image is SCREEN 8 or 12.
 
 Please take a look at the supplied example program NMIFSAM.BAS, it follows 
 all the mentioned steps with detail. The source for NestorPreTer, 
-NMIFSAM.ASC, is also supplied.
+NMIFSAM.ASM, is also supplied.
 
 
 3. SUBFUNCTIONS AND PARAMETERS

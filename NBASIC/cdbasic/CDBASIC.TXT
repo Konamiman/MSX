@@ -1,0 +1,118 @@
+*** Manual de uso de CDBASIC ***
+
+CDBASIC es una extensi¢n para NestorBASIC que te permite manejar CDs de audio 
+pero s¢lo para MegaSCSI.
+
+Para instalarlo, carga el fichero CDBASIC.BIN en la posici¢n &H400 de 
+cualquier segmento, tal como hac¡as con el CABROPL4. Puedes usar el mismo 
+segmento de CABROPL4 para aprovechar memoria, ya que ambos programas se 
+instalan en direcciones distintas. Igualmente te env¡o el c¢digo fuente por 
+si quieres ensamblarlo en otra direcci¢n, s¢lo tienes que cambiar la 
+directiva ORG inicial.
+
+CDBASIC consta de nueve funciones. Para llamar a una funci¢n haz:
+
+P(0) = Segmento
+P(1) = &H400
+P(2) = Funci¢n
+P(3) = Pista (s¢lo funciones 4 y 5)
+E=USR(59)
+
+Todas las funciones devuelven un c¢digo de error en P(3). 0 significa comando 
+ejecutado OK. Entre 1 y 255 significa error SCSI. A partir de 256 significa 
+error generado por CDBASIC.
+
+No hay forma de saber si un error SCSI significa que no hay CD, o que el CD 
+est  da¤ado, o que la unidad a£n no ha podido acceder al CD (ya sabes que 
+desde que metes un CD hasta que puedes acceder a ‚l hay un tiempo en el que 
+la unidad "se lo piensa"; durante ese tiempo todas las funciones devuelven 
+error). Consejo: al ejecutar una funci¢n, si obtienes un error < 256 
+reintenta durante por ejemplo 30 segundos antes de saltar a una rutina de 
+error. Mira el programa de ejemplo que te env¡o.
+
+La funci¢n 1 la has de ejcutar al menos una vez para que CDBASIC funcione. 
+Las dem s las puedes ejecutar o no seg£n te salga de la punta.
+
+Para reproducir pistas uso un comando SCSI m s complicado pero supuestamente 
+m s "estandar" que el que usaba en NestorCDPlayer, por tanto CDBASIC deber¡a 
+funcionar en todas las unidades de CD m¡nimamente normales.
+
+ATENCION: Las indicaciones de tiempo/posici¢n s¢lo ser n v lidas para pistas 
+de duracion inferior a 14.5 minutos. Si esto te jode mucho, d¡melo y ya 
+buscar‚ una rutina de divisi¢n de 32 bits, que es lo que me falta para poder 
+calcular en segundos duraciones mayores.
+
+Y sin m s, hete aqu¡ el listado de las funciones:
+
+
+* Funci¢n 1: B£squeda de un Mega-SCSI y de una unidad de CD
+  Entrada:  -
+  Devuelve: P(3) = 0 (siempre OK)
+	    P(4) = Slot del MegaSCSI
+		   (si est  expandido: slot + 4*subslot + 128)
+	    P(5) = ID del CD
+  Si no se encuentra MegaSCSI o CD: P(4) = 0
+  Esta funci¢n debe ser ejecutada al menos una vez.
+
+
+* Funci¢n 2: Obtiene informaci¢n sobre el CD
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+	   P(4) = N£mero total de pistas
+	   P(5) = N£mero de pistas de audio
+
+
+* Funci¢n 3: Obtiene el estado de la reproducci¢n
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+	   P(4) = Estado:
+		  0: Audio no soportado
+		  1: Reproduciendo
+		  2: Pausa
+		  3: Reproducci¢n terminada OK
+		  4: Reproducci¢n terminada debido a un error
+		  5: No se ha reproducido ninguna pista a£n
+
+
+* Funci¢n 4: Devuelve informaci¢n sobre una pista de audio
+  Entrada: P(3) = Pista, empezando por la 1
+  Salida:  P(3) = Error (0 si OK)
+		  256 si la pista no existe
+		  257 si la pista no es de audio
+	   P(4)+P(5) = Longitud de la pista
+	   P(4) en segundos, P(5) en 1/75 segundos
+
+
+* Funci¢n 5: Reproduce una pista de audio
+  Entrada: P(3) = Pista a reproducir, empezando por la 1
+  Salida:  P(3) = Error (0 si OK)
+		  256 si la pista no existe
+		  257 si la pista no es de audio
+	   P(4)+P(5) = Longitud de la pista
+	   P(4) en segundos, P(5) en 1/75 segundos
+
+
+* Funci¢n 6: Para la reproducci¢n
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+
+
+* Funci¢n 7: Pausa/Contin£a la reproduccion
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+		  258 si no hay ninguna reproducci¢n en marcha
+
+
+* Funci¢n 8: Obtiene la posici¢n actual de la reproduccion
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+		  258 si no hay ninguna reproducci¢n en marcha
+	   P(4)+P(5) = Posici¢n de la reproducci¢n
+	   P(4) en segundos, P(5) en 1/75 segundos
+
+
+* Funci¢n 9: Expulsa el CD
+  Entrada: -
+  Salida:  P(3) = Error (0 si OK)
+
+

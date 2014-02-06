@@ -1,0 +1,22 @@
+if exist nbasic.tmp del nbasic.tmp
+if not exist nbasic.sin goto ~jump
+if %@filesize[nbasic.bin,k]% LT 16 copy nbasic.bin nbasic.sin
+concat /b nbasic.sin+xbasic.bin+nplayer.bin+nwave.bin+nwaver.bin+patches.bin nbasic.bin
+echo
+echo Size of NBASIC.BIN:  %@filesize[nbasic.bin,b]% bytes
+echo Size of NBASIC.ASM:  %@filesize[nbasic.asm,b]% bytes
+echo Size of NPLAYER.ASM: %@filesize[nplayer.asm,b]% bytes
+echo Size of NPLAYER.BIN: %@filesize[nplayer.bin,b]% bytes
+echo Size of NWAVE.ASM: %@filesize[nwave.asm,b]% bytes
+echo Size of NWAVE.BIN: %@filesize[nwave.bin,b]% bytes
+goto ~fin
+
+~jump
+echo
+echo NBASIC.SIN not found. Jumping to CONCA.BTM...
+echo
+conca
+
+~fin
+
+

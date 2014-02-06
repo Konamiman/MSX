@@ -1,1 +1,1 @@
-﻿Easymbler is a MSX oriented Z80 assembler course written in Spanish.
+﻿Easymbler is a MSX oriented Z80 assembler course written in Spanish. It was originally published in the EuroLink MSX diskmagazine.
