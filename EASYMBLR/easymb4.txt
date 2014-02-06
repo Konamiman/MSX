@@ -1,0 +1,946 @@
+­­ SABOTAJE !!
+
+­Es incre¡ble! Ignoro el motivo que ha llevado a las altas esferas a llevar a 
+cabo semejante acci¢n (debe ser que soy el m s guapo), pero el caso es que la 
+tercera entrega de Easymbler fue vilmente saboteada, quedando interrumpida en 
+lo m s interesante. La causa oficial es "falta de espacio en disco", pero 
+todos intuimos que la envidia sufrida por cierta gente que no pas¢ del gosub 
+ha tenido algo que ver...
+
+As¡ pues, antes de Easymbler 4, he aqu¡ la continuaci¢n de Easymbler 3. 
+Est bamos con una rutina para desmayuscular y desminuscular una cadena, y ya 
+hab¡amos compuesto la cabecera.
+
+
+AL ACNE, QUE ES LO QUE SE VE
+
+Una vez tenemos la cabecera, podemos empezar con la rutina. Las dos primeras 
+l¡neas est n cantadas:
+
+MAYMIN: PUSH HL
+	PUSH DE
+
+...y nada m s empezar ya hemos de pararnos y darle curro a las neuronas. 
+Vamos a ver, nos han pasado una cadena que hemos de recorrer, pero nos pueden 
+haber pasado su longitud de dos formas distintas. As¡ pues, ¨programamos dos 
+bucles de b£squeda? Us‚ase, ¨programamos un bucle que recorra la cadena hasta 
+que ya no queden carc cteres (como la rutina de imprimir tropecientas "A") y 
+otro que la recorra buscando un car cter de terminaci¢n (como PRINT), para 
+usar uno u otro seg£n la entrada?
+
+No es una soluci¢n muy limpia. Lo mejor es programar un solo bucle para un 
+tipo de entrada, y en caso de recibir la entrada del otro tipo, convertirla. 
+Es decir, tenemos dos opciones:
+
+- Programar un bucle que recorra la cadena de entrada hasta encontrar un 
+car cter de terminaci¢n. Si a la entrada Cy=1, a¤adir primero un car cter de 
+terminaci¢n cualquiera al final de la cadena.
+- Programar un bucle que recorra la cadena de entrada conociendo de antemano 
+el n£mero de iteraciones, es decir, su longitud. Si a la entrada Cy=0, hallar 
+primero la longitud de la cadena.
+
+Parece un dif¡cil dilema, pero si piensas un poco m s (se piensa mejor 
+dejando el hacha en el suelo, te lo garantizo) ver s enseguida que la mejor 
+opci¢n es la segunda, porque:
+
+1. Nadie nos ha dado permiso para modificar la cadena original a¤adi‚ndole 
+nada: s¢lo tenemos derecho a escribir en la zona de memoria que comienza en 
+DE.
+2. De todas formas hemos de devolver la longitud de la cadena en B, as¡ que 
+si ya la medimos al principio afilamos dos hachas de un tiro.
+
+Pues nada, visto esto ya podemos continuar con la rutina:
+
+	LD (TERM),A
+	CALL NC,MEDIR
+	JR NC,FIN2	;Si MEDIR devuelve Cy=0, terminamos con error 2
+	LD A,B
+	OR A
+	JR Z,FIN3	;Error 3 si la cadena est  vac¡a	
+	LD (LONGIT),A
+
+"­Eh, un momento, para el carro!" Vale, admito que esto merece un par de 
+explicaciones. TERM y LONGIT son dos variables en las que guardaremos, 
+respectivamente, el car cter de terminaci¢n y la longitud de la cadena; el 
+uso de variables para datos "fijos" de la rutina hace la misma m s 
+comprensible y evita las complicaciones derivadas de ir arrastrando datos en 
+le pila o en otros registros. 
+
+¨Que d¢nde est n estas variables? Pues dentro de la rutina, concretamente al 
+final de la misma (para que no interfieran con el c¢digo ejecutable y para 
+seguir un orden). Es decir, que despu‚s de todo el c¢digo antes de dar por 
+terminada la rutina a¤adiremos:
+
+TERM:	db 0
+LONGIT: db 0
+
+M s cosas. MEDIR es otra subrutina, ejecutada s¢lo si Cy=0, que se encargar  
+de medir la longitud de la cadena. Como se trata de una subrutina secundaria 
+(interna a otra rutina), su cabecera puede ser un poco m s chapucera. He aqu¡ 
+su c¢digo:
+
+;MEDIR: Devuelve en B la longitud de la cadena HL
+;	Termina con Cy=0 si hay error 2,
+;	en caso contrario con Cy=1
+;	Modifica A y C
+
+MEDIR:	PUSH HL  
+	LD C,A	 
+	LD B,0
+
+	LD A,#FF	;Informamos que Cy=0 a la entrada
+	LD (TERM_F),A
+
+BUCMED: LD A,(HL)	;Cogemos car cter
+	CP C		;¨Es el de terminaci¢n?
+	JR Z,FINMED	;S¡: terminamos
+
+	INC B		;No: incrementamos contador...
+	JR Z,FINM2	;(¨Error 2?)
+	INC HL		;...y pasamos al siguiente car cter
+	JR BUCMED
+
+FINMED: POP HL
+	SCF
+	RET
+
+FINM2:	POP HL
+	OR A
+	RET
+
+Aunque no lo parezca, s¡ hemos tenido en cuenta la disponibilidad de los 
+registros:
+
+- A: Ya la hemos guardado en TERM antes de ejecutar la rutina, as¡ que nos lo 
+podemos cargar.
+- B: Si hemos llamado a esta rutina es porque Cy=0 a la entrada, es decir, B 
+no conten¡a ning£n dato £til.
+- C: Est  en la lista de registros modificados.
+- HL: Esta s¡ hemos de guardarla, pues apunta a la cadena.
+
+Tanto si MEDIR se ejecuta como si no, tras el CALL NC,MEDIR tendremos en B la 
+longitud de la cadena, que almacenaremos en LONGIT. TERM_F es una variable 
+(la F es de "flag", bandera) que ponemos a #FF si hemos pasado un car cter de 
+terminaci¢n, en caso contrario la dejamos a su valor inicial, es decir, 0. 
+Nos har  falta para saber, al final de la rutina, si hemos de poner o no 
+car cter de terminaci¢n en la cadena creada.
+
+La detecci¢n del error 2 la realizamos examinando B una vez incrementado. Si 
+se pasa de 255 volver  a 0, y en ese caso activar  Z tras el INC. Volveremos 
+entonces con Cy=0 (no confundir con el acarreo de entrada), situaci¢n que el 
+programa principal detectar  y terminar  con error 2. He aqu¡ otro m‚todo 
+para tratar errores sencillos (del tipo "hay o no hay error"): usar el 
+acarreo. Observa por qu‚ no podemos saltar sirectamente a FIN2 desde dentro 
+de MEDIR...
+
+Cuesti¢n importante: ¨no ser¡a m s l¢gico volver con Cy=1 si hay error, y 
+Cy=0 si no lo hay? S¡, pero esto implicar¡a esta modificaci¢n en el programa:
+
+	CALL NC,MEDIR
+	JR C,FIN2
+
+Entonces, si a la entrada tenemos Cy=1, MEDIR no se ejecutar , y al llegar al 
+JR C,FIN2 continuaremos con Cy=1, con lo cual el error 2 es inevitable. En 
+cambio, tal como lo hemos hecho nosotros tenemos:
+
+	CALL NC,MEDIR
+	JR NC,FIN2
+
+Si Cy=1 a la entrada, tanto el CALL como el JR son ignorados; si Cy=0 a la 
+entrada, se realiza la llamada a MEDIR, de cuyo resultado depende que la 
+ejecuci¢n salte o no a FIN2. No pongas esa cara, que no es tan complicado...
+
+¨Y d¢nde se ponen las subrutinas de una rutina? Despu‚s del programa 
+principal pero antes de las variables.
+
+Pues parece que ya, sin m s proleg¢menos, podemos ponernos a masacrar la 
+cadena (en sentido figurado, as¡ que suelta el hacha). Pero antes hemos de 
+hacernos una pregunta aparentemente bastante est£pida pero imprescindible si 
+queremos continuar: ¨qu‚ es una may£scula y qu‚ es una min£scula?
+
+La respuesta correcta en este contexto (porque no creo que tu profe de lengua 
+estuviera muy convencido) es la siguiente: una may£scula es un car cter cuyo 
+c¢digo ASCII est  comprendido entre 65 y 90. Una min£scula, idem de idem 
+entre 97 y 122. Si representamos la tabla ASCII linealmente, tenemos:
+
+xxx...xxx   ccc...ccc	MMM...MMM   ccc...ccc	mmm...mmm   ccc...ccc
+1   -  31   32	-  64	65  - 90    91	-  96	97  - 122   123 - 255
+C¢digos     Car ct.	May£sc.     Car ct.	Min£sc.     Car ct.
+control     no alfab.		    no alfab.		    no alfab.
+
+Ya s‚ que no estamos en la EGB para andar con dibujitos est£pidos, pero 
+tampoco estamos en Pesadilla en Ca'n Sbert y bien que le das al hacha (o lo 
+intentas). Este esquema nos permitir  dise¤ar la estrategia a la hora de 
+convertir los car cteres, estrategia que ser  algo as¡ como esto:
+
+- Coger car cter si no ha acabado el bucle.
+- Si es menor de 32, terminar con error 1.
+- Si es menor de 65, no es alfab‚tico: no modificarlo, escribirlo y goto 
+  coger.
+- Si es mayor de 122, idem.
+
+Si llegamos a este punto, es que el car cter est  entre 65 y 122:
+
+- Si es menor de 91, es una may£scula. Convertir a min£scula, escribirlo y 
+  goto coger.
+- Si es mayor de 96, es una min£scula. Convertir a may£scula, escribirlo y 
+  goto coger.
+- Si hemos llegado aqu¡ es que est  entre 91 y 96: no es alfab‚tico, 
+  escribirlo sin modificarlo y goto coger.
+
+¨Qu‚ te ha parecido? Puede ser un planteamiento de una l¢gica aplastante, 
+pero no es inmediato. Vale, igual sigues pensando que tanto trabajo para 
+convertir una mayusculaci¢n (no s‚ si este palabro existe pero me da igual) 
+es un poco absurdo, pero piensa que en el futuro, si aspiras a realizar 
+programas m¡nimamente complejos tendr s que pelearte con estructuras de datos 
+algo m s complicadas (que muchas veces dise¤ar s t£ mismo), y es importante 
+que adquieras una buena metodolog¡a (es decir, ordenada).
+
+Volvemos a lo mismo: una vez que tenemos el QUE, pasar al COMO esta chupao. 
+Atenci¢n:
+
+COGER:	LD A,(HL)	;Cogemos car cter
+	CP 32
+	JR C,FIN1	;Error 1 si es menor de 32 
+
+	CP "A"          ;Lo colocamos en DE sin modificar si menor de 32...
+	JR C,PONER
+	CP "z"+1        ;...o mayor o igual que 123
+	JR NC,PONER
+
+CHKMAY: CP "Z"+1        ;¨Es may£scula?
+	JR NC,CHKMIN	;No: comprobamos si es min£scula
+	ADD "a"-"A"     ;S¡: convertimos a may£scula
+	JR PONER
+
+CHKMIN: CP "a"          ;¨Es min£scula?
+	JR C,PONER	;No: lo colocamos en DE sin modificar
+	SUB "a"-"A"     ;S¡: convertimos a min£scula
+
+PONER:	LD (DE),A	;Colocamos el car cter, convertido o no, en DE...
+	INC HL		;...y seguimos con el bucle
+	INC DE
+	DJNZ COGER
+
+De haber empezado a codificar esto sin el esquema previo, probablemente nos 
+habr¡amos hecho el hacha un l¡o. Una vez hemos acabado el bucle queda poca 
+cosa por hacer:
+
+	LD A,(TERM_F)
+	OR A
+	JR Z,NOTERM
+	
+	LD A,(TERM)	;Ponemos el car cter de terminaci¢n
+	LD (DE),A	;si la cadena original ten¡a (TERM_F=#FF)
+
+NOTERM: LD A,(LONG)
+	LD B,A
+ 
+	XOR A		;Terminamos sin error
+	JR FIN
+
+FIN1:	LD A,1		;Finalizaciones con error
+	JR FIN
+FIN2:	LD A,2
+	JR FIN
+FIN3:	LD A,3
+FIN:	POP DE
+	POP HL
+	RET
+
+Observa que, al final del bucle, DE apunta justo despu‚s del £ltimo car cter 
+de la cadena creada, por lo que podemos poner el car cter de terminaci¢n con 
+un simple LD (DE),A. Finalmente cargamos en B la longitud, y terminamos sin 
+error. A continuaci¢n colocamos las distintas finalizaciones con error, y 
+despu‚s vendr  la subrutina MEDIR y las variables. A¤adimos un poco de 
+perejil, y ya tenemos nuestra rutina lista para servir.
+
+Resumiendo...
+
+;MAYMIN (#A000)
+;  Convierte las may£sculas de una cadena en min£sculas y viceversa.
+;ENTRADA:  HL = Cadena de origen
+;	   DE = Buffer para la cadena de destino
+;	   Cy = 0 -> A = Car cter de terminaci¢n, B ignorado
+;	   Cy = 1 -> B = Longitud de la cadena, A ignorado
+;SALIDA:   Cadena convertida en DE, acabada con el mismo caracter
+;	     que la original si Cy=0 a la entrada
+;	   Cadena original inalterada en HL
+;	   B = Longitud de la cadena sin contar la terminaci¢n
+;	   A = Error:
+;	       0 -> No hay error
+;	       1 -> La cadena contiene c¢digos de control (<32)
+;	       2 -> Se han procesado 255 car cteres y no se ha encontrado
+;		    el car cter de terminaci¢n (si Cy=0 a la entrada)
+;	       3 -> Cy=1 y B=0 a la entrada, o
+;		    Cy=0 y la cadena s¢lo contiene
+;			 el car cter de terminaci¢n
+;MODIFICA: C
+
+MAYMIN: PUSH HL
+	PUSH DE
+
+	CALL NC,MEDIR
+	JR NC,FIN2	;Si MEDIR devuelve Cy=0, terminamos con error 2
+	LD A,B
+	OR A
+	JR Z,FIN3	;Error 3 si la cadena est  vac¡a	
+	LD (LONGIT),A
+
+COGER:	LD A,(HL)	;Cogemos car cter
+	CP 32
+	JR C,FIN1	;Error 1 si es menor de 32 
+
+	CP "A"          ;Lo colocamos en DE sin modificar si menor de 32...
+	JR C,PONER
+	CP "z"+1        ;...o mayor o igual que 123
+	JR NC,PONER
+
+CHKMAY: CP "Z"+1        ;¨Es may£scula?
+	JR NC,CHKMIN	;No: comprobamos si es min£scula
+	AND %11011111	;S¡: convertimos a may£scula
+	JR PONER
+
+CHKMIN: CP "a"          ;¨Es min£scula?
+	JR C,PONER	;No: lo colocamos en DE sin modificar
+	OR %00100000	;S¡: convertimos a min£scula
+
+PONER:	LD (DE),A	;Colocamos el car cter, convertido o no, en DE...
+	INC HL		;...y seguimos con el bucle
+	INC DE
+	DJNZ COGER
+
+	LD A,(TERM_F)
+	OR A
+	JR Z,NOTERM
+	
+	LD A,(TERM)	;Ponemos el car cter de terminaci¢n
+	LD (DE),A	;si la cadena original ten¡a (TERM_F=#FF)
+
+NOTERM: LD A,(LONG)
+	LD B,A
+ 
+	XOR A		;Terminamos sin error
+	JR FIN
+
+FIN1:	LD A,1		;Finalizaciones con error
+	JR FIN
+FIN2:	LD A,2
+	JR FIN
+FIN3:	LD A,3
+FIN:	POP DE
+	POP HL
+	RET
+
+;MEDIR: Devuelve en B la longitud de la cadena HL
+;	Termina con Cy=0 si hay error 2,
+;	en caso contrario con Cy=1
+;	Modifica A y C
+
+MEDIR:	PUSH HL  
+	LD (TERM),A 
+	LD C,A	 
+	LD B,0
+
+	LD A,#FF	;Informamos que Cy=0 a la entrada
+	LD (TERM_F),A
+
+BUCMED: LD A,(HL)	;Cogemos car cter
+	CP C		;¨Es el de terminaci¢n?
+	JR Z,FINMED	;S¡: terminamos
+
+	INC B		;No: incrementamos contador...
+	JR Z,FINM2	;(¨Error 2?)
+	INC HL		;...y pasamos al siguiente car cter
+	JR BUCMED
+
+FINMED: POP HL
+	SCF
+	RET
+
+FINM2:	POP HL
+	OR A
+	RET
+
+TERM:	db 0
+TERM_F: db 0
+LONGIT: db 0
+
+Como ver s he hecho un par de retoques: he movido la instrucci¢n LD (TERM),A 
+al interior de la rutina MEDIR, ya que si no pasamos car cter de terminaci¢n 
+no hay por qu‚ usar esta variable; y en cuanto a la conversi¢n 
+may£scula-min£scula y viceversa con una operaci¢n l¢gica, lo ver s claro si 
+observas los c¢digos ASCII de las may£sculas y de las min£sculas en formato 
+binario.
+
+¨Qu‚? ¨Te ha parecido larga la rutina? Je, je, pobrecito... esto no es nada 
+comparado con las rutinas de verdad (es decir, las que sirven para algo) que 
+ir s programando a lo largo de tu vida. Pero t£ tranquilo, por muy largas que 
+sean no tienes nada que temer si procedes como el Z80 manda, es decir:
+
+- Primero, hay que saber qu‚ es lo que har  exactamente la rutina, y a partir 
+de ah¡ dise¤ar la cabecera.
+- Debes tener las ideas claras con respecto a las estructuras de datos que 
+vas a manejar, sin escatimar esquemas ayudativos (otra palabra cuya 
+existencia desconozco, pero en RET...).
+- A la hora de programar, plant‚ate antes de cada bloque de instrucciones qu‚ 
+va a hacer ese bloque, sigue un orden y no ahorres comentarios ni variables.
+
+Si as¡ lo haces, con un mucho de pr ctica (y con informaci¢n t‚cnica) ser s 
+capaz de programar cualquier cosa que te propongas. No, un detector de 
+japonesas no; lo siento, ya lo he intentado yo, pero falta el hard adecuado. 
+Ya hablar‚ con Henrik o con Padial...
+
+EN EL PROXIMO CAPITULO...
+
+Enhorabuena: si has conseguido soportarme hasta este punto, a estas alturas 
+ya eres capaz de programar por tu cuenta, o eso creo. Empieza con cosas 
+sencillitas y ve aumentando la complejidad de tus desarrollos hasta que hayas 
+programado el SD Snatcher 2, entonces av¡same, te har‚ unas cuantas m£sicas y 
+nos repartimos los beneficios de la venta (a ver si cre¡as que te estaba 
+ense¤ando ensamblador por gusto...)
+
+Bueno, ahora en serio (o algo menos en broma): aparte de coger pr ctica, s¢lo 
+te falta profundizar en la arquitectura del MSX, y eso es lo que haremos a 
+partir del pr¢ximo Easymbler. Como aperitivo ah¡ van un par de rutinas de la 
+BIOS que pueden serte £tiles para ir haciendo cosillas:
+
+BREAKX (#00B7)
+  Comprueba la pulsaci¢n de CTRL+STOP
+ENTRADA:  -
+SALIDA:   Cy=1 si CTRL+STOP est n pulsadas
+MODIFICA: AF
+
+Gracias a esta rutina podr s realizar programas que hagan algo 
+indefinidamente y finalicen al pulsar CTRL+STOP:
+
+START: ...
+       ...
+       CALL BREAKX
+       JR NC,START
+       RET
+
+Ah¡ van otras, relacionadas con la lectura del teclado y la salida por 
+pantalla:
+
+GTSTCK (#00D5)
+  Lee el estado del joystick o los cursores
+ENTRADA:  A=Joystick a leer (1 o 2, 0 para los cursores)
+SALIDA:   A=Direcci¢n del joystick leida (0 a 8, como STICK del BASIC)
+MODIFICA: Todos los registros
+
+GTTRIG (#00D8)
+  Lee el estado de los botones del joystick o la barra espaciadora
+ENTRADA:  A=Bot¢n a leer (1 o 3: joystick 1, 2 o 4: joystick 2, 0: espacio)
+SALIDA:   A=0	-> Bot¢n no pulsado
+	  A=#FF -> Bot¢n pulsado
+MODIFICA: AF
+
+CHGET (#009F)
+  Espera que el usuario pulse una tecla
+ENTRADA:  -
+SALIDA:   A=Tecla pulsada
+MODIFICA: AF
+
+CLS (#00C3)
+  Borra la pantalla
+ENTRADA:  Z=1
+SALIDA:   -
+MODIFICA: AF, BC, DE
+
+POSIT (#00C6)
+  Posiciona el cursor
+ENTRADA:  H=Coordenada X
+	  L=Coordenada Y
+SALIDA:   -
+MODIFICA: AF
+
+BEEP (#00C0)
+  Adivina...
+ENTRADA:  -
+SALIDA:   -
+MODIFICA: Todos los registros
+
+Con estas rutinas tienes m s que sificiente para realizar programas con un 
+interfaz de usuario b sico. No tengas miedo y ponte a investigar, lo peor que 
+te puede pasar (y de hecho te pasar  bastante) es colgar al ordenador, pero 
+de algo tiene que comer la tecla RESET, ¨no?
+
+Un par de cosillas m s acerca de la grabaci¢n de programas en ensamblador 
+para ser usados desde BASIC. Una vez ensamblado (en #A000, hab¡amos dicho) 
+has de grabar tu programa en formato binario, con #A000 como direcci¢n 
+inicial y de ejecuci¢n; como direcci¢n final has de poner la que te dice el 
+ensamblador cuando terminas de ensamblar. Ya puedes usar tus rutinas desde 
+BASIC haciendo lo siguiente:
+
+CLEAR 200,&HA000
+BLOAD"NOMBRE.BIN",R
+
+Para volver a ejecutar una rutina sin tener que volver a cargarla haz:
+
+DEFUSR=&HA000:A=USR(0)
+
+La instrucci¢n CLEAR reserva la memoria desde &HA000 hasta el final de la 
+zona de usuario para tus programas en ensamblador, de forma que puedes 
+disponer de esta parte de la memoria con la seguridad de que el int‚rprete 
+BASIC no la tocar . ¨Y d¢nde termina la zona de usuario? Depende del 
+ordenador y la cantidad de unidades de disco y programas residentes 
+instalados; de todas formas, si no tocas m s all  de #DE00 nunca tendr s 
+problemas.
+
+SE ME ACABO LA CUERDA
+
+Ya no tienes excusa. Tienes los conocimientos necesarios para empezar a 
+programar, as¡ que no te escaquees: deja de leer estas chorradas y, ­­a 
+machacar el teclado!! ­­­PERO YA!!!
+
+Ahora s¡ que termino, pero no te hagas ilusiones porque volver‚eeee... YIEJ, 
+YIEJ, YIEJ...
+
+TO BE CONTINUED... UNLUCKILY FOR YOU!
+
+
+___--->>>*** ­­ JEFE, AQUI COMIENZA EASYMBLER 4 !! ***<<<---___
+
+
+
+BENDICION
+
+Ahora s¡: esta es la aut‚ntica, genuina y garantizada cuarta entrega de 
+Easymbler. Antes que nada, y principalmente para que rabieis un poco, os 
+comunico que gracias a mi gran habilidad, carisma y hacimiento de cargo he 
+conseguido nada ADD y nada SUB que ­­un Turbo-R para m¡ solito!! ­­­GRACIAS 
+KYOKO!!!
+
+Bueno, a lo que ¡bamos. Como ya hab¡a dicho tiempo ha, todo lo relativo al 
+Z80 que puede interesarnos ya est  visto, y es de suponer que ya te haces 
+cargo con la BIOS. A partir de ahora s¢lo (­¨s¢lo?!) nos resta adentrarnos en 
+los m s ¡ntimos detalles estructurales de esa gran m quina obsoleta llamada 
+MSX. Y empezaremos por uno de mis temas favoritos (o al menos eso dice la 
+gente de MESXES): los slots (­hala!). Ya os hab¡a contado algo por encima, 
+pero para no perder la rigurosidad y buen hacer de este gran curso (pffff... 
+que me da...) y dado que no recuerdo qu‚ es lo que os hab¡a dicho 
+exactamente, pues empezar‚ otra vez desde el principio, ¨pasa algo? Ah, 
+cre¡a.
+
+CAPERUCITA OBSOLETA
+
+Erase que se eran unos se¤ores de esos calvos, con gafas y bata blanca, que 
+saben muuucho de ordenadores y dem s parafernalia postmoderna, que hace ya 
+unos cuantos lustros dijeron: "­Qu‚ aburrimiento! ¨Y si dise¤amos una 
+Maquinita Super eXtra¤a (abreviadamente MSX)?" "­Fale! Y la basamos en el 
+Z80, que mi primo trabaja en Zilog y me puede conseguir el kilo de Z80 m s 
+barato." Y as¡ lo hicieron.
+
+Pero para que la maquinita tardara al menos cinco a¤os y no cinco minutos en 
+quedarse obsoleta, no pod¡an limitarse a conectar una ROM para el BASIC y un 
+poco de RAM al Z80 y ­hala, a vender! NO. El ordendor deb¡a ser ampliable, 
+tanto internamente (expansiones a elegir por cada fabricante), como 
+externamente (expansiones externas a conectar por el usuario). Adem s en 
+aquella ‚poca el formato m s adecuado para programas "serios" era 
+directamente el chip con ROM, que deb¡a poder ser conectada al MSX 
+externamente.
+
+¨Y c¢mo compaginar todo esto con un pobre Z80 que s¢lo direcciona 64K de RAM? 
+Pues d ndole al coco y dise¤ando un sistema de bancos de memoria, vulgarmente 
+conocidos como SLOTS. De esta forma, en cada slot puede haber (de hecho suele 
+haber) 64K de algo (RAM, ROM, controlador de perif‚rico) que el Z80 puede 
+conectar a su espacio de direccionamiento y, a partir de ah¡, leer y/o 
+escribir tan tranquilamente como quien le estampa una tarta a Bill Gates en 
+el careto.
+
+KORE WA DOO TABERU KA
+
+Us‚ase: ¨esto c¢mo se come? (si lo he escrito mal -lo m s probable- acepto 
+patadas dentales). Pues muy facil. Pero antes recordemos una vez m s (por si 
+te hab¡as dormido) que el MSX divide el espacio de direccionamiento del Z80 
+en cuatro p ginas:
+
+P gina 0: #0000 - #3FFF
+P gina 1: #4000 - #7FFF
+P gina 2: #8000 - #BFFF
+P gina 3: #C000 - #FFFF
+
+Todo MSX dispone de cuatro slots, uno de los cuales ha de ser externo (suelen 
+ser dos) para permitir al usuario conectar el Salamander o el F1 Spirit y 
+picarse con el vecino cosa mala; el resto son internos y contienen diversas 
+RAMs y ROMs necesarias para que el MSX sirva para algo m s que decorar el 
+armario. Los slots se numeran de 0 a 3.
+
+Cada slot se divide tambi‚n en cuatro p ginas, igual que el Z80. ¨Casualidad? 
+No hijo, no: en todo momento y circunstancia cada p gina del Z80 est  
+conectada con la p gina af¡n (­del mismo n£mero co¤o!) de un slot. Pero, ¨de 
+qu‚ slot? Esto se controla mediante el puerto #A8, de la manera siguiente:
+
+- Los bits 0 y 1 del valor que contiene el registro #A8 indican el slot 
+conectado a la p gina 0 del Z80.
+- Los bits 2 y 3, lo ¡dem de la p gina 1.
+- Los bits 4 y 5, lo mesmo en la p gina 2.
+- Los bits 6 y 7, que s¡ que te oigo de la p gina 3.
+
+Por ejemplo, si haces OUT #A8,%10011100 establecer s la siguiente 
+configuraci¢n:
+
+- P gina 0 del slot 0 en la p gina 0 del Z80 (xx xx xx 00)
+- P gina 1 del slot 3 en la p gina 1 del Z80 (xx xx 11 xx)
+- P gina 2 del slot 1 en la p gina 2 del Z80 (xx 01 xx xx)
+- P gina 3 del slot 2 en la p gina 3 del Z80 (10 xx xx xx)
+
+­Y yast ! ¨Ves qu‚ facil? "Pues yo lo he probado y se me cuelga el MSX" 
+­­Claro, burro, no puedes cambiar los slots as¡ a lo loco sin saber lo que 
+haces!! Anda, trae el hacha...
+
+El puerto #A8 es de lectura y escritura. Us‚ase, para obtener la 
+configuraci¢n de slots vigente no tienes m s que leer el puerto #A8. O al 
+menos ser¡a as¡ de no ser por los subslots. A ello vamos:
+
+
+­HA GANADO UN SUBSLOT!
+
+"Pues mi vecino tiene un expansor de 8 slots y el capullo este va y dice que 
+un MSX s¢lo puede tener 4." Punto uno: tu padre. Punto dos: no he terminado. 
+Me reitero en que un MSX s¢lo tiene cuatro slots, pero es que mediante una 
+cabriola hardwar¡stica de no te menees, cada uno de estos cuatro se puede 
+expandir, us‚ase convertir en otros cuatro (­los tipos de la bata blanca eran 
+realmente listos!). Entonces no hablamos ya de "el slot X" sino de "el slot 
+X, subslot Y", con Y tambi‚n de 0 a 3. O, m s abreviadamente, de los slots 
+X-0, X-1, X-2 y X-3. Ojo: los subslots NO se a¤aden al slot primario, sino 
+que lo sustituyen.
+
+Y t£, mente tremendamente inquieta, te preguntar s, ¨qui‚n ganar  el mundial 
+de furgol?, en cuyo caso te puedes ir directamente a plantar bonsais en medio 
+del s hara. Pero si por casualidad te has equivocado al formular la pregunta 
+y lo que te ha salido es: ¨c¢mo puedo averiguar si un slot est  expandido?, 
+la respuesta es: no lo s‚, y no creo que mucha gente lo sepa, pero si 
+preguntas en la zona de trabajo del MSX igual te dicen algo. S¡, parece que 
+la BIOS ya se encarga de tales averiguaciones al inicializar el sistema, y si 
+quieres averiguar si un slot est  expandido no tienes m s que consultar el 
+bit 7 de las direcciones #FCC1 a #FCC4 para los slots 0 a 3, respectivamente. 
+Si el susodicho bit est  a 1, enhorabuena, el slot ha tenido cuatro preciosos 
+subslots.
+
+¨Que c¢mo se conecta un slot expandido? Bien, sientate que esto tiene su miga 
+(aunque no tanta), y m s de un programa comercial ha dado problemas de 
+incompatibilidad por culpa de un err¢neo manejo de los subslots.
+
+Hemos visto que el puerto #A8 controla la conexi¢n de los slots primarios. En 
+el caso de que el slot est‚ expandido esto no cambia: el puerto #A8 indica 
+entonces el n£mero de slot primario. ¨Y c¢mo indicamos el subslot? Pues 
+mediante la direcci¢n #FFFF del slot correspondiente. Esta direcci¢n act£a 
+como un puerto, y contiene la siguiente informaci¢n, similar en cuanto al 
+formato a la del puerto #A8:
+
+- Los bits 0 y 1 contienen el subslot que ser  conectado en caso de que el 
+slot primario correspondiente sea conectado en la p gina 0 del Z80 mediante 
+el puerto #A8.
+- Los bits 2 y 3, ¡dem p gina 1.
+- Los bits 4 y 5, ¡dem p gina 2.
+- Los bits 6 y 7, ¡dem p gina 3.
+
+
+¨¨¨ QUEEEEEE ???
+
+Esto... s¡, vale, acabo de releer lo que llevo escrito y no me ha quedado muy 
+claro; tienes raz¢n al agarrar de nuevo el hacha, aunque naturalmente no me 
+voy a dejar atrapar (uno es tonto pero no tanto). As¡ pues vamos a lo 
+importante: ¨cu l es el procedimiento correcto para conectar el slot X-Y? 
+Pues tal que este:
+
+- Lo primero al realizar cambios de slot SIEMPRE es deshabilitar las 
+interrupciones. Si no, no respondo de cuelgues y dem s windower¡as.
+- Leemos el puerto #A8 y variamos los bits necesarios del valor obtenido para 
+conectar el slot X en la p gina deseada.
+
+En caso de que el slot no est‚ expandido (consulta el bit 7 de #FCC1+X) 
+escribimos el nuevo valor en el puerto #A8 y ya hemos acabado. Si no...
+
+- Averiguamos qu‚ slot hay conectado a la p gina 3 mediante la lectura de los 
+bits 6 y 7 del valor obtenido del puerto #A8, y guardamos esta informaci¢n.
+- Conectamos el slot X en la p gina 3. "¨­Qu‚!? ¨Pero esto no era pecado 
+mortal?" S¡, pero como hemos deshabilitado las interrupciones nadie se va a 
+enterar. Venga, sin miedo: pones X en los bits 6 y 7 y mandas el nuevo valor 
+al puerto #A8.
+- Leemos el valor de la posici¢n #FFFF (-1 pa los amigos), y lo 
+complementamos. "¨Mande?" S¡, es que para diferenciar esta posici¢n, que en 
+realidad es un puerto, de las direcciones normales, al MSX no se le ocurre 
+nada mejor que complementar (cerar los unos y unar los ceros [­Has vuelto a 
+fallar! ­Eres la deshonra del club de hachas!]) el valor del puerto antes de 
+entregarlo. Pero nada, t£ plantificas un CPL despu‚s del LD A,(-1) y tan 
+fresco.
+- Establecemos los bits necesarios del valor le¡do (seg£n la p gina) con Y, y 
+mandamos el nuevo valor a -1 con un simple LD (-1),A.
+- Restablecemos el slot original de la p gina 3 (­­sobre todo que no se te 
+olvide esto!!)
+- Actualizamos la zona de trabajo (hablaremos de esto m s adelante)
+
+Y yasta toa. Si simplemente quieres saber qu‚ slot-subslot X-Y hay conectado 
+en una determinada p gina, la cosa se simplifica un pixel:
+
+- DI
+- Lectura de #A8, cuyo valor guardamos.
+- Averiguamos qu‚ slot hay conectado en la p gina deseada: ya tenemos X.
+- Consultamos el bit 7 de #FCC1+X: si es cero el slot no est  expandido, y ya 
+hemos acabado.
+- Establecemos X en los bits 6 y 7 (p gina 3) del valor anteriormente le¡do 
+de #A8, y lo mandamos de nuevo al mismo sitio. Es decir, conectamos X en la 
+p gina 3.
+- Leemos la direcci¢n -1, la complementamos y de aqu¡ sacamos el valor Y.
+- Restauramos el valor original de #A8 para dejar los slots como estaban.
+
+No voy a poner las rutinas necesarias para hacer estas operaciones, por dos 
+razones. Una: ser  un buen ejercicio que las hagas t£ mismo. ¨Ya est ? 
+¨Funcionan? Vale, perfecto. Dos: sonr¡e a la c mara...
+
+­­­INOCENTEEEE!!!
+
+­Has picado! Todo esto que te he contado es cierto, pero no es necesario 
+romperse tanto la cabeza, porque ­la BIOS ya tiene rutinas para realizar 
+cambios de slot! ­­JUA JUA!! Ay, qu‚ gracia... eh... ¨no te r¡es? ¨No te ha 
+hecho gracia? Bueno, al menos veo que has soltado el hacha... pero ¨qu‚ es 
+eso que coges ahora? Parece una sierra mec nica... oye c lmate... no... 
+­­SOCORROOO!!
+
+Suerte que ten¡a el Twingo a mano para salir por ruedas. Bien, te preguntar s 
+el porqu‚ de esta putada. No es tal putada: ahora tienes un conocimiento 
+profundo del funcionamiento de los slots de los MSX, lo cual siempre es £til 
+y te puede ayudar m s de 34 veces a depurar tus programas. Adem s, ¨y si por 
+cualquier raz¢n no puedes/no quieres/no *.* usar la BIOS? Pues ya conoces los 
+procedimientos correctos para slotear a tus anchas.
+
+Bueno, ahora que te has cansado de correr aprovecho para describirte qu‚ 
+croquetas pone la BIOS a tu disposici¢n para manejar los slots:
+
+* RSLREG (#0138) - Lee el registro selector de slots primaro en A.
+* WSLREG (#013B) - Escribe A en el registro selector de slots primario.
+
+Estas rutinas no tienen mucha gracia, porque lo £nico que hacen es leer o 
+escribir directamente el puerto #A8 (tambi‚n llamado en c¡rculos reducidos el 
+registro selector de slots primario). No modifican ning£n registro.
+
+Esta otra rutina es bastante m s interesante:
+
+* ENASLT (#0024) - Conecta el slot A en la p gina indicada en HL.
+
+En A debes indicar el slot-subslot a conectar, con el siguiente formato:
+
+%E000YYXX
+
+XX: N£mero de slot primario
+YY: N£mero de subslot
+E:  1 si el slot est  expandido
+
+En HL debes establecer cualquier direcci¢n contenida en la p gina que quieres 
+conectar; o, dicho de una forma m s liosa: la p gina a conectar se indica 
+mediante los bits 6 y 7 del registro H. No te compliquies la vida: 
+simplemente usa H=#40 para cambiar la p gina 1 y H=#80 para la p gina 2, por 
+ejemplo, y yast . Ah, que modifica todos los registros.
+
+Adem s de conectarlos, con los slots se pueden hacer m s cosas. ­Me refiero a 
+leer y escribir su contenido, malpensado! Para ello tenemos a...
+
+* RDSLT (#000C) - Lee el contenido de una direcci¢n de un slot.
+
+Entrada:  A  = Slot, mismo formato que ENASLT
+	  HL = Direcci¢n a leer
+Salida:   A  = Dato le¡do
+Modifica: AF, BC, DE
+
+* WRSLT (#0014) - Escribe en una direcci¢n de un slot.
+
+Entrada:  A  = Slot, mismo formato que ENASLT
+	  HL = Direcci¢n a escribir
+	  E  = Dato a escribir
+Salida:   ¨Qu‚ salida quieres? ­Ninguna, hombre!
+Modifica: AF, BC, D
+
+Por supuesto, WRSLT s¢lo funciona si el slot se deja escribir, es decir, si 
+no es ROM o equiparable. S¢lo faltar¡a...
+
+­No se vayan todav¡a, a£n hay m s! (el Saver cre¡a que se dec¡a "una y m s", 
+cosa que no entend¡a y le produc¡a interminables dolores de cabeza. Que se 
+joda, por cabr¢n). ¨Qu‚ te parecer¡a poder hacer llamadas a rutinas 
+contenidas en otro slot? ­Con BIOS ya puedes! ­­Aprovecha la oferta!! (Este 
+anuncio es de una maquinita obsoleta. No usar en caso de querer mantener una 
+reputaci¢n. En caso de cuelgue consulte con Konami Man. Ver c¢digo fuente.)
+
+* CALSLT (#001C) - Llamada a una rutina en otro slot
+
+Entrada:  IYh = Slot, mismo formato que ENASLT
+	  IX  = Direcci¢n de la rutina a llamar
+Salida:   Seg£n la rutina llamada
+Modifica: Seg£n la rutina llamada
+
+No, no te esfuerces: si IX es superior a #BFFF la rutina ser  llamada, pero 
+sin realizar ning£n cambio de slot. ­Que la BIOS no es tonta!
+
+Esta otra es bastante curiosa:
+
+CALLF (#0030) - Llamada a una rutina en otro slot
+
+Entrada: El slot y la direcci¢n se han de indicar tras la llamada a CALLF, de 
+la siguiente forma:
+
+	CALL	CALLF
+	DB	Slot
+	DW	Direcci¢n
+
+Esto es bastante £til para llamadas a una rutina situada en una direcci¢n 
+fija de un slot concreto. Si le echas un vistazo a #FD9F, el gancho de la 
+interrupci¢n del reloj, igual te encuentras una llamada al slot de la 
+controladora de disco con este mismo formato. Falen, no me mires as¡, s¢lo 
+era una curiosidad...
+
+LA ZONA DE WORKEO
+
+Ahora vamos a boreham qu‚ nos ofrece la zona de trabajo en cuanto a slots se 
+refiere, que la ten¡amos un poco olvidada a la pobre...
+
+* EXPTBL (#FCC1, 4 bytes)
+
+Ya la conoces: indica si cada slot est  expandido o no, mediante el bit 7: el 
+slot S est  expandido si (#FCC1+S) tiene el bit 7 a uno.
+
+Adem s, la direcci¢n #FCC1 tiene truki: indica el slot de la BIOS, con el 
+mismo formato que ENASLT. "¨Pero no era siempre el 0?" Hoy por hoy yo dir¡a 
+que s¡, pero qui‚n sabe... esta direcci¢n m s bien parece una futura 
+aplicaci¢n.
+
+* SLTTBL (#FCC5, 4 bytes)
+
+Contiene una copia de la direcci¢n -1 (el registro de selecci¢n de subslot) 
+para cada slot. As¡, si quieres saber qu‚ slot hay conectado en determinada 
+p gina sin pasar por toda la parafernalia que te he explicado antes, s¢lo 
+tienes que...
+
+- Leer #A8.
+- Averiguar qu‚ slot S hay conectado en la p gina deseada, consultando los 
+bits adecuados (0 y 1 para la p gina 0, etc.)
+- Averiguar qu‚ subslot hay conectado consultando los mismos bits de #FCC5+S.
+
+Mucho m s f cil, ¨verdad? Esta es la zona de trabajo que debes actualizar si 
+quieres cambiar de slot "a mano". Por supuesto ENASLT la actualiza 
+autom ticamente.
+
+Hay m s, pero contienen informaci¢n m s espec¡fica sobre el contenido de cada 
+slot que no creo que te haga falta, al menos ahora que est s empezando; 
+adem s me s‚ de cierto redactor jefe que me agradecer  este ahorro de l¡neas, 
+ejem...
+
+¨Y LA SUBROM QUE?
+
+Ah s¡, calla calla... no me acordaba de que los MSX2 y superiores disponen de 
+una BIOS secundaria para funciones extendidas, en un slot aparte. Esto lo 
+liquidamos pronto. Primero: ¨en qu‚ slot est  la SUBROM? Pues donde diga 
+EXBRSA (#FAF8). Segundo: ¨c¢mo se usa? Pues con un par de rutinas de la BIOS:
+
+* EXTROM (#015F) - Llamada a una rutina de la SUB-ROM
+
+Entrada:  IX = Direcci¢n de la rutina a llamar
+Salida:   Seg£n la rutina llamada
+Modifica: Seg£n la rutina llamada. Los registros alternativos y IY nunca son 
+modificados.
+
+* SUBROM (#015C) - Hace lo mismo que EXTROM, pero al acabar hace un POP IX, 
+por lo que antes de llamarla has de hacer un PUSH IX. Mira, se ve que los de 
+ASCII se aburr¡an...
+
+"Y en la SUBROM, ¨qu‚ hay de interesante?" Pues por ejemplo CHGMOD (#00D1), 
+que establece el modo gr fico que le metas en A. Desde la BIOS principal s¢lo 
+puedes establecer SCREEN 0 a 3.
+
+­¨ Y EL MSX-DOS QUE?! ­¨EH?!
+
+­Otia te has dado cuenta! Si en modo MSX-DOS la p gina 0 est  conectada a RAM 
+no se puede usar la BIOS, y si no se puede usar la BIOS no se puede cambiar 
+de slot (de forma facil) ni leer/escribir otros slots ni hacer llamadas a 
+otros slots... ­Que no panda el c£nico! Cuando el modo MSX-DOS est  activo, 
+los primeros 256 bytes de RAM (direccions #0000 a #01FF) est n reservados 
+para el sistema, y ­albricias: algunas de las rutinas de la BIOS para manejo 
+de slots est n disponibles! Concretamente:
+
+* RDSLT  (#000C)
+* WRSLT  (#0014)
+* CALSLT (#001C)
+* ENASLT (#0024)
+* CALLF  (#0030)
+
+La direcci¢n de estas rutinas y su funcionamiento es id‚ntico al de sus 
+cong‚neres BIOSeras, as¡n que ya podemos pasar a la £ltima croqueta:
+
+¨QUE ES ESO DEL POKE -1,0/170/255?
+
+­Ah, caramba! As¡ que t£ tambi‚n te estabas preguntando desde hace a¤os por 
+qu‚ hay que ponerle un POKE -1,algo a ciertas conversiones konamieras y a 
+ciertos juegos de cinta de hace un par de lustros, ¨eh? Pues nada, ya que 
+viene a cuento paso a explicarlo.
+
+Supongamos un juego de cinta de, digamos, el a¤o 87. El juego es para MSX1 
+con 64K de RAM, y necesita conectar el slot de la ¡dem en las p ginas 0 y/o 
+1. Como por aquel entonces los subslots no estaban muy de moda (creo que 
+ning£n MSX1 tiene), el procedimiento para conectar la RAM usado era este:
+
+- DI
+- Averiguar qu‚ slot hay conectado en la p gina 3
+- Conectar dicho slot en la p gina 0, o 1, o ambas, mediante el puerto #A8
+
+Y eso era todo: ten¡a que funcionar y funcionaba. Pero entonces llegaron los 
+MSX2 que, m s chulos que nadie, ten¡an la RAM en un slot expandido. Pongamos 
+el caso del Philips 8245, que la ten¡a en el slot 3-2. El juego, al cargarse, 
+conectaba el slot 3 en la p gina 0 o 1. Pero, ¨qu‚ subslot? Pues depende del 
+valor de la direcci¢n -1 en ese momento, ya que dicha direcci¢n no es 
+modificada. ¨Y qu‚ valor tiene? Pues vete a saber. Cuando el MSX arranca en 
+modo MSX-BASIC conecta el slot de ROM y el BASIC en las p ginas 0 y 1, por lo 
+que el valor del selector de subslots del slot de RAM para estas p ginas no 
+tiene por qu‚ ser establecido. Us‚ase: valor aleatorio. Resultado: viene el 
+juego y conecta el slot de RAM pero no se preocupa del subslot, se conecta un 
+¡dem aleatorio y ya la hemos liado.
+
+¨La soluci¢n? Establecer adecuadamente los 4 bits bajos de la direcci¢n -1 
+del slot de RAM ANTES de conectar el slot. Esto lo podemos hacer desde BASIC 
+con un simple POKE, dado que lo que hay conectado en las p ginas 0 y 1 en ese 
+momento es ROM. ¨Y c¢mo se establece? Basta ver qu‚ subslot hay conectado en 
+la p gina 2 o 3 (ser  el mismo) y establecer este valor para las p ginas 0 y 
+1. Us‚ase, copiar los 4 bits altos de -1 en los 4 bits bajos.
+
+Ejemplo: en el 8245, la RAM est  en el slot 3-2. Entonces el valor le¡do de 
+-1 es %1010xxxx, y hay que establecerlo en %10101010: de aqu¡ el POKE -1,170. 
+En los Sony F700 el slot es el 3-3, y hay que hacer un POKE -1,255. Lo que no 
+todo el mundo sabe es que hay un POKE universal que nos evita todo este 
+guirigai:
+
+POKE -1,((PEEK(-1)XOR&HFF)AND&HF0)*1.0625
+
+Recuerda que hay que complementar el valor tras leerlo de -1: de aqu¡ el XOR 
+&HFF.
+
+Y con esta duda existencial despejada ya puedes ir a dormir tranquilo, as¡ 
+que...
+
+...ACABOSE
+
+"¨Qu‚? ­¨Ya?!" S¡, s¡; se ha hecho corto, ¨eh? "Hooombreee..." Aceptar‚ eso 
+como un "S¡" (hay que ver, lo que hace la envidia...) Bueno, esta entrega ha 
+sido m s corta porque en caso contrario el jefe habr¡a cogido el enfado que 
+ha superado al enfado del jefe enfadado (Copyright del retorcimiento: Dragon 
+Ball team), y porque ya no incluyo listados. Esto es debido a que si has 
+le¡do los anteriores Easymbleres (cosa que ni por un ciclo de reloj dudo) ya 
+tienes el nivel suficiente para programar t£ solito (como la canci¢n, "cuando 
+yo era peque¤ito me hac¡an las rutinitas, ahora que soy mayorcito las cuelgo 
+yo solito...") y yo ya s¢lo puedo darte informaci¢n t‚cnica y cuatro consejos 
+(por ejemplo: env¡a un generoso donativo a Konami Man, el chaval se lo 
+merece).
+
+En la pr¢xima entrega os machacar‚ con otro tema de candente actualidad: la 
+memoria mapeada. Y esto va para el Saver: ­­CABRON!! (N¢tese que ya no se 
+merece la R may£scula final. ­Es que encima ya no viene a las rus de 
+Barcelona pa poder irse a Austria! ­­Pa matarlo!!). En fin, se despide el 
+envidioso mayor del reino.
+
+					///// KONAMI MAN \\\\\
+
+NOTA para despistados y/o no inmersos en la secta: el Saver tiene desde hace 
+tres meses una novia japonesa -residente en Austria-, cosa que ha disparado 
+el nivel de envidia del menda y que le convierte en un CABRON. Desde aqu¡ le 
+deseo sinceramente que se muera.
+
+

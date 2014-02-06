@@ -1,0 +1,673 @@
+¨COMO ESTAN USTEDEEEES?
+
+­Lo que hace el aburrimiento! No hace ni una semana que he entregado la 
+cuarta entrega (valga la rimbombancia) de Easymbler a la autoridad 
+competente, y heme aqu¡ escribiendo ya la quinta. En parte tambi‚n es una 
+medida de autoprotecci¢n, ya que de esta forma te pillo desprevenido y no te 
+doy tiempo a desenfundar y/o afilar el hacha.
+
+Habiendo machacado y convenientemente digerido (supongo) el tema de los 
+slots, pasamos a adentrarnos en otro de los aspectos clave del hardware 
+mesxesiano: la memoria mapeada.
+
+MAIN RAM: 128K
+
+Erase que se era un pobre iluso que se le¡a todos los Easymbler creyendo que 
+as¡ aprender¡a algo sobre los aspectos m s intr¡nsecos y profundos de su 
+maquinita obsoleta (pobre...). El caso es que tras meterse entre frente y 
+nuca el rollazo sobre los slots empez¢ a cavilar tal que as¡:
+
+"Al encender mi MSX me dice que tiene 128K de RAM. Como en cada slot s¢lo 
+caben 64K, eso es que debo tener dos slots internos llenos de RAM. Pero mi 
+vecino del trigesimocuarto tiene 512K, por lo que necesita 8 slots; eso debe 
+ser que alg£n circuito raro los junta todos en uno conectando alguna l¡nea 
+indocumentada del Z80 o algo as¡... s¡, debe ser eso."
+
+En este momento es cuando yo digo que tengo una ampliaci¢n de 4 megas, te das 
+cuenta de que para ello son necesarios 64 slots, lo cual es imposible; 
+piensas que te he estado enga¤ando, coges el hacha y ya la hemos vuelto a 
+liar. Como siempre, me vas a permitir que empiece a correr y por el camino te 
+cuento un cuento.
+
+¨LA MEMORIA QUEEE?
+
+Mapeada. O el memory mapper, como dicen los mayores. Se trata de otra pirueta 
+harwar¡stica que permite meter hasta 4 megas (s¡, s¡: 4096K) de RAM en un 
+mismo slot.
+
+¨Y esto c¢mo se hace? Pos muy facil. Un slot con memoria RAM mapeada divide 
+esta memoria en segmentos de 16K. Para conectar uno de estos segmentos al 
+espacio de direccionamiento del Z80 lo primero que hay que hacer es conectar 
+el slot a la p gina deseada (lo cual por otra parte es bastante l¢gico). Ipso 
+facto seguido se selecciona el segmento por medio de un puerto que el MSX 
+tiene a tal efecto. Bueno, en realidad son cuatro: del #FC al #FF, uno para 
+cada p gina. Una vez enviado el n£mero de segmento a #FC+P, donde P es la 
+p gina a la que hemos conectado el slot, ya podemos leer y/o escribir el 
+segmento tranquilamente desde esa p gina.
+
+Como siempre, la explicaci¢n a saco no se entiende (yo al menos no la veo muy 
+clara), as¡ que vamos a ver un ejemplillo. ¨Que queremos conectar el segmento 
+S del slot X en la p gina 2? Pues hacemos tal que esto:
+
+- Conectamos el slot X en la p gina 2.
+- Conectamos el segmento S a la p gina 2 tal que as¡:
+
+	LD	A,S
+	OUT	(#FE),A
+
+- Ya tenemos el segmento S conectado a las direcciones #8000-#BFFF y listo 
+para leer y escribir.
+
+Como tratamos con puertos de 8 bits el n£mero m ximo de segmentos manejables 
+con este sistema es de 256. Si multiplicas este n£mero por las 16K que tiene 
+cada segmento obtendr s los 4096K por slot de m xima.
+
+¨ASI DE FACIL?
+
+S¡... y no. Bueno, de hecho no. El uso incorrecto del mapeador de memoria 
+tiene la culpa de todos los problemas de incompatibilidad de los programas 
+antiguos de DOS 1 cuando corren bajo DOS 2 y/o bajo Turbo-R.
+
+Para empezar, y esto es algo que poca gente sab¡a hasta hace unos a¤os (yo 
+por ejemplo no lo sab¡a), los puertos del mapeador (los #FC a #FF) son de 
+s¢lo escritura. Es decir, oficialmente no puedes averiguar qu‚ segmento hay 
+conectado en una p gina determinada del Z80 con un simple IN. Por tanto, el 
+procedimiento correcto pasa por guardar en memoria una copia del valor 
+enviado al mapeador cada vez que cambiamos de segmento, y consultar este 
+valor en vez de leer el puerto cuando sea necesario:
+
+; Rutinas para conectar el segmento A en una p gina
+  (se supone el slot de RAM ya conectado)
+
+PUT_P0: LD	(STORE_P0),A
+	OUT	(#FC),A
+	RET
+
+PUT_P1: (Idem con #FD y STORE_P1)
+PUT_P2: (Idem con #FE y STORE_P2)
+PUT_P3: RET
+
+; Rutinas para averiguar qu‚ segmento hay conectado en una p gina
+
+GET_P0: LD	A,(STORE_P0)
+	RET
+
+GET_P1: (Idem con STORE_P1)
+GET_P2: (Idem con STORE_P2)
+GET_P3: (Idem con STORE_P3)
+
+; Copia en memoria del valor de los puertos del mapeador
+
+STORE_P0:	DB	3
+STORE_P1:	DB	2
+STORE_P2:	DB	1
+STORE_P3:	DB	0
+
+Un par de detalles importantes. Uno: el valor inicial de los puertos del 
+mapeador al inicializarse el sistema (­qu‚ miedo, suena a Windows!) es 
+siempre de 3, 2, 1 y 0 para las p ginas 0, 1, 2 y 3, respectivamente. Dos: 
+evidentemente, si hab¡amos quedado en que no puedes cambiar el slot de la 
+p gina 3 porque contiene la zona de trabajo, tampoco puedes cambiar su 
+segmento; de ah¡ el RET en PUT_P3.
+
+Pero como ya he dicho antes esta restricci¢n de los puertos no se conoc¡a, o 
+s¡ se conoc¡a pero no se hac¡a caso. ¨Por qu‚? Pues porque en todos los MSX2 
+europeos pasa una cosa bastante curiosa: cuando lees los registros del 
+mapeador obtienes un valor que te permite, mediante una sencilla operaci¢n, 
+matar dos Bill Gates de un tiro: averiguar qu‚ segmento hay conectado y 
+c£antos segmentos tiene el slot, es decir, la cantidad de RAM del mismo. Miel 
+sobre japonesas, as¡ que todo el mundo us¢ este sistema (incluido yo mismo en 
+mis inicios, lo confieso...). Problema: llegan los MSX2+ de Panasonic y los 
+Turbo-R y resulta que el valor leido de los puertos del mapeador cuando haces 
+un IN en estos ordenadores no cumple esta regla "universal" de los MSX 
+europeos (y est n en su derecho)... y el asunto explota (us‚ase, se cuelga) 
+en cuanto ejecutas un programa que lee los puertos para averiguar qu‚ 
+segmento hay conectado: el valor obtenido no es correcto, y al intentar 
+volver a conectar ese segmento, ­­boum!!
+
+¨CUANTA RAM HAS DICHO?
+
+A estas alturas t£, persona persona inquieta y curiosa donde las haya (y 
+nerviosa, no s‚ d¢nde te dieron la licencia de hachas), ya te habr s 
+preguntado algo as¡ como esto: falen, leer los puertos del mapeador es un 
+deporte de riesgo; entonces, ¨c¢mo puedo averiguar cu nta RAM mapeada hay en 
+un determinado slot? Pues bien, ­albricias y alborozo!: eso es precisamente 
+lo que iba a explicar ahora.
+
+Los puertos del mapeador de memoria tienen una caracter¡stica bastante 
+curiosa (y significativa) que nos vendr  de perlas para satisfacer nuestra 
+curiosidad: son c¡clicos. Explicome: si el slot tiene S segmentos de RAM (0 a 
+S-1, recuerda) y mandamos al puerto correspondiente el valor S, lo que 
+obtendremos ser  no una explosi¢n nuclear ni nada por el estilo, sino el 
+segmento 0 conectado. Si mandamos el valor S+1, tendremos conectado el 
+segmento 1, y as¡ sucesivamente. Ah, esta caracter¡stica s¡ es oficial, 
+respira tranquilo.
+
+Vale, ¨Y c¢mo nos montamos un test de memoria con esto? Pues muy f cil, tal 
+que as¡:
+
+- Seleccionamos una p gina, la que m s nos guste, por ejemplo la 2, y le 
+conectamos el slot a investigar.
+- Hacemos un bucle con S de 0 a 255 que haga tal que esto:
+  * Conectar el segmento S a la p gina 2
+  * Escribimos el valor S en el primer byte del segmento, es decir
+    en la direcci¢n #8000
+- Conectamos el segmento 0 en la p gina 2 y leemos el valor de su primer byte
+(direcci¢n #8000), llam‚mosle B.
+
+Pues bien, el n£mero de segmentos disponibles en ese mapeador es precisamente 
+256-B. ¨Sorprendido? ¨Extasiado quiz s? ­Es l¢gico: Konami Man es 
+insuperable! Y muy modesto, todo hay que decirlo.
+
+¨C¢mo? ¨No lo ves claro? "Lo veo clar¡simo: Konami Man es un fantasm¢n de 
+mucho cuidado." Grftx... me refer¡a al test de memoria, so hachoso. Es facil: 
+como hemos visto antes, el mapeador es c¡clico, lo cual significa que el 
+segmento S equivale al 0; pero tambi‚n el 2*S, el 3*S... y as¡ hasta el 
+(N-1)*S, donde N es el resultado de dividir 256 entre S (aprovecho para 
+recordarte que S siempre es una potencia de dos, por tanto esta divisi¢n 
+siempre ser  exacta). Entonces, como siempre escribimos en #8000 y vamos 
+conectando todos los segmentos c¡clicamente, el £ltimo dato que escribamos en 
+el segmento 0 ser  precisamente (N-1)*S, y:
+
+256-B = 256-((N-1)*S) = 256-(((256/S)-1)*S) = S
+
+Veo tanto humo salir de tu cabeza como de tus manos, por la enorme presi¢n 
+ejercida sobre el mango del hacha. ­Tranquilo, que ahora iba a poner un 
+ejemplo clarificador! Supongamos S=4 (64K de RAM, el mapeador m s peque¤o 
+posible); entonces:
+
+				S      2*S		   (N-1)*S 
+Dato enviado al puerto: 0 1 2 3 4 5 6 7 8 9 10 . . . 250 251 252 253 254 255
+Segmento conectado:	0 1 2 3 0 1 2 3 0 1 2  . . .  2   3   0   1   2   3
+
+As¡, al conectar el segmento 0 y leer de #8000, obtendr¡amos el valor 252, y 
+casualmente 256-252=4. ¨Ves como no era tan dif¡cil? ­Neuras, que eres un 
+neuras!
+
+Atenci¢n: este test de memoria es destructivo, es decir, nos cargamos el 
+primer byte de cada segmento. Para hacer las cosas bien, prepara un bufer de 
+256 bytes (que no ha de estar en la p gina 2, por supuesto) y ve guardando en 
+‚l este primer byte de cada segmento antes de machacarlo, para reponerlo al 
+final con un bucle.
+
+DOS 2 RULEZ
+
+Ciertamente, la obsolescencia profunda es un estado que confiere una gran paz 
+interior y un alto prestigio en c¡rculos sectario-mesxesianos. Sin embargo, 
+de vez en cuando conviene modernizarse un poco, manque nos pese (¨o era "mal 
+que"? Nunca me acuerdo...)
+
+No, no pretendo que adquieras un hacha electr¢nica ni nada por el estilo. 
+Estoy hablando de esa maravilla de la operativa sistem tica (disciplina 
+encargada de los sistemas operativos (supongo)) que es el MSX-DOS 2. A estas 
+alturas, t£, asaz incr‚dulo debido a mis desvar¡os anteriores, seguramente 
+estar s pensando algo como "¨Eins? Vale, el DOS2 me deja hacer 
+subdirectorios, ¨pero qu‚ tiene que ver esto con la memoria mapeada?" Suerte 
+que estoy aqu¡ para sacarte del ostracismo en el que vives (la frase es de 
+Mato#34).
+
+Resulta que las mejoras que el DOS 2 incorpora no se limitan a la fachada, 
+us‚ase, ­no s¢lo de subdirectorios vive el hombre obsoleto! El DOS 2 tambi‚n 
+est  pensado para facilitar la vida del programador ensambladero (esto ya 
+parece el teletienda). Y resulta que ­oh, maravillas de la t‚cnica!, tienes a 
+tu disposici¢n una serie de rutinas destinadas a la gesti¢n de la memoria 
+mapeada. De esta forma, igual que gracias al DOS no es necesario conocer los 
+puertos de la disketera para abrir un fichero, lo mismo sucede ahora con la 
+memoria. Y todos tan contentos como el Gili Gates al enterarse de que acaba 
+de ganar ultracientos millones m s (¨para qu‚ querr  tantos? Y, si gana tanto 
+vendiendo un sistema operativo que falla por todas partes, ¨cu nto ganar¡a si 
+vendiera uno que funcionara? Tiemblo s¢lo del frio que hace).
+
+MEMORIZANDO
+
+Basta de autocomplacencia, que veo que tu hacha empieza a cobrar vida de 
+forma inusitada (si es que se escribe as¡n). Bajo DOS 2 la memoria mapeada se 
+sigue dividiendo en segmentos de 16K (esto es una caracter¡stica inamovible 
+-qu‚ bien suena esto- del hardware), pero ahora estos segmentos pueden estar 
+en uno de estos tres estados:
+
+- Libre, o sea, que no est  siendo usada por ning£n programa.
+- Reservada en modo usuario, es decir en uso por el programa en ejecuci¢n. 
+Cuando el programa termina y el DOS vuelve a tomar el control, el segmento es 
+liberado.
+- Reservada en modo sistema: aunque el programa en curso termine, el segmento 
+sigue reservado, y s¢lo es liberado cuando el usuario lo hace de forma 
+expl¡cita. Este modo es £til para programas residentes, siendo usado por el 
+propio RAMdisk del DOS.
+
+As¡ pues, el m‚todo correcto para usar la memoria mapeada bajo DOS sigue los 
+siguientes pasos:
+
+- Petici¢n de un segmento al DOS.
+- Si hay alg£n segmento libre, el DOS lo marca como reservado, y nos devuelve 
+el n£mero del mismo y su slot: ya podemos usarlo.
+- Conexi¢n del segmento al espacio de direccionamiento, lo cual ahora no se 
+hace accediendo directamente a los puertos sino mediante llamadas al sistema 
+espec¡ficas. Tambi‚n es posible acceder a un segmento sin conectarlo. En 
+ambos casos, primero hay que conectar el slot que contiene el segmento, lo 
+cual ya sabes hacer gracias al fant stico Easymbler#4.
+- Aunque te¢ricamente no es necesario, es recomendable liberar los segmentos 
+reservados en modo usuario antes de que el programa termine.
+
+De esta forma suprimimos el ciclo vital de dos aves con una £nica eyecci¢n de 
+plomo: ganamos facilidad de uso (se acabron las engorrosas rutinas para saber 
+cu nta memoria tenemos, y los problemas derivados del acceso directo a los 
+puertos), y gracias al sistema de reserva evitamos conflictos entre programas 
+residentes, ya que ahora es imposible que usen la misma memoria. Pero claro, 
+el problema es que a£n corren por ah¡ muchos programas que no son para DOS 2 
+y siguen haciendo lo que les da la gana con la memoria, pero en fin, esto ya 
+no es culpa m¡a...
+
+POSOLOGIA
+
+Frena tu impaciencia, oh noble hachero, pues voy a explicarte los detalles 
+para hacer todo esto tal que ya.
+
+El DOS 2 pone a tu disposici¢n dos recursos para gestionar la memoria 
+mapeada: una tabla con informaci¢n sobre la misma, y una serie de rutinas 
+(llamadas "rutinas de soporte del mapeador", nombre francamante bonito) para 
+reservarla/liberarla y conectarla, entre otras cosas. Veamos primero la 
+tabla, que resulta que tiene tal que este formato:
+
++0: Slot del mapeador, en el formato t¡pico ExxxSSPP
++1: N£mero total de segmentos
++2: N£mero de segmentos libres
++3: N£mero de segmentos reservados en modo sistema
++4: N£mero de segmentos reservados en modo usuario
++5..+7: Sin usar
+
+Como m¡nimo hay una de estas tablas, que es la correspondiente al mapeador 
+primario. Y como creo que antes no lo he hecho, ahora cojo y te explico lo 
+que es el mapeador primario: es el que contiene la p gina 3, y el que est  
+siempre conectado por defecto en las otras p ginas cuando tu programa BASIC o 
+DOS inicia su ejecuci¢n. En los MSX2 y 2+, cuando hay m s de un slot con RAM 
+mapeada, se establece como mapeador primario el de mayor capacidad (en caso 
+de empate se elige el que tiene el menor n£mero de slot, ­est  todo 
+previsto!). En los Turbo-R, el mapeador primario siempre es el interno, el 
+del slot 3-0.
+
+Hay una tabla como la que has visto para cada mapeador, y est n todas 
+colocadas consecutivamente. Por tanto, no tienes m s que mirar a partir de la 
+posici¢n +8 de la primera, para encontrarte la siguiente; si lo que te 
+encuentras es el valor 0, es que ya no hay m s (porque por muy obsoleto que 
+sea, ning£n MSX tiene la RAM en el slot 0. Bueno, creo que el Sony F500 s¡, 
+pero este ordenador es mu raro y no se deja ampliar. All  ‚l... t£ no te 
+preocupes, que los papis del DOS 2 sab¡an lo que se hac¡an).
+
+­Las rutinas! Pues est n disponibles a trav‚s de una tabla de salto muy 
+bonita que es la que tienes a continuaci¢n. Adem s, como son rutinas 
+oficiales y caballeras y todo eso, pues cada una tiene un nombre muy bonito 
+que tambi‚n incluyo, y gratix (de nada). He aqu¡ la susodicha:
+
++#0	ALL_SEG Reserva un segmento
++#3	FRE_SEG Libera un segmento
++#6	RD_SEG	Lee un byte de un segmento
++#9	WR_SEG	Escribe un byte en un segmento
++#C	CAL_SEG Llama a una rutina en un segmento,
+		pasando la direcci¢n en IYh:IX
++#F	CALLS	Llama a una rutina en un segmento,
+		pasando la direcci¢n en el propio listado del programa
++#12	PUT_HL	Conecta un segmento en la p gina indicada
+		por la direcci¢n contenida en HL
++#15	GET_HL	Obtiene el segmento conectado en la p gina indicada
+		por la direcci¢n contenida en HL
++#18	PUT_P0	Conecta un segmento en la p gina 0
++#1B	GET_P0	Obtiene el segmento conectado en la p gina 0
++#1E	PUT_P1	Conecta un segmento en la p gina 1
++#21	GET_P1	Obtiene el segmento conectado en la p gina 1
++#24	PUT_P2	Conecta un segmento en la p gina 2
++#27	GET_P2	Obtiene el segmento conectado en la p gina 2
++#2A	PUT_P3	Deber¡a conectar un segmento en la p gina 3,
+		pero como eso es pecado, pues no hace nada
++#2D	GET_P3	Obtiene el segmento conectado en la p gina 3
+
+¨Has visto qu‚ bonito? Pues Vicente, b‚same la frente; Andr‚s, b‚same los 
+pies; Angulo... ¨d¢nde vas tan corriendo?
+
+"DONDE ESTAS LOBATON, OIGO TU COMPILAR..."
+
+Puedo leer en tu cara, reflejada en tu hacha, algo como esto: "Vale, tenemos 
+dos tablas muy bonitas, pero ¨en qu‚ direcci¢n de memoria est n ubicadas? Si 
+no lo sabemos, ¨c¢mo podemos usarlas?" (Macho, es que tienes una cara 
+complicadilla...)
+
+La respuesta a la primera pregunta es: no lo s‚, de hecho las direcciones 
+exactas pueden variar para cada versi¢n del DOS, y s¢lo puedo asegurarte que 
+estar n en la p gina 3. Y no creas que me vas a atrapar tan facilmente, pues 
+ya estoy acostumbrado a correr delante de tu hacha y ya voy m s r pido que 
+aquel que corr¡a tan r pido (esto de los deportes no es lo m¡o), pero por si 
+acaso voy a ir respondi‚ndote a la segunda: es posible averiguar la direcci¢n 
+de inicio de ambas tablas mediante un par de llamadas a la BIOS extendida.
+
+(Entre el p rrafo anterior y el corriente han (he) pasado tres d¡as encamado 
+con una amigdalitis tama¤o XL y 34+5 de fiebre. ­Bonita manera de empezar 
+unas vacaciones!)
+
+Por d¢nde ¡bamos... ­ah, la cara de tonto que se te ha quedado con lo de la 
+BIOS extendida! (es broma, no me haches). Explicacioncilla r pida de lo que 
+es el engendro este: como su propio nombre permite barruntar, es un invento 
+que permit¡a a los desarrolladores (qu‚ raro suena esto, pero si escribes 
+"developpers" quedas como un rey, no es justo...) del sistema sacarse de la 
+manga extensiones de la BIOS (normalmente para manejar extensiones del hard, 
+por ejemplo el RS-232) sin tener que modificar la ROM. ¨C¢mo se deglute esto? 
+F cil: si bien la BIOS cl sica se llama a trav‚s de un conjunto de 
+direcciones, una para cada rutina, ahora tenemos una sola direcci¢n 
+(concretamente #FFCA, en bonito es EXTBIO), y a trav‚s de DE le pasamos el 
+identificador de la rutina que queremos ejecutar. Y como todo el tinglado se 
+gestiona desde RAM y no desde ROM como la BIOS normal, pues es f cilmente 
+actualizable y configurable (toma ya, ni el Gindous al instalarle una rata).
+
+¨Que no has entendido nada? Da igual, s¢lo era para ponerte en situaci¢n y no 
+entra en examen... lo importante viene ahora: existen dos rutinas, accesibles 
+por medio de la BIOS extendida, que nos devuelven las direcciones de las dos 
+tablas aquellas: la de datos sobre el mapeador, y la de la tabla de salto de 
+las rutinas para su manejo. Verbigratia:
+
+* Obtenci¢n de la direcci¢n de la tabla de datos del mapeador:
+
+Entrada:	A = 0
+		DE = #0401
+
+Y tras un CALL #FFCA...
+
+Salida: 	A = Slot del mapeador primario
+		HL = Direcci¢n de inicio de la tabla
+
+* Obtenci¢n de la direcci¢n de las rutinas de soporte del mapeador:
+
+Entrada:	A = 0
+		DE = #0402
+
+Y tras un CALL #FFCA...
+
+Salida: 	A = N£mero total de segmentos
+		B = Slot del mapeador primario
+		C = N£mero de segmentos libres en el mapeador primario
+		HL = Direcci¢n de inicio de la tabla de salto
+
+Observa que lo realmente importante en ambos casos es el valor que obtenemos 
+en HL, el resto son simplemente croquetas. A trav‚s del valor devuelto en A 
+podemos averiguar si realmente existen las tablas y rutinas de soporte del 
+mapeador: simplemente comprueba si A es distinto de 0 tras el CALL #FFCA, ya 
+que en caso contrario no hay tales rutinas (seguramente porque no tienes DOS 
+2), y habr  que volver a la parafernalia del principio del articulillo 
+este...
+
+As¡ pues parece que la cosa est  facilona: haces un par de llamadas a la BIOS 
+extendida, guardas el valor de HL en ambos casos, y ya puedes mapear a gusto:
+
+	XOR	A
+	LD	DE,#0401
+	CALL	#FFCA
+	LD	(MAP_TABLA),HL
+
+	OR	A
+	JP	Z,ERROR ;Para comprobar si realmente tienes las tablas
+
+	XOR	A
+	LD	DE,#0402
+	CALL	#FFCA
+	LD	(MAP_RUT),HL
+
+Una vez hecho esto, si por ejemplo quieres averiguar cu ntos segmentos libres 
+hay en el mapeador primario, no tienes m s que:
+
+	LD	IX,(MAP_TABLA)
+	LD	A,(IX+2)
+
+y yast . Y si por ejemplo quieres obtener el segmento conectado en la p gina 
+0, pues... eeeeh... hum...
+
+EL TRUKI DE LAS TRES TREINTA
+
+T  complicadilla la cosa: se trata de hacer un CALL a una direcci¢n que no 
+conocemos a priori (us‚ase cuando escribimos el programa). ¨C¢mo lo hacemos? 
+Hay instrucciones tipo JP (IX) por ah¡, pero recordando que en todo el cosmos 
+rige desde hace mucho tiempo la Ley Universal del M¡nimo Esfuerzo, nos vamos 
+a sacar de la manga un truquillo que nos permitir  usar las rutinas de 
+soporte con CALLs de los de toda la vida.
+
+Vamos all , que es f cil. Si haces algo m s que afilar tu hacha mientras yo 
+voy vertiendo conocimientos, te habr s fijado en que las rutinas de soporte 
+est n separadas entre s¡ tres bytes. Tienes raz¢n: es imposible meter una 
+rutina en tres bytes. Lo que en realidad tenemos es una tabla de JPs 
+(recuerda que la he llamado "tabla de saltos" un par de veces) a las 
+verdaderas rutinas. Es decir, que lo que obtenemos en HL al llamar a EXTBIO 
+con DE=#0402 es una direcci¢n en la que hay tal que esto:
+
+	JP	&Hxxxx
+	JP	&Hyyyy
+	JP	&Hzzzz
+	...
+
+donde &Hxxxx es la verdadera direcci¢n de inicio de ALL_SEG, &Hyyyy la de 
+FRE_SEG, &Hzzzz la de RD_SEG, etc... as¡ pues, tenemos 16 rutinas, a 25 
+pesetas... perd¢n, a 3 bytes cada una, 48 bytes en total: a efectos 
+pr cticos, estos 48 bytes son para nosotros todas las rutinas de soporte. 
+
+Sabiendo esto, deducimos f cilmente (supongo) el truquillo: una vez sabemos 
+d¢nde est  esta tabla de 48 bytes, la copiamos a saco en una direcci¢n 
+conocida, con lo cual ya podremos CALLear a gusto y sin m s intermediarios.
+
+¨Que esto tampoco lo has entendido? Macho, entonces definitivamente tu futuro 
+est  en Microsoft, por mucho que te duela aceptarlo. Pero tranquilo, para que 
+admires una vez m s mi magnanimidad, a continuaci¢n tienes el truco este 
+traducido a nem¢nicos de aplicaci¢n directa (consulte a su teclad¢logo):
+
+; Obtenci¢n de las rutinas de soporte del mapeador
+; Versi¢n 2 (truquillo inside)
+; Una vez asesinada, digo ejecutada, se puede hacer CALL ALL_SEG,
+; CALL FRE_SEG, etc, con la tranquilidad de un Vil Gates cualquiera
+; absorbiendo empresas cual vampiro cibern‚tico.
+
+	XOR	A
+	LD	DE,#0402
+	CALL	#FFCA
+
+	LD	DE,ALL_SEG
+	LD	BC,48
+	LDIR
+	RET
+
+ALL_SEG:	DS	3
+FRE_SEG:	DS	3
+RD_SEG: DS	3
+WR_SEG: DS	3
+CAL_SEG:	DS	3
+CALLS:	DS	3
+PUT_PH: DS	3
+GET_PH: DS	3
+PUT_P0: DS	3
+GET_P0: DS	3
+PUT_P1: DS	3
+GET_P1: DS	3
+PUT_P2: DS	3
+GET_P2: DS	3
+PUT_P3: DS	3
+GET_P3: DS	3
+
+CONCRETIZACION DE LAS CROQUETAS (¨a que no lo dices con la boca llena?)
+
+El jefe me encarg¢ un texto de 20K y esa longitud ya ha sido sobrepasada, 
+pero a£n queda por exponer un aspecto fundamental sobre las rutinas de 
+soporte: sus especificaciones de entrada-salida detalladas, que por supuesto 
+no puedes adivinar a no ser que seas un "Rappelente" (­Juo juo! ­Pobre del 
+que tenga que traducir esto! Anda, si es el jefe... esteeee... no, que yo 
+dec¡a que... ­Mira, un Windows que no se cuelga!) Ahora que est  distraido, 
+aprovecho:
+
+* ALL_SEG: Reserva de un segmento
+
+Entrada:	A = 0 -> Reserva un segmento en modo usuario
+		A <>0 -> Reserva un segmento en modo sistema
+		B = 0 -> Reserva un segmento del mapeador primario
+		B<> 0 -> Reserva un segmento del slot &B ExxxSSPP, donde
+			PP = slot primario, SS = secundario, E = extendido
+			(igual que en las rutinas de la BIOS)
+
+El campo "xxx" de B nos permite especificar las preferencias a la hora de 
+elegir el slot del mapeador en el que estar  el segmento que queremos 
+reservar, de la forma siguiente:
+
+xxx = 000: Buscar segmentos libres s¢lo en el slot especificado.
+xxx = 001: Buscar segmentos libres s¢lo en slots que no sean el especificado.
+xxx = 010: Buscar segmentos libres en el slot especificado, y si no hay 
+ninguno, buscar en los otros slots.
+xxx = 011: Buscar segmentos libres en slots que no sean el especificado, y si 
+no hay ninguno, buscar en el slot especificado.
+
+Recuerda que un valor de 0 para E, SS y PP indica el slot del mapeador 
+primario.
+
+Salida: 	Cy = 1 si no hay segmentos libres
+		(seg£n el m‚todo de reserva especificado)
+		Cy = 0 si se ha podido reservar el segmento
+		A  = N£mero del segmento reservado
+		B  = Slot del mapeador que contiene el segmento reservado
+		     (0, si se especific¢ E, SS y PP = 0)
+
+* FRE_SEG: Libera un segmento previamente reservado
+
+Entrada:	A = N£mero del segmento a liberar
+		B = Slot del segmento a liberar, &B E000SSPP
+		    (0 para el mapeador primario)
+Salida: 	Cy = 1 si ha habido error
+		Cy = 0 si el segmento ha sido liberado sin error
+
+* RD_SEG: Lee un byte de un segmento
+
+Entrada:	A  = N£mero de segmento
+		HL = Direcci¢n
+Salida: 	A  = Valor le¡do
+		Los dem s registros preservados
+
+Unos cuantos detallitos a tener en cuenta al usar esta rutina:
+
+- L¢gicamente, al ser los segmentos de 16K, s¢lo son v lidas las direcciones 
+#0000-#3FFF. Pero si especificas direcciones superiores tambi‚n son 
+consideradas v lidas: simplemente, los rangos de direcciones #4000-#7FFF, 
+#8000-#BFFF y #C000-#FFFF equivalen a #0000-#3FFF.
+- El slot del mapeador que contiene el segmento ha de estar conectado en la 
+p gina 2 previamente. Esta rutina no hace ning£n cambio de slot.
+- La pila no ha de estar en la p gina 2 al llamar a esta rutina, suponiendo 
+claro que no te gustan los cuelgues fulminantes.
+- Esta rutina deshabilita las interrupciones.
+
+* WR_SEG: Escribe un byte en un segmento
+
+Entrada:	A  = N£mero de segmento
+		HL = Direcci¢n
+		E  = Dato a escribir
+Salida: 	Todos los registros preservados excepto A
+
+Echale un ojo a las explicaciones sobre RD_SEG, que tambi‚n son aplicables 
+aqu¡.
+
+* CAL_SEG: Llamada a una rutina contenida en un segmento
+
+Entrada:	IYh = N£mero de segmento
+		IX = Direcci¢n de la rutina
+		AF, BC, DE, HL ser n pasados tal cual a la rutina
+Salida: 	AF, BC, DE, HL, IX, IY tal como los deje la rutina llamada
+		
+Detallitos dos, la venganza:
+
+- Ahora cualquier direcci¢n es v lida, pero cuidado: el slot del mapeador ha 
+de estar conectado previamente en la p gina correspondiente a la direcci¢n 
+especificada, ya que CAL_SEG s¢lo hace cambios de segmento, no de slot.
+- L¢gicamente, si la direcci¢n especificada es #C000 o superior, no se 
+realizar  ning£n cambio de segmento (recuerda que cambiar el slot o segmento 
+de la p gina 3 es pecado), y CAL_SEG equivaldr  entonces a un simple CALL.
+- Si vas a llamar a una rutina desde la p gina 0, cuidadito con las 
+interrupciones (al hacer un cambio de segmento en la p gina 0, perder s el 
+gancho de la interrupci¢n de #0038: c¢pialo en el segmento a llamar, o bien 
+haz un DI antes de la llamada, si no quieres quedarte ligeramente colgado).
+- CAL_SEG no modifica el estado de las interrupciones.
+
+* CAL_SEG: Llamada a una rutina contenida en un segmento,
+	   con especificaci¢n del segmento y direcci¢n
+	   mediante incrustaci¢n directa en el c¢digo
+	   (en ingl‚s se dice "inline", que queda m s bonito)
+
+Entrada:	AF, BC, DE, HL ser n pasados tal cual a la rutina
+		La secuencia de llamada es tal que as¡:
+
+		CALL	CALLS
+		DB	Segmento
+		DW	Direcci¢n
+
+Salida: 	AF, BC, DE, HL, IX, IY tal como los deje la rutina llamada
+
+En este punto, leerte las explicaciones de CAL_SEG es beneficioso para la 
+salud de tus programas, y ayuda a regular el nivel de silicio.
+
+* PUT_PH: Conecta un segmento en la p gina correspondiente a la direcci¢n 
+especificada en HL
+
+Entrada:	HL = Cualquier direcci¢n de la p gina deseada
+		A  = Segmento a conectar
+Salida: 	Todos los segmentos preservados
+
+O sea, que esto es justo lo que parece: si HL est  entre #0000 y #3FFF, el 
+segmento A ser  conectado en la p gina 0; si entre #4000 y #7FFF, pues en la 
+p gina 1; si entre #8000 y #BFFF, pues en la p gina 2; y si entre #C000 y 
+#FFFF... pues no, listillo, ni por esas nos vas a pillar ni a m¡ ni al DOS. 
+En este £ltimo caso, PUT_PH no hace absolutamente nada, ya que el cambio del 
+segmento de la p gina 3 significar¡a un descenso directo a los infiernos.
+
+Ah, y que como ya viene siendo habitual, el slot del mapeador correspondiente 
+ha de estar previamente conectado en la p gina adecuada.
+
+* GET_PH: Obtiene el segmento conectado en la p gina correspondiente a la 
+direcci¢n especificada en HL
+
+Entrada:	HL = Cualquier direcci¢n de la p gina deseada
+Salida: 	A  = Segmento conectado
+		Todos los dem s segmentos preservados
+
+El valor devuelto no es le¡do directamente de los puertos del mapeador, sino 
+que se saca de una tabla interna que tiene el DOS en memoria. De esta forma 
+se evitan problemas con mapeadores rarillos y/o ligeramente incompatibles.
+
+Y que te acuerdes de vigilar las interrupciones cuando manosees la p gina 
+0...
+
+* PUT_Pn: Conecta un segmento en una p gina espec¡fica (n = 0, 1, 2)
+
+Entrada:	A = Segmento a conectar
+Salida: 	Todos los segmentos preservados
+
+Lo de siempre: "Cuando el segmento de tu vecino veas cambiar, pon antes el 
+slot de tu p gina correspondiente a plantificar".
+
+Y que no, pesao, ­­que PUT_P3 no existe!! Bueno, s¡ existe, pero no hace nada 
+(ganas de perder el tiempo...)
+
+* GET_Pn: Obtiene el slot conectado en una p gina espec¡fica
+(n = 0, 1, 2, 3)
+
+Entrada:	Ninguna (en c¢modos plazos)
+Salida: 	A = Segmento conectado
+		Todos los dem s segmentos preservados
+
+En un arrebato de generosidad, resulta que GET_P3 s¡ existe, mira t£.
+
+ACABANDO, QUE YA LLEVAMOS 28K
+
+Pues eso, resumiendo, que para manejar el la memoria mapeada hay que usar las 
+rutinas de soporte del DOS cuando haberlas haigalas, y cuando no, pues 
+cebolla y agua (o como se diga), y hay que usar rutinas propias como las 
+desparramadas al principio de esta secuencia de c¢digos ASCII interpretables 
+como un fichero de texto. Recuerda que para averiguar si hay rutinas de 
+soporte del mapeador, hay que comprobar si A=0 tras un CALL #FFCA con A=0 y 
+DE=#0401 o #0402.
+
+Y eso, que as¡ son las cosas obsoletas y as¡ se las hemos incrustado, y que 
+en la pr¢xima entrega de este instrumento de cultura popular igual conocereis 
+los secretos m s profundos de la caligraf¡a pictografica en la patagonia, 
+porque la verdad es que sobre introducci¢n al ensamblador MSX ya no tengo ni 
+pendona idea de sobre qu‚ apabullaros... en fin, ya pensar‚ algo (una vez al 
+a¤o no hace demasiado da¤o), manque se admiten sugerencias. ­Hasta incluso, y 
+feliz navidad/verano! (seg£n cu ndo se publique esto).
+
+

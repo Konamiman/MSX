@@ -1,0 +1,986 @@
+­Ep! ­Hola! ­Que aqu¡ estoy de nuevo!
+
+Sorprendentemente, parece  que hay  alguien a  quien le  ha gustado  esto del 
+Easymbler...  pues  bien,  lo siento  por todos  aquellos que  cre¡an haberse 
+librado  de m¡:  Easymbler contin£a,  as¡ que  ya puedes  ir desempolvando el 
+hacha y  prepar ndote para una nueva raci¢n de sabidur¡a zetaoch‚ntica. ­All  
+vamos!
+
+A  ver, ¨d¢nde	est bamos? Vimos  qu‚ demonios	era eso  del Z80,  algo sobre 
+c¢digos  de  operaci¢n	y  nem¢nicos,  bastante  sobre	numeraci¢n  binaria y 
+hexadecimal, la  estructura del  Z80 y	la pila. Pues bien, esto se pone cada 
+vez m s interesante: sin m s pre mbulos damos paso a las...
+
+INSTRUCCIONES DEL Z80
+
+Pues  s¡, lo  que vamos  a ver	ahora es  una enumeraci¢n,  acompa¤ada de una 
+descripci¢n, de  todas las  instrucciones del  Z80. No incluyo los c¢digos de 
+operaci¢n, ya que no son imprescindibles para programar y s¢lo servir¡an para 
+liar m s el asunto; ya incluir‚ una tabla de los mismos m s adelante.
+
+Supongo  que no hace falta que te diga qu‚ ocurrir  si intentas aprend‚rtelas 
+de memoria,  pero para	por si te lo recuerdo: no lo conseguir s, te volver s 
+loco,  aprovechar‚  para  birlarte el  hacha y	a partir  de ah¡  puede pasar 
+cualquier cosa. As¡ que ya sabes: t£ lee tranquilamente, y con la pr ctica ya 
+ir s reteniendo. 
+
+Recuerda  que hace  alg£n tiempo  te dije  que el  Z80 puede  "tratar datos y 
+alguna cosa  m s". Concretando  un poco,  las instrucciones del Z80 se pueden 
+clasificar en cinco categor¡as:
+
+- Transferencia de datos.
+- Tratamiento de datos, que a su vez se pueden clasificar en:
+* Operaciones aritm‚ticas.
+* Incremento y decremento.
+* Operaciones l¢gicas.
+* Rotaci¢n y desplazamiento.
+* Manipulaci¢n de bits.
+- Verificaci¢n y salto.
+- Entrada y salida.
+- Control.
+
+"Pues  cualquiera memoriza  esto." ¨Qu‚  has dichooo?  "­Ah! eh...  nada, que 
+Konami Man es un genio." Ah, cre¡a...
+
+Pues nada,  como te  veo ligeramente  impaciente y  ya no  se me  ocurren m s 
+paridas de relleno, vamos a hacer una visita a las...
+
+INSTRUCCIONES DE TRANSFERENCIA DE DATOS
+
+Pues  s¡, una  de las portentosas operaciones que nuestro genial Z80 es capaz 
+de realizar  es mover  datos de  un sitio  a otro  (bueno, en realidad no hay 
+muchos tipos de "sitios": s¢lo memoria y registros).
+
+Para  empezar podemos  cargar cualquier  registro (o par de registros) con un 
+dato inmediato	(es decir,  con un n£mero puro y duro). Para ello tenemos las 
+instrucciones:
+
+LD r,n
+LD rr,nn
+
+donde "r"  puede ser  cuqlquiera de  los registros A, B, C, D, E, H, L y "rr" 
+cualquiera de los pares BC, DE, HL, SP, IX, IY. Como ya habr s adivinado, "n" 
+ha de ser un dato de un byte, y "nn" uno de dos bytes. "¨Y no puedo cargar un 
+par  de registros  con dato  de un  byte?" Claro  que puedes:  si ejecutas LD 
+HL,34, lo  que har s es cargar L con 34 y H con 0, pero insisto en que el Z80 
+no explotar .
+
+Tambi‚n puedes cargar cualquier registro con el contenido de otro registro:
+
+LD r,r'
+
+donde  "r" y  "r'" pueden  ser A, B, C, D, E, H, L. Los pares de registros no 
+son tan flexibles en este aspecto: s¢lo disponemos de 
+
+LD SP,rr
+
+donde "rr" pueden ser £nicamente HL, IX o IY.
+
+"¨Y qu‚ hay de la memoria?" A eso iba. Si queremos transferir un dato directo 
+(n£mero P.  y D.)  a memoria,  lo tenemos dif¡cil: s¢lo puedes hacer esto con 
+datos de un byte, y con las instrucciones
+
+LD (rr),n
+
+donde  "rr"  pueden  ser  HL,  IX+d o  IY+d. Recuerda  el significado  de los 
+par‚ntesis  (indican "el contenido de la posici¢n de memoria indicada en rr") 
+y de "d" (un desplazamiento de un byte en complemento a dos, de -128 a 127).
+
+Si lo  que queremos  indicar directamente  es la  direcci¢n de	memoria, para 
+transferir datos de un byte s¢lo disponemos de una instrucci¢n:
+
+LD (nn),A
+
+y para dos bytes,
+
+LD (nn),rr
+
+donde  "nn" es una direcci¢n de memoria (dos bytes), y "rr" puede ser BC, DE, 
+HL, SP, IX, IY.
+
+Si lo  que queremos  es usar  registros para  indicar tanto  la direcci¢n  de 
+memoria como el dato, podemos usar las instrucciones:
+
+LD (rr),r'
+
+donde  "rr" puede  ser HL,  IX+d o  IY+d y  "r'", A,  B, C, D, E, H o L. Como 
+siempre  el  acumulador  es  m s  chulo  que  nadie,  y  tambi‚n  existen las 
+instrucciones
+
+LD (BC),A
+LD (DE),A
+
+"Est  bien esto de transferir datos a la memoria, pero... ¨y si lo que quiero 
+es  leer de  la memoria?"  Caramba, vas  espabilando. Pues  bien, la  cosa no 
+cambia mucho  respecto de  lo ya expuesto: las instrucciones disponibles para 
+leer la memoria son
+
+LD A,(nn)
+LD r',(rr)
+
+donde "r'" puede ser A, B, C, D, E, H, L y "rr" HL, IX+d o IY+d. M s:
+
+LD A,(BC)
+LD A,(DE)
+
+Te estar s preguntando c¢mo funciona esto de las transferencia de dos bytes a 
+memoria.  Pues	bien, justo  al reves  de como	hab¡as imaginado:  primero se 
+transfiere el byte bajo y despu‚s el alto. "¨Lo cualo qu‚?" S¡, que si haces 
+
+LD HL,#1234
+LD (#1000),HL
+
+conseguir s un #34 en #1000 y un #12 en #1001. As¡ de claro (y de raro).  
+
+¨D¢nde	vas? ­A£n quedan instrucciones de trasnferencia de datos! Algunas son 
+tan psicod‚licas como
+
+LD A,I
+LD A,R
+LD I,A
+LD R,A
+
+para acceder  al registro de refresco y al de interrupci¢n. Otras, como PUSH, 
+POP,   EXX  y	EX  AF,AF'   ya las   conoces de  sobras. Existe  tambi‚n una 
+instrucci¢n bastante curiosa:
+
+EX (SP),rr
+
+Que  intercambia la  parte superior de la pila (vamos, el dato que obtendr¡as 
+con un POP cualquiera) con el par HL, IX o IY, talmente como si hicieras
+
+"POP JK"
+"PUSH rr"
+"LD rr,JK"
+
+donde  JK  ser¡a  una  par  de	registros  imaginario que  har¡a de  bufer... 
+cualquier  d¡a	 uso  esta  instrucci¢n,  tiene  su  gracia.  Y  hablando  de 
+intercambios, tambi‚n existe
+
+EX DE,HL
+
+cuya  funci¢n no  te voy  a explicar porque soy as¡ de malo y quiero que esta 
+noche la pases en vela rompi‚ndote el coco.
+
+Las  que vamos	a ver  con un  poco m s  de calma son las de transferencia de 
+bloques. "Este  t¡o empieza  a marearme,  y yo ya tengo calambres en el brazo 
+del  hacha."  Bueno,  no  opinar s  lo  mismo  cuando  compruebes  que  estas 
+instrucciones  pueden ahorrarte  bastante trabajo a la hora de programar, as¡ 
+que tranquilo, y atiende.
+
+Las instrucciones de transferencia de bloques son las siguientes:
+
+LDI
+LDIR
+LDD
+LDDR
+
+y con  ellas puedes  transferir de golpe un bloque de datos de una zona de la 
+memoria  a otra,  de una  forma m s  sencilla imposible. ¨Que no te lo crees? 
+Pues mira, s¢lo tienes que hacer
+
+LD HL,dir. origen
+LD DE,dir. destino
+LD BC,longitud del bloque
+LDIR
+
+­­  Y ya  est  el  bloque transferido !! Te has quedado de piedra, ¨eh? Ya te 
+dije que el Z80 es el invento del siglo.
+
+Desmenucemos un  poco m s  esta fant stica  instrucci¢n. Podr¡amos simular su 
+comportamiento con este programa BASIC:
+
+10 POKE HL,PEEK(DE)
+20 HL=HL+1:DE=DE+1:BC=BC-1
+30 IF BC=0 THEN END ELSE GOTO 10
+
+¨Y  qu‚ pasa con las otras tres? LDDR se diferencia de LDIR en que el puntero 
+de la  direcci¢n de  destino se  decrementa en lugar de incrementarse, con lo 
+cual  el  bloque  se  transfiere  invertido;  vamos,  que  el  programa BASIC 
+simulador es el mismo, s¢lo que cambiando DE=DE+1 por DE=DE-1.
+
+En  cuanto a LDI y LDD, transfieren el dato y actualizan los punteros, pero a 
+diferencia de LDIR y LDDR s¢lo transfieren un dato y no cierran el bucle. Sus 
+equivalentes BASIC  se obtendr¡an  eliminando la  l¡nea 30  de los  programas 
+simuladores de LDIR (para LDI) y LDDR (para LDD). 
+
+Bueno,	pues hemos  acabado con  las instrucciones de transferencia de datos. 
+"­Eh chaval¡n!  ¨Qu‚ pasa con las banderas?" ­Huy perd¢n, es verdad! No puedo 
+obviar el efecto de las instrucciones de carga sobre las banderas.
+
+Las  £nicas instrucciones  de carga  "normales" (tipo  LD) que  modifican las 
+banderas son  LD A,R  y LD  A,I, que  no nos  deben preocupar  porque no  las 
+usaremos.  Obviamente, tambi‚n	modifican las banderas EX AF,AF' y POP AF. En 
+cuanto a  las instrucciones de transferencia de bloques, siempre ponen a cero 
+las  banderas H  y N.  LDIR y LDDR ponen la bandera P/V siempre a cero; LDD y 
+LDI la	ponen a  cero si BC=0 tras la ejecuci¢n, en caso contrario la ponen a 
+uno.  Y ya est , como ves la familia LDez no da mucho trabajo con esto de las 
+banderas.
+
+Pues  esto  es	todo  en  cuanto a  instrucciones de  transferencia de datos. 
+¨Demasiadas? Bueno, ¨y para qu‚ est n las tablas? ¨Eh? Pues ­tablas van!
+
+
+TABLA DE INSTRUCCIONES DE TRANSFERENCIA DE DATOS "LD" (1 BYTE)
+
+      A B C D E H L (HL) (BC) (DE) (IX+d) (IY+d) (nn)	n
+Orig. ->
+Dest. |
+      \/
+A     x x x x x x x  x	  x    x     x	    x	  x	x
+B     x x x x x x x  x		     x	    x		x
+C     x x x x x x x  x	  x    x     x	    x	  x	x
+D     x x x x x x x  x	  x    x     x	    x	  x	x
+E     x x x x x x x  x	  x    x     x	    x	  x	x
+H     x x x x x x x  x	  x    x     x	    x	  x	x
+L     x x x x x x x  x	  x    x     x	    x	  x	x
+
+(HL)  x x x x x x x					x
+(BC)  x
+(DE)  x
+
+(IX+d)x x x x x x x					x
+(IY+d)x x x x x x x					x
+
+(nn)  x
+
+
+TABLA DE INSTRUCCIONES DE TRANSFERENCIA DE DATOS "LD" (2 BYTES)
+
+
+	  BC  DE  HL  SP  IX  IY    nn	(nn)
+Orig. ->				    
+Dest. | 				    
+      \/				    
+BC				    x	 x  
+DE				    x	 x
+HL				    x	 x
+			   
+SP		  x	  x    x    x	 x 
+	   
+IX				    x	 x
+IY				    x	 x
+	   
+(nn)	  x   x   x   x   x   x 
+
+
+Simplemente  recuerda que  el formato  es LD  Destino,Origen; si  ves una "x" 
+significa que  la instrucci¢n  existe para ese origen y ese destino. Como ves 
+me he saltado intencionadamente los registros I y R, para nuestros prop¢sitos 
+m s  in£tiles que  la primera  rebanada del  pan de  molde. Para completar la 
+tabla, ah¡ van el resto de instrucciones de carga:
+
+PUSH rr
+POP  rr      -> "rr" =  AF, BC, DE, HL, IX, IY
+
+EX AF,AF'
+EXX
+EX (SP),HL
+EX (SP),IX
+EX (SP),IY
+EX DE,HL
+
+LDI
+LDIR
+LDD
+LDDR
+
+
+INSTRUCCIONES ARITMETICAS
+
+­Yupi!	­Por fin! Ya echaba de menos las matem ticas. Eestooo... por supuesto 
+que no	hablaba en  serio. Te  lo juero  por el  hacha que  en estos momentos 
+sostienes a escasa distancia de mi cabeza.
+
+En realidad poco hay que decir en esta secci¢n, pues el Z80 es un poco tonto; 
+las £nicas  operaciones matem ticas  que el  pobre conoce  son la  suma y  la 
+resta.	As¡ pues,  disponemos de £nicamente cuatro instrucciones: ADD (suma), 
+ADC (suma  con acarreo), SUB (resta) y SBC (resta sin acarreo).
+
+En las	operaciones con  un byte  se suma (o resta) siempre el acumulador m s 
+(menos) el segundo operando (otro registro, un dato inmediato o (HL), (IX+d), 
+(IY+d),  y se  deja el	resultado en  el acumulador. Dicho de otro modo (modo 
+tabla, claro):
+
+Instrucci¢n	Operaci¢n (CY = bandera de acarreo)
+
+ADD A,r 	A = A + r	   -> "r" = A, B, C, D, E, H, L
+ADD A,(HL)	A = A + (HL)
+ADD A,(IX+d)	A = A + (IX+d)
+ADD A,(IY+d)	A = A + (IY+d)
+ADD A,n 	A = A + n
+
+ADC A,r 	A = A + r + CY	   -> "r" = A, B, C, D, E, H, L
+ADC A,(HL)	A = A + (HL) + CY
+ADC A,(IX+d)	A = A + (IX+d) + CY
+ADC A,(IY+d)	A = A + (IY+d) + CY
+ADC A,n 	A = A + n + CY
+
+SUB r		A = A - r	   -> "r" = A, B, C, D, E, H, L
+SUB (HL)	A = A - (HL)
+SUB (IX+d)	A = A - (IX+d)
+SUB (IY+d)	A = A - (IY+d)
+SUB n		A = A - n
+
+SBC A,r 	A = A - r - CY	   -> "r" = A, B, C, D, E, H, L
+SBC A,(HL)	A = A - (HL) - CY
+SBC A,(IX+d)	A = A - (IX+d) - CY
+SBC A,(IY+d)	A = A - (IY+d) - CY
+SBC A,n 	A = A - n - CY
+
+En cuanto  a las  operaciones de  dos bytes, podemos sumar con y sin acarreo, 
+pero  s¢lo  disponemos	de  resta sin  acarreo (esto no es demasiado tr gico: 
+basta  poner a	cero el  acarreo antes de restar. Retomaremos el asunto en la 
+secci¢n de  operaciones l¢gicas).  Mejor pasamos  directamante a la consabida 
+tabla:
+
+Instrucci¢n	Operaci¢n
+
+ADD HL,rr	HL = HL + rr	\
+ADD IX,rr	IX = IX + rr	 -> "rr" = BC, DE, SP
+ADD IY,rr	IY = IY + rr	/
+
+ADD HL,HL	HL = HL x 2
+ADD IX,IX	IX = IX x 2
+ADD IY,IY	IY = IY x 2
+
+ADC HL,rr	HL = HL + rr + CY   -> "rr" = HL, DE, BC, SP
+
+SBC HL,rr	HL = HL - rr - CY   -> "rr" = HL, DE, BC, SP
+
+Como  ves, el  par HL  tiene la  patente de  las operaciones de dos bytes con 
+acarreo... vaale, la pr¢xima vez que suelte una parida me asegurar‚ de que es 
+m¡nimamente graciosa.
+
+  Te preguntar s  de qu‚  sirve sumar  y restar  el bit  del acarreo... bien, 
+recuerda la suma y resta de n£meros binarios que vimos en la primera entrega. 
+"­­NOOOOOO!!"  S¡. Recu‚rdala.  "Argh... ya  est  (esta  me la pagas)." Bien, 
+ahora dime  c¢mo har¡as  para sumar  dos n£meros  de 32  bits, supongamos que 
+contenidos  en HL-IX  y IY-BC.
+
+¨Ya? Si lo has conseguido, pues enhorabuena, t¢mate algo. Si no, no te rompas 
+m s el coco, la soluci¢n es bien sencilla:
+
+ADD IX,BC
+ADC HL,IY
+
+... y ya tenemos el resultado de la suma en HL-IX. S¡: la suma de los 16 bits 
+bajos  es independiente  de la	suma de  los 16  bits altos,  excepto por  la 
+posible generaci¢n  de un  acarreo del	bit 15 al 16, acarreo que es recogido 
+por CY y usado por ADC. Y lo mismo, m s o menos, pasa con la resta.
+
+M s cosas.  Habr s observado  que, aunque el Z80 no sabe multiplicar, podemos 
+de  hecho multiplicar  por dos	(y, por tanto, por cualquier potencia de dos) 
+cualquier  n£mero  de  uno  o  dos  bytes, mediante  la autosuma  (s¡, me  he 
+inventado la  palabreja, ¨qu‚  pasa?). Por  ejemplo, para  multiplicar HL por 
+cuatro:
+
+ADD HL,HL
+ADD HL,HL
+
+Vamos a  rizar el  rizo: ­­Multiplicaci¢n de HL por siete!! "­Est s loco! ­No 
+se puede!" Ah, ¨no? Pues ‚chale un vistazo a este programilla:
+
+PUSH HL
+POP DE
+ADD HL,HL
+ADD HL,HL
+ADD HL,DE
+ADD HL,DE
+ADD HL,DE
+
+­­Y una vez m s, queda demostrado que Konami Man es un genioooo!! ­CHAS! ­AH! 
+De acuerdo, vale, me he pasado, pero si no llego a esquivar el hachazo, ahora 
+existir¡an Konami y Man por separado, so bestia...
+
+Seguro	que has comprendido el programa, pero como hoy tengo ganas de teclear 
+ah¡ va	la explicaci¢n:  Se introduce la cabeza por la abertura, se ajusta el 
+chaleco  con la correa, y se infla tirando fuertemente de los pasadores, pero 
+NUNCA dentro  del avi¢n...  un momento...  creo que  no era  esta explicaci¢n 
+(tanto	viaje  a  Barcelona me	va a  dejar gilipenes).  Bueno, que  copio el 
+contenido  de Hl  en DE  (como ves,  he aqu¡  una nueva utilidad de la pila), 
+multiplico HL por cuatro (por dos y otra vez por dos) y le sumo tres veces el 
+valor  que  ten¡a  antes:  ya  hemos  multiplicado por	siete. Para  terminar 
+recuerda que tambi‚n existe la instrucci¢n ADD A,A para autosumas de un byte.
+
+Me dejaba  en el tintero tres instrucciones que no s‚ si se pueden clasificar 
+exactamente como aritm‚ticas, pero como tengo que ponerlas en alg£n sitio ah¡ 
+van:  se trata	de CPL (invierte el acumulador, cambiando todos los 0 por 1 y 
+viceversa), NEG  (realiza el  complemento a  dos del acumulador, es decir, lo 
+niega  y le  suma uno),  y DAA,  que realiza  el ajuste del resultado una vez 
+realizada una  operaci¢n en  formato BCD.  "¨Becequ‚eeee?" Es  un formato  de 
+codificaci¢n de n£meros decimales del que ya hablaremos si nos hace falta, t£ 
+tranqui.
+
+Bueno,	pues hasta  aqu¡ las  operaciones aritm‚ticas;	podemos pasar  a otra 
+cosa.  "­Quieto  parao!  ¨Y  las banderas?"  Est  visto  que no  se te  puede 
+enga¤ar. Pues  bien, salvo  tres excepciones, todas las operaciones de suma y 
+resta  modifican todas	las banderas: S, Signo (seg£n el ¡dem del resultado); 
+Z, cero (a uno si el resultado es ¡dem); H, acarreo mitad (el criterio cambia 
+seg£n la  instrucci¢n, no  vale la pena preocuparse); P/V, desbordamiento (si 
+la operaci¢n produce un ¡dem); N, resta (0 tras una suma, 1 tras una ¡dem); y 
+C,  acarreo (si  se produce un ¡dem).
+
+­M s banderas,	es la  guerra!: CPL  pone a  uno H y N; NEG activa C si A era 
+cero  antes de	la instrucci¢n,  activa P/V  si A era #80, siempre activa N y 
+modifica el  resto de  las banderas de la forma usual; y en cuanto a DAA, por 
+el  momento la	vamos a dejar m s abandonada que que aquel juego de cinta que 
+heredaste de tu abuelo.
+
+"¨Y las tres excepciones de las que hablabas?" Son ADD HL,rr, ADD IX,rr y ADD 
+IY,rr:	modifican H,  N y  C pero no tocan S, Z ni P/V (sigo pensando que los 
+dise¤adores del  Z80 estaban  un pel¡n bebidos...) T£ tranquilo, recuerda que 
+en  caso de  emergencia simpre puedes poner el acarreo a cero y usar ADC, que 
+s¡ banderiza como toca.
+
+Bueno,	pues eso,  que las  instrucciones aritm‚ticas  ya est n listas (vaya, 
+cuantas l¡neas...  y eso que dije que no hab¡a mucho que decir sobre ellas... 
+menudo cubrimiento de gloria...)
+
+
+INCREMENTO Y DECREMENTO
+
+Estas  instrucciones no est n clasificadas como aritm‚ticas, pero casi que lo 
+son...	bueno,	dejemos  de  filosofar	y  al  grano  (digo,  al  byte).  Las 
+instrucciones INC y DEC nos permiten incrementar y decrementar (sumar/ restar 
+uno), respectivamente,	cualquier registro  o par  de registros, o incluso el 
+contenido  de  cualquier  direcci¢n  de  memoria,  simpre  que la  indiquemos 
+convenientemente.
+
+Pues  eso, que	disponemos de las instrucciones de incremento y decremento de 
+un byte:
+
+INC r
+DEC r
+
+donde "r" = A, B, C, D, E, H, L, (HL), (IX+d), (IY+D); y las de dos bytes
+
+INC rr
+DEC rr
+
+donde "rr" = HL, BC, DE, SP, IX, IY.
+
+Poca cosa queda por decir sobre estas instrucciones, a no ser alguna tonter¡a 
+sin importancia;  por decir  algo, el  efecto sobre  las banderas.  Por decir 
+algo,  INC r y DEC r modifican S, Z, H, P/V y N seg£n el resultado (P/V act£a 
+como bandera  de desbordamiento,  N se	pone a	0 para	INC y  a 1 para DEC), 
+mientras  que INC  rr y  DEC rr no modifican ninguna (misterios del silicio). 
+Bueno, lo  dejo aqu¡  porque el  SaveR me dice que ha hecho una m£sica con el 
+OPL4 y quiere torturarme un rato (como una puta cabra...)
+
+
+OPERACIONES LOGICAS
+
+Desde  luego, la m£sica del SaveR era claustrof¢bica a m s no poder... venga, 
+ya est  bien de secta. ¨Recuerdas las cuatro operaciones l¢gicas NOT, OR, AND 
+y XOR? Pues bien, el Z80 tiene a nuestra disposici¢n cuatro instrucciones que 
+realizan estas	operaciones: CPL, OR, AND y XOR, casualmente. Excepto CPL, de 
+la  que ya  hemos hablado,  la operaci¢n  se realiza entre el acumulador y un 
+operando  que  hemos  de  especificar,	quedando  el  resultado  final en  el 
+acumulador. "Pero si las operaciones l¢gicas se realizan entre dos bits, y el 
+acumulador tiene ocho..." Cierto: la operaci¢n se realiza bit a bit, con cada 
+uno de	los ocho  del acumulador  y del operaqndo. "¨Eins?" Ejemplo: OR B. Lo 
+que esta instrucci¢n hace es lo siguiente:
+
+bit 0 de A = bit 0 de A OR bit 0 de B
+bit 1 de A = bit 1 de A OR bit 1 de B 
+...
+bit 7 de A = bit 7 de A OR bit 7 de B
+
+As¡  de f cil:	con una sola instrucci¢n realizamos ocho operaciones l¢gicas. 
+La £nica  que no necesita segundo operando es CPL, que como ya vimos invierte 
+todos  los bits  del acumulador. Es decir, que tras un CPL lo que el Z80 hace 
+es:
+
+bit 0 de A = NOT bit 0 de A
+...
+bit 7 de A = NOT bit 7 de A
+
+Concretando un poco, las instrucciones de las que disponemos son:
+
+CPL
+OR r
+AND r
+XOR r
+
+donde "r" = A, B, C, D, E, H, L, (HL), (IX+d), (IY+d) o un dato inmediato (lo 
+que en mi pueblo se llama n£mero de un byte).
+
+Las operaciones  l¢gicas con un dato inmediato tienen truco. No se lo digas a 
+nadie, pero permiten poner a uno o a cero bits sueltos del acumulador, con un 
+par de golpes de reloj (us‚ase con una instrucci¢n). Ejemplo: sup¢n que te da 
+el  venazo de poner a uno los bits 1 y 3 del acumulador, sin tocar los otros. 
+Pues bien, no tiene m s que hacer:
+
+OR %00001010
+
+­Sorpresa! En  realidad no  hay tal truco; si repasas la tabla de operaciones 
+l¢gicas, ver s que 0 OR lokesea = lokesea, y 1 OR lokesea = 1.
+
+¨Y si ahora quisieras poner a 0 los bits 7 y 5? Observa y p smate:
+
+AND %01011111
+
+El  colmo de  las virguer¡as:  ­­Vamos a  invertir los	bits 0	y 6!! Chupao, 
+hombre, chupao:
+
+XOR %01000001
+
+Estar s  pensando  que	soy  un  tipo  un poco	raro si  encuentro placer  en 
+modificar  bits  del  acumulador... bueno,  cuando empieces a programar ser s 
+consciente de la importancia que puede llegar a tener un triste bit.
+
+­Ya tard bamos	en hablar  de las  banderas! LAs  instrucciones l¢gicas  (CPL 
+aparte) modifican S, Z y P/V (que act£a como bit de paridad), y ponen a 0 N y 
+C; OR y XOR ponen H a 0, y AND la pone a 1.
+
+Llegamos a  otro truqui:  ¨qu‚ pasa  si hacemos  AND A	or OR  A? "Nada, pues 
+lokesea  AND/OR elmismolokesea	= eselokesea".  En efecto,  el acumulador  no 
+cambia, pero  s¡ las  banderas, nunca  lo olvides.  De hecho, OR A y AND A se 
+utilizan siempre que se quiere poner a cero la bandera de acarreo.
+
+Un £ltimo  truqui: XOR A, que si te fijas deja el acumulador al m s m¡sero de 
+los  ceros. XOR A es usado normalmente para borrar el acumulador, ya que esta 
+instrucci¢n ocupa  un byte  y LD  A,0 ocupa  dos. "Entonces,  ¨XOR A y LD A,0 
+tienen un efecto id‚ntico?" ­­NO!! Recuerda las banderas...
+
+Ya  est  aqu¡  el SaveR otra vez. "­­Que me pongas el OPL4, que me vi a hacer 
+una m£sica pero lla!!" Pos bueno, hasta leugo...
+
+
+ROTACION Y DESPLAZAMIENTO
+
+­El SaveR se ha largado a estudiar japon‚s! ­­Aprovechemos!!
+
+Llegamos  a un	conjunto de instrucciones bastante curioso, que nos permitir  
+tratar los registros como si de vulgares rompecabezas se trataran. 
+
+Imag¡nate  que, un  buen d¡a,  el bit 7 del acumulador se pone cachondo, y le 
+entra  la  perra de  ocupar el	lugar del  bit 6.  Como es  m s burro  que el 
+programador medio  de PC  (que cuando  un programa  le sale  lento, en vez de 
+optimizarlo se compra un pestium m s r pido), le arrea a su vecino un empuj¢n 
+de los bastos, tras lo cual consigue su prop¢sito y se instala c¢modamente en 
+la  posici¢n del bit 6. Este, por su parte, se ve obligado a desalojar al bit 
+5, ya que en alguna parte se ha de quedar. El bit 5 se traslada a su vez a la 
+posici¢n 4...  y as¡  hasta llegar al bit 1, que se coloca en la posici¢n del 
+bit 0. ¨Que qu‚ hace el cer‚simo bit? Seg£n su estado de  nimo: puede mudarse 
+al  acarreo o  puede trasladarse  a la	posici¢n del  bit 7.  En cuanto  a la 
+posici¢n  7,  que  queda  libre, puede	ser "okupada"  por el  bit 0,  por el 
+contenido del acarreo, o quedar vacante (en cuyo caso se carga con un 0).
+
+Pues  en  esto	consisten las  operaciones de  rotaci¢n y  desplazamiento, en 
+idemciones  e idemzamientos  de todos los bits de un registrto. La diferencia 
+entre  ambas  estriba  en  el  comportamiento  del  £ltimo  bit  (el  0  para 
+movimientos hacia la derecha, el 7 para movimientos hacia la izquierda). A su 
+vez, los  desplazamientos se dividen en l¢gicos y aritm‚ticos; las rotaciones 
+pueden ser a trav‚s del acarreo y con copia en el acarreo.
+
+"Perdone, me  he equivocado... yo buscaba el curso de ensamblador F-A-C-I-L." 
+­­Eh,  eh, un  momento!! ­Que  es muy f cil! "¨Seguro?" ­Claro! Comprendo que 
+una  parrafada	te¢rica  siempre  queda  bastante  pastosa, pero  ya deber¡as 
+conocer mi estilo: tras el rollazo, ­simpre vienen las tablas! Conque he aqu¡ 
+una  tabla   (aunque  en   esta  ocasi¢n  mejor  denominarla  lista)  de  las 
+instrucciones  de  rotazamiento  (palabreja  que  me  viene  de  perlas  para 
+abreviar):
+
+- Desplazamiento aritm‚tico a la izquierda: SLA r
+
+	----	------------------
+	|  | <- | 7   <----    0 | <- 0
+	----	------------------
+	 CY
+
+El bit 7 pasa al acarreo. El bit 0 se carga con un 0. Equivale a la operaci¢n 
+aritm‚tica r = r*2.
+
+
+- Desplazamiento aritm‚tico a la derecha: SRA x
+
+	 ------------------    ----
+      ---| 7   ---->	0 | -> |  |
+      |  ------------------    ----
+      |   / \			CY
+      -----|
+
+El  bit  7  no	var¡a.	El bit	0 pasa	al acarreo.  Equivale a  la operaci¢n 
+aritm‚tica r = r/2, respetando el bit de signo.
+
+
+- Rotaci¢n con copia en el acarreo hacia la izquierda: RLC r
+
+	----	------------------
+	|  | <- | 7   <----    0 |
+	----	------------------ 
+	 CY	  |	      / \
+		  |	       |
+		  --------------
+
+El bit 7 se copia en el acarreo y pasa a la posici¢n 0.
+
+
+- Rotaci¢n con copia en el acarreo hacia la derecha: RRC r
+
+	------------------    ----
+	| 7   ---->    0 | -> |  |
+	------------------    ----
+	 / \	       |       CY
+	  |	       |
+	  --------------
+
+El bit 0 se copia en el acarreo y pasa a la posici¢n 7.
+
+
+- Rotaci¢n a trav‚s del acarreo hacia la izquierda: RL r
+
+	----	------------------
+	|  | <- | 7   <----    0 |
+	----	------------------ 
+	 CY		      / \
+	 |		       |
+	 -----------------------
+
+El  contenido  del  acarreo  antes  de la  instrucci¢n pasa  al bit  0. El 
+bit 7 pasa al acarreo.
+
+
+- Rotaci¢n a trav‚s del acarreo hacia la derecha: RR l
+
+	------------------    ----
+	| 7   ---->    0 | -> |  |
+	------------------    ----
+	 / \		       CY
+	  |		       |
+	  ----------------------
+
+El contenido del acarreo antes de la instrucci¢n pasa al bit 7. El bit 0 pasa 
+al acarreo.
+
+¨Ves  como no  era tan	dif¡cil? Puede que ahora mismo no veas la utilidad de 
+estas instrucciones.  "S¡, llenar  p ginas de Easymbler". Je, je, qu‚ gracia, 
+me  parto  de  ¡dem.  Bueno,  imag¡nate  que  quieres multiplicar/dividir  el 
+contenido de alg£n registro por una potencia de dos, o comprobar el contenido 
+de  todos los bits de un registro con un solo bucle... anda, parece que estas 
+instrucciones sirven para esto, ¨verdad? Qu‚ curioso...
+
+­­Eh,  eh,  quieto parao,  que no  hemos terminado  con las  instrucciones de 
+rotazamiento!! Concretamente, me olvidaba de cuatro detallitos.
+
+Uno: 'r'  puede ser A, B, C, D, E, H, L, (HL), (IX+n) o (IY+n) para todas las 
+rotazacciones	(­Toma	 compresi¢n   de   "instrucciones   de   rotaci¢n   y 
+desplazamiento"!)
+
+Dos:  el  comportamiento de  las banderas.  Todas las rotazacciones modifican 
+todas  las banderas  (P/V act£a como bit de paridad, H y N se ponen siempre a 
+0).
+ 
+Tres:  existen	unas  instrucciones  de rotaci¢n  exclusivas del  acumulador, 
+heredadas del  abuelito 8080.  Se trata  de RLA,  RRA, RLCA y RRCA; tienen la 
+ventaja  de ocupar  un s¢lo  byte, y  s¢lo se diferencian de sus equivalentes 
+generales en el efecto sobre las banderas (no modifican S, Z ni P/V).
+
+Cuatro:  hay  dos  instrucciones  especiales  para  rotaci¢n  decimal.	Estas 
+instrucciones trabajan	sobre A y (HL), y tratan los bytes como grupos de dos 
+nibbles (normalmente, dos d¡gitos BCD). Ah¡ van:
+
+- Rotaci¢n decimal a la izquierda: RLD
+
+		      -----------------------
+		      | 		    |
+		      | 		   \ / 
+	-------------------    -------------------
+     A	| 7    4 | 3	0 |    | 7    4 | 3    0 |  (HL)
+	-------------------    -------------------
+		     / \	 |   / \     |
+		      | 	 |    |      |
+		      ------------    --------
+
+El  nibble inferior  de A  pasa al  nibble inferior  de (HL),  ‚ste al nibble 
+superior de  (HL), y ‚ste al nibble inferior de A. El nibble superior de A no 
+se ve alterado.
+
+
+- Rotaci¢n decimal a la derecha: RRD
+
+		      -----------------------
+		      | 		    |
+		     \ /		    |  
+	-------------------    -------------------
+     A	| 7    4 | 3	0 |    | 7    4 | 3    0 |  (HL)
+	-------------------    -------------------
+		      | 	/ \   |     / \
+		      | 	 |    |      |
+		      ------------    --------
+
+El  nibble inferior  de A  pasa al  nibble superior  de (HL),  ‚ste al nibble 
+inferior de  (HL), y ‚ste al nibble inferior de A. El nibble superior de A no 
+se ve afectado.
+
+Ya  queda poco...  el efecto  sobre las  banderas es  el mismo	que el de las 
+instrucciones normales,  salvo que  el acarreo	no se ve afectado. Y ahora s¡ 
+que hemos terminado con las rotazacciones (Sayonara... beibi.)
+
+
+MANIPULACION DE BITS
+
+Manque	te  parezca  incre¡ble (o  manque no),	este es el £ltimo subgrupo de 
+las llamadas operaciones de tratamiento de datos. Como su propio nombre grita 
+(tan  alto que	alg£n vecino  se va  a mosquear  y va  a llamar  a la Polic¡a 
+Renderizada),  con  estas  instrucciones  puedes  manipular  bit  sueltos  de 
+cualquier registro.  ¨Y qu‚ es exactamente "manipular"? Pues lo que se conoce 
+como  "las tres  pes": Poner a 0, Poner a 1 y Ponerse a mirar qu‚ hay (bueno, 
+la tercera  operaci¢n se  suele abreviar  con "comprobar" o "verificar", pero 
+entonces no me cuadraba lo de "las tres pes", y no me sal¡a el chiste malo de 
+turno).
+
+Para empezar,  supongamos que  estamos en plan chafardero, y queremos ver qu‚ 
+hay  en el  bit 'b' (de 0 a 7) del registro 'r' (que puede ser A, B, C, D, E, 
+H,  L,	(HL),  (IX+d)  o  (IY+d)).  Pues  nada,  no tenemos  m s que  usar la 
+instrucci¢n
+
+BIT b,r
+
+...  y tendremos la bandera Z convertida en esp¡a (Z=1 si el bit es 0, Z=0 si 
+el bit es 1). En cuanto al resto de las banderas, H se pone a 1, N a 0, y S y 
+P/V var¡an aleatoriamente.
+
+Si lo  que queremos  es pasar a la acci¢n y modificar a nuestro antojo el bit 
+'b' del registro 'r' (los mismos que SET), usaremos
+
+SET b,r
+RES b,r
+
+para  poner, respectivamente,  el bit  a 1  o a 0. Estas dos instrucciones no 
+act£an sobre las banderas.
+
+Caramba,  me dejaba  de un par de instrucciones, se trata de SCF (que pone el 
+acarreo a 1) y CCF (que complementa el acarreo). Pues bueno, ah¡ quedan, y ya 
+podemos pasar tranquilamente al siguiente grupo...
+
+VERIFICACION Y SALTO
+
+Vaya,  vaya, mira por donde esto no nos pilla totalmente por sorpresa. S¡: ya 
+hab¡amos visto	una instrucci¢n  de salto. "­¨Qu‚?! ¨D¢nde?" No disimules, en 
+la secci¢n sobre la pila ya hab¡amos visto la instrucci¢n CALL. Se trataba de 
+uns   instrucci¢n  de  llamada	incondicional.	Tambi‚n  vimos	RET,  retorno 
+incondicional.
+
+Las instrucciones de este grupo se dividen en salto absoluto, salto relativo, 
+llamada y  retorno; a  su vez,	cada una de ‚stas puede ser incondicional (la 
+instrucci¢n  se ejecuta  "by noses") o condicional (la instrucci¢n se ejecuta 
+s¢lo si se cumpla una determinada condici¢n, es decir, si determinada bandera 
+est  como nosotros queremos que est‚). ¨Recuerdas la charla que tuvimos sobre 
+las banderas?  Qued¢ claro  (o debi¢ quedar claro) que las banderas juegan un 
+papel	fundamental  en   las  instrucciones  condicionales,  equivalentes  a 
+IF...GOTO. Pues  bien, sin  m s ni more paso a describir las instrucciones de 
+salto y comprobar s que tal afirmaci¢n no fue gratuita (son 34 millardos, por 
+si le place). Ah¡ van:
+
+- Salto  absoluto: JP aa. El PC se carga con la direcci¢n 'aa' y la ejecuci¢n 
+contin£a.  Vamos, como	un vulgar  GOTO. Tambi‚n  existen JP  (HL), JP (IX) y 
+JP (IY).
+
+-  Salto absoluto  condicional: JP  cc,aa. El PC se carga con 'aa' s¢lo si se 
+cumple la condici¢n 'cc', que puede ser:
+
+Z: cero (Z=1)
+NZ: no cer (Z=0)
+C: acarreo (C=1)
+NC: no acarreo (C=0)
+PE: paridad par (P/V=1)
+PO: paridad impar (P/V=0)
+P: positivo (S=0)
+M: negativo (S=1)
+
+Como ves, equivale a IF cc GOTO aa.
+
+- Salto relativo: JR d. Al contador de programa se suma el desplazamiento 'd' 
+(un byte  en complemento a dos). El valor del PC se toma tras la instrucci¢n, 
+que  ocupa dos	bytes; por tanto 'd' puede ir de -126 a +129. No te rompas el 
+coco con  estos detalles,  a la  hora de  ensamblar usar s  etiquetas, que te 
+ahorrar n cualquier c lculo. Dale paciencia a la ¡dem.
+
+El salto relatico tiene varias ventajas respecto al absoluto: es m s corta, y 
+permite realizar  programas reubicables  (si un programa s¢lo contiene saltos 
+relativos,  da igual  si empieza  en #0034  o en  #AFBE). La desventaja es el 
+limitado alcance (de -126 a +129 bytes).
+
+-  Salto relativo  condicional: JR cc,d. El salto relativo s¢lo se produce si 
+se cumple la condici¢n, que en esta ocasi¢n s¢lo puede ser C, NC, Z o NZ.
+
+- Llamada  a subrutina: CALL aa. Esta instrucci¢n qued¢ ampliamente explicada 
+en la secci¢n sobre la pila, as¡ que no me enrollar‚ aqu¡ sobre ella.
+
+- Llamada  condicional: CALL  cc,aa. La  llamada se  reasliza si se cumple la 
+condici¢n,  que puede  ser cualquiera de las expuestas para JP. Equivalente a 
+IF...GOSUB.
+
+- Retorno de subrutina: RET. Idem de lo sicho para CALL.
+
+- Retorno condicional: RET cc. El valor del PC es restaurado de la pila, s¢lo 
+si se cumple la condici¢n (puede ser cualquiera de las usables en JP y CALL).
+
+¨Recuerdas la  instrucci¢n CP,	que comparaba  dos operandos y modificaba las 
+banderas  en funci¢n  del resultado?  Pues con	CP y los saltos condicionales 
+podemos componer instrucciones del tipo IF A<B GOTO... Fant stico, ¨verdad?
+
+Ahora veremos  algunas instrucciones  especiales. Una bastante interesante es 
+DJNZ  d: primero  decrementa el registro B, despu‚s comprueba si ha llegado a 
+cero; en  caso contrario realiza un salto relativo de longitud 'd' (igual que 
+JR).  O m s  BASICamente,
+
+B=B-1:IF B<>0 THEN GOTO PC+d
+
+Vamos, que  ni hecha  a prop¢sito (de hecho, hecha a prop¢sito) para componer 
+bucles.
+
+Un  par de  instrucciones rarillas son RETI y RETN, usadas para volver de una 
+rutina	de  atenci¢n  a  una  interrupci¢n,  enmascarable  y  no enmascarable 
+respectivamente. Como  el MSX  no usa  interrupciones no enmascarables, y las 
+enmascarables las gestiona normalmente el sistema operativo, no entraremos en 
+detalles.
+
+Esta  es bastante  curiosa: RST  a. Equivale  a CALL a. ¨La ventaja? Ocupa un 
+s¢lo byte.  ¨La desventaja?  'a' s¢lo  puede ser  #0000, #0008, #0010, #0018, 
+#0020, #0028, #0030 y #0038. Caprichitos de los zilogueros...
+
+Para  acabar con  este grupo,  una frase hist¢rica que dijo no s‚ qui‚n: "Las 
+instrucciones de  verificaci¢n y  salto no  modifican ninguna bandera". Si la 
+miras bien es bastante profunda...
+
+
+ENTRADA/SALIDA
+
+Seguramente  habr s o¡do hablar de los puertos de entrada/salida, a trav‚s de 
+los cuales el Z80 puede intercambiar datos con los diferentes perif‚ricos del 
+MSX (el  VDP, el  PSG y  compa¤¡a). Tambi‚n  recordar s que dije alg£n tiempo 
+algo as¡ como "cualquier perif‚rico conectable a un MSX puede ser contemplado 
+como memoria". Vamos a ver esto con un poco m s de calma.
+
+Vimos que el Z80 puede direccionar 64K de memoria, a base de instrucciones LD 
+y  similares. Pues  bien, el  Z80 tambi‚n  dispone de  un segundo  espacio de 
+direccionamiento, llamado  espacio de  entrada/salida. Este  es de 8 bits (es 
+decir,	 "mide"  £nicamente  256  direcciones,  o  "puertos")  y  dispone  de 
+instrucciones  espec¡ficas  para su  control. Normalmente  se usa  el espacio 
+"normal"  para  direccionar  memoria  y  el  espacio  de  entrada/salida para 
+controlar perif‚ricos,	aunque nada  impide que sea al rev‚s (por ejemplo, el 
+SCC  se controla  a trav‚s del espacio normal de direcciones del cartucho que 
+lo contiene).  De hecho,  en el  MSX la mayor¡a de los 256 puertos del Z80 ya 
+est n  reservados para	perif‚ricos est ndar,  y lo  m s seguro  a la hora de 
+dise¤ar uno nuevo es controlarlo a trav‚s del espacio de memoria del cartucho 
+controlador.
+
+Resumiendo,  que  adem s  de  64K de  memoria, el  Z80 puede  direccionar 256 
+puertos  de  entrada/salida.  En  primer lugar	veremos las  instrucciones de 
+entrada:
+
+IN A,(n)
+IN r,(C) -> 'r' = A, B, C, D, E, H, L
+INI
+INIR
+IND
+INDR
+
+La primera instrucci¢n lee el puerto indicado de forma inmedianta mediante el 
+n£mero 'n',  deposit ndolo en  A. La  segunda deposita  en el registro 'r' el 
+contenido  del puerto indicado en el registro C. ­­OJO!! IN A,(n) no modifica 
+ninguna bandera, pero IN r,(C) modifica S, Z, H, P/V (paridad) y N (siempre a 
+0).
+
+Las instrucciones  INI, INIR,  IND e  INDR son	similares a  LDI, LDIR, LDD y 
+LDDR:  permiten la  entrada de	bloques de  datos con pocas instrucciones. En 
+concreto, INIR equivale a:
+
+10 POKE HL,INP(C)
+20 HL=HL+1:B=B-1
+30 IF B=0 THEN END ELSE GOTO 10
+ 
+Si  eliminamos	la l¡nea  30 tenemos  INI; si  cambiamos HL=HL+1  por HL=HL-1 
+tenemos INDR;  y si  hacemos las  dos cosas  tenemos IND. Observa que siempre 
+leemos	el mismo  puerto (el  indicado en  el registro C), y que s¢lo podemos 
+leer un m ximo de 256 datos (el bucle es controlado por el registro B).
+
+En cuanto a las banderas, S, Z y P/V se modifican aleatoriamente; N se pone a 
+1, y  Z se  pone 1 si B=0 tras la ejecuci¢n (cosa que siempre pasa con INIR e 
+INDR).
+
+¨Y la salida? Para escribir en los puertos disponemos de:
+
+OUT (n),A
+OUT (C),r -> 'r' = A, B, C, D, E, H, L
+OUTI
+OTIR
+OUTD
+OTDR
+
+Ni OUT (n),A ni OUT (C),r modifican las banderas. OUTI, OTIR, OUTD y OTDR son 
+equivalentes  a  INI,  INIR,  IND e  INDR (el  efecto sobre  las banderas  es 
+id‚ntico), basta cambiar en el programa BASIC equivalente la primera l¡nea:
+ 
+10 OUT (C),PEEK (HL)
+
+Y ahora  una frase que ya debes estar harto de o¡r, pero que no por ello deja 
+de  ser cierta: con la pr ctica (otra vez...) acabar s por saberte de memoria 
+los puertos m s importantes del MSX. Prometible y prometido.
+
+
+INSTRUCCIONES DE CONTROL
+
+Seg£n  el  manual  del	Z80,  estas  instrucciones  "modifican  la  situaci¢n 
+operativa de  la CPU o manupulan la informaci¢n de su estado interno". Bueno, 
+yo prefiero decir que sirven para torear un poco al Z80. Vamos a verlas.
+
+Para empezar tenemos NOP, que realiza una portentosa demostraci¢n de vagancia 
+y no  hace nada.  Es tan  in£til que su c¢digo de operaci¢n es #00. ¨Que para 
+qu‚  sirve? Como retardo (imprescindible, por ejemplo, en algunas operaciones 
+con el	VDP), como  relleno (¨quieres  eliminar una  instrucci¢n si tener que 
+ensamblarlo  todo de  nuevo? La  pisas con ceros, y listo) o para reservar un 
+cacho  de  memoria  para  datos  (tambi‚n  podr¡as  rellenarla con  34s, pero 
+suele ser  m s limpio, y m s claro a la hora de desensamblar, usar ceros). He 
+ah¡ la utilidad de lo in£til.
+
+HALT:  provoca un infarto al Z80, es decir, lo deja inactivo (ejecutando NOPs 
+para refrescar la memoria) hasta que recibe una interrupci¢n. Curioso...
+
+DI &  EI: invalida  y valida  interrupciones, respectivamente.	Trabajando en 
+modo  DI ganas	velocidad, pero  si no vas con cuidado hay riesgo de cuelgue. 
+Vamos,	que  es  como  contener la  respiraci¢n... (El	crimen perfecto:  ­DI 
+seguido de HALT!)
+
+IM  0, IM 1 & IM 2: selecciona uno de los tres modos de interrupci¢n del Z80. 
+El  MSX  s¢lo usa  IM 1,  es decir,  salto autom tico  a #38  al recibir  una 
+interrupci¢n, y a partir de ah¡ ya te apa¤ar s...
+
+¨Las banderas? Qu‚ vaaa, estas instrucciones no las tocan para nada...
+
+
+CONCLUSION CITY
+
+Bbbuuuuuuuffff...  se  acab¢ lo  que se  tecleaba. Ya  hemos visto  todas las 
+instrucciones del Z80.
+
+Reconozco  que	esta  entrega  de Easymbler  tambi‚n me  ha quedado  un pel¡n 
+pesada, pero  piensa que  es dif¡cil hacer secta con un LD A,34 o un DJNZ. Lo 
+que  has de hacer (nuuuunca me cansar‚ de reptirlo) es leerlo todo con calma, 
+sin  intentar  retener nada;  m s que  como texto  docente (eeks,  parezco un 
+profesor)  esta  lista	de  instrucciones te  servir  como  referencia en  el 
+futuro. 
+
+¨De  qu‚ ir   el pr¢ximo  plomazo? Bueno, ya va siendo hora de profundizar un 
+poquito m s  en la  estructura del  MSX, de aprender a usar un ensamblador de 
+verdad	(aunque lo  que veremos  se puede  aplicar a  todos, no me cansar‚ de 
+recomendarte el  mejor, el que est  a eones luz de los dem s: COMPASS, claro) 
+y de meterle mano a unas cuantas t‚cnicas b sicas de programaci¢n.
+
+Mientras, con  lo que  has visto,  ya puedes  ir haciendo  alguna cosilla. Yo 
+empec‚	con  un  programa que  llenaba la  pantalla de	As... s¢lo  necesitas 
+disponer  de la  rutina de  impresi¢n de un car cter en pantalla (con la BIOS 
+conectada, o  lo que es lo mismo, con el BASIC activo, se encuentra en #00A2; 
+tienes	que hacer  LD A,65  y llamarla)  y componer  un bucle.	¨Ser s capaz? 
+­­­Claro que s¡!!!
+
+­Hasta incluso!
+
+
+					///// KONAMI MAN \\\\\
+
+

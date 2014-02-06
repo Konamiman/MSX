@@ -1,0 +1,1194 @@
+A LA TERCERA VA LA ENSAMBLADA
+
+­Hombre, cu nto tiempo sin escapar de tu hacha! Veo que incluso has ganado 
+b¡ceps a fuerza de sostener tan pesado artilugio. A partir de ahora tendr‚ 
+que ir con m s cuidado con lo que digo (o correr m s r pido).
+
+Pues nada, bienvenido a la tercera entrega (tercera ya, c¢mo pasan los 
+herzios) de este curso de ensamblador f cil (yo ten¡a una asignatura en 
+primero llamada F.A.C.I.L.: Ficheros Archivos Con una Introducci¢n Ligera. Ya 
+s‚ que no tiene gracia, pero me muero de ganas por ver c¢mo traduce esto 
+Ram¢n). El enorme sufrimiento y merma de tu salud ps¡quica que para t¡ ha 
+supuesto la lectura de las dos primeras entregas van a verse por fin 
+compensados, ya que ahora, por fin, veremos chicha, o lo que es lo mismo: 
+­ensamblaremos programas de verdad! 
+
+Pero tranquilo, no corras. Recuerda que el Z80 no hace al MSX y que existe 
+una cosa llamada "programa ensamblador". As¡ pues, y sinti‚ndolo por m¡ 
+(porque veo que vuelves a echar mano al hacha), antes de entrar a matar hemos 
+de detenernos en un par de puntos. Ah¡ va el primero:
+
+LIGERISIMA INTRODUCCION A LA ARQUITECTURA DEL MSX
+
+Y tan ligera. S¢lo nos vamos a ocupar de la organizaci¢n de la memoria, y sin 
+muchos detalles: lo justo para empezar a programar. T£ tranquilo, est  
+chupao.
+
+Tenemos un Z80 como microprocesador, o lo que es lo mismo, acceso a 65536 
+direcciones de memoria, de #0000 a #FFFF. Este espacio de direcciones se 
+divide en cuatro p ginas:
+
+P gina 0: #0000 a #3FFF
+P gina 1: #4000 a #7FFF
+P gina 2: #8000 a #BFFF
+P gina 3: #C000 a #FFFF
+
+Estas son las direcciones que el Z80 puede leer y escribir a trav‚s de las 
+instrucciones apropiadas, como ya vimos. ¨Y qu‚ es lo que estamos 
+leyendo/escribiendo realmente en un MSX? Pues, ¨qu‚ va a ser? Memoria, ni m s 
+ni menos. ¨Y c¢mo se le enchufa memoria al Z80 de los MSX? A trav‚s de los 
+slots.
+
+Un MSX dispone de cuatro slots o bancos de memoria, salvo alguna excepci¢n 
+son dos internos y dos externos (s¡, ‚stas son las famosas ranuras para 
+cartuchos). A cada uno de estos bancos podemos conectar una memoria de 64K, 
+que tambi‚n se divide en cuatro p ginas de 16K. 
+
+Una vez que tenemos la memoria conectada al slot y el ordenador encendido 
+podemos, mediante un puerto llamdo registro selector de slot (por si tienes 
+curiosidad es el #A8), conectar cualquier p gina de cualquier slot a la 
+p gina del Z80 que tenga el mismo n£mero (es decir, si quieres conectar al 
+Z80 la p gina 2 de un slot, tienes que hacerlo por narices en la p gina 2 del 
+Z80), y a partir de ah¡ leerla y escribirla normalmente con LDs y similares.
+
+Los slots externos est n para que el usuario conecte lo que le d‚ la gana, 
+desde el Nemesis hasta el Mega-SCSI, sin olvidarnos de las ampliaciones de 
+memoria o las unidades de disco externas. ¨Y qu‚ hay de los slots internos? 
+Vienen conectados de f brica con ROMs indispensables para el funcionamiento 
+del MSX. Principalmente la BIOS, el int‚rprete del BASIC, la controladora de 
+disco, la BIOS extendida de los MSX2/2+/TR y por supuesto la RAM; luego est n 
+los "extras" como el FM-PAC de los 2+/TR, el Turbo-BASIC del MSX2+ de Sanyo o 
+la agenda del Sony F9S.
+
+El MSX tiene dos modos de funcionamiento, o dos ambientes, que como ya sabr s 
+son el MSX-BASIC y el MSX-DOS. De momento trabajaremos en modo BASIC, cuya 
+disposici¢n de p ginas conectadas es la siguiente:
+
+* P gina 0: ROM-BIOS. Se trata de una serie de rutinas destinadas a la 
+gesti¢n de los recursos del MSX, est n estandarizadas y garantizan un 
+funcionamiento id‚ntico independientmente del MSX que las ejecute. Permiten 
+realizar programas 100% compatibles, pero resultan un poco lentas. De 
+momento, y como estamos aprendiendo, usaremos mucho la BIOS. Cuando tengamos 
+m s experiencia y sepamos bien d¢nde pisamos podremos ir prescindiendo poco a 
+poco de ella, con lo que ganaremos en velocidad, pero tendremos que ir con 
+muuuucho cuidado para no hacer programas incompatibles.
+
+* P gina 1: Int‚rprete BASIC. El responsable de que el SaveR haya sido capaz 
+de empezar un clon del SD-Snatcher. No es m s que un largu¡smo (16K) programa 
+en ensamblador grabado en una ROM.
+
+* P gina 2: RAM. Aqu¡ se almacena el programa que el usuario teclea o carga.
+
+* P gina 3: RAM otra vez, pero gran parte de ella (unas 10K) est  reservada 
+como zona de trabajo para el sistema; vamos, que el usuario no la puede tocar 
+si el ordenador no quiere colgar. En total, el usuario dispone de unas 23K, a 
+partir de #8000, para sus programas BASIC y ensamblador (s¡, pueden convivir 
+a la vez en memoria siguiendo unas reglas b sicas).
+
+De momento nosotros ensamblaremos nuestros programas a partir de #A000, con 
+lo que podremos meter programas BASIC entre #8000 y #9FFF y mezclarlos con 
+nuestras rutinas por medio de USRs y similares (pr ctica aceptable para 
+principiantes, pero con el tiempo debes aprender a pasar ol¡mpicamente del 
+BASIC y programar al 100% en ensamblador).
+
+Uff, me ha quedado m s largo de lo que pensaba. He omitido a prop¢sito 
+detalles como los slots expandidos, la RAM mapeada o el misterio de los 
+Mega-ROMS, ya que no nos interesan para empezar a programar. Del entorno 
+MSX-DOS ya hablaremos cuando nos haga falta, t£ tranqui.
+
+INTRODUCCION A LOS ENSAMBLADORES DE VERDAD
+
+Veo que no sabes qu‚ hacer con el hacha... te est s impacientando y quieres 
+empezar a programar, pero lo que te estoy contando no lo sab¡as y te parece 
+interesante... pues nada, t£ sigue dudando, que yo seguir‚ corriendo, y por 
+el camino explicando.
+
+Bueno, el £ltimo plomazo que nos queda por mirar es el funcionamiento del 
+programa ensamblador con el que trabajaremos. Aunque soy un plasta y no paro 
+de recomendar el Compass, lo que dir‚ es igualmente v lido para cualquier 
+ensamblador.
+
+Un programa de estas caractar¡sticas suele incluir tres m¢dulos. Para empezar 
+el ensamblador propiamente dicho, que no ser¡a m s que un procesador de textos 
+normal y corriente (con algunas facilidades de edici¢n como copia de bloques, 
+b£squeda y sustituci¢n, etc), de no ser por la opci¢n de ensamblar, que 
+convierte el c¢digo fuente (el listado que hemos tecleado) en c¢digo objeto 
+(el programa ya ensamblado en memoria), pudiendo despu‚s grabar ambos en 
+disco.
+
+Otro m¢dulo importante es el desensamblador/simulador, que nos muestra el 
+contenido de la memoria en forma de instrucciones del Z80. Desde aqu¡ podemos 
+ejecutar una instrucci¢n concreta o un grupo de ellas y observar/modificar 
+el contenido de los registros durante el proceso. Indispensable para probar 
+las rutinas que iremos haciendo.
+
+Por £ltimo, el monitor nos muestra la memoria tal cual, en forma de bytes y 
+en formato ASCII simult neamente; una utilidad de este m¢dulo es, entre 
+otras, buscar textos en memoria.
+
+Que nooo... que a£n no hemos acabado... que nos quedan por ver un par de 
+cosas del m¢dulo ensamblador... que dejes de afilar el hacha...
+
+El m¢dulo ensamblador no s¢lo se limita a traducir texto a bytes. Tambi‚n nos 
+ofrece una serie de facilidades como son las etiquetas, las directivas, las 
+macros y el ensamblado condicional. De momento s¢lo nos fijaremos en las dos 
+primeras.
+
+Una etiqueta no es m s que un nombre que das a la direcci¢n de memoria en la 
+que comienza justamente la instrucci¢n o dato que a t¡ te interesa. Esto es 
+imprescindible para saltos y bucles, por ejemplo:
+
+	  LD A,(DATO)
+	  CP B
+	  JR Z,IGUALES 
+DISTINT:  SUB C
+	  RRA
+	  RET
+IGUALES:  ADD E
+	  EI
+	  RET
+DATO:	  DB #34
+
+Tras la comparaci¢n, la ejecuci¢n saltar  a IGUALES si A=B, de lo contrario 
+seguir  en DISTINT. Como ves no nos preocupan las direcciones concretas a 
+las que se refieren estas etiquetas, si bien es posible consultarlas mediante 
+una opci¢n del ensamblador. El l¡mite en el n£mero de car cteres para una 
+etiqueta depende del ensamblador en concreto, aunque no es recomendable 
+pasarse de ocho car cteres (m s que nada, no queda bonito).
+
+Animo, que ya queda menos. Las directivas son ¢rdenes especiales para el 
+ensamblador que se camuflan con las instrucciones normales del Z80. Las 
+directivas b sicas que todo ensamblador tiene y que nos resultar n 
+imprescindibles para programar son:
+
+* ORG: Indica la direcci¢n de memoria a partir de la cual ser  ensamblado el 
+listado situado a continuaci¢n. Como hemos visto, nuestros listados 
+comenzar n siempre con un ORG #A000.
+
+* EQU: Define una constante, es decir, un nombre al que se asocia un valor 
+concreto de uno o dos bytes. Cada vez que el ensamblador encuentre ese nombre 
+lo sustituir  por el valor correspondiente. Ejemplo:
+
+TOTREN: EQU #34
+DIREC:	EQU #ABCD
+
+	LD HL,DIREC
+	LD A,TOTREN
+	LD (HL),A
+
+Lo que el ensamblador meter  en memoria es, en realidad, esto:
+	
+	LD HL,#ABCD
+	LD A,#34
+	LD (HL),A
+
+* DEFB o DB (define byte): Esta instrucci¢n sirve para ensamblar bytes 
+sueltos que han de ser interpretados como datos, es decir, que no son 
+instrucciones. Es posible definir con un solo DB varios bytes en formato 
+decimal, hexadecimal o ASCII:
+
+	LD DE,CADENA
+	JP PRINT
+
+CADENA: DB #0C,"Esto se imprimir ",13,10,"$"
+DATOS:	DB 0,3,2,#34,5,220
+
+Si ensamblamos esto y despu‚s nos vamos al monitor podremos leer "Esto se 
+imprimir " mezclado entre los datos e instrucciones: el ensamblador se ha 
+encargado de transformar cada car cter de la cadena en un byte equivalente a 
+su c¢digo ASCII. 
+
+* DEFW o DW (define word): Act£a casi igual que DB, s¢lo que ahora los datos 
+son de dos bytes. ­­MUCHO CUIDADO!! Los datos de dos bytes definidos con DW 
+son almacenados seg£n el formato est ndar del Z80, es decir, el byte bajo 
+antes que el alto. As¡, si ensamblamos esto:
+
+	DW #1234,#5678
+
+lo que tendremos en memoria ser  #34,#12,#78,#56.
+
+* DEFS o DS (define space): Repite un determinado byte un n£mero determinado 
+de veces. ¨Que queremos ensamblar diez treintaicuatros? Bastar  con un simple
+
+	DS 10,34
+
+* END: Pues eso, termina de ensamblar aunque a£n quede listado por delante.
+
+Pues ya est , con estas directivas tenemos de sobras para programar, y si 
+necesitamos m s ya las veremos. Como soy as¡ de malo y quiero liarte un poco, 
+te recuerdo que es posible mezclar las directivas, lo cual muchas veces hace 
+el listado m s comprensible:
+
+START:	EQU #A000
+CLS:	EQU #0C
+CR:	EQU 13
+LF:	EQU 10
+ENDSTR: EQU "$"
+
+	ORG START
+
+	LD DE,CADENA
+	JP PRINT
+
+CADENA: DB CLS,"­Suelta el hacha,",CR,LF
+	DB "que ya empezamos a programar!",CR,LF,CR,LF
+	DB "­­Te lo juro!!",CR,LF,ENDSTR
+
+
+SE¥ORAS Y SE¥ORES, PROGRAMEN Y VEAN
+
+Antes de nada quiero sacar la pata, ya que en la anterior entrega de 
+Easymbler la met¡ a bastante profundidad al explicar la instrucci¢n CP. 
+Contrariamente a lo dicho entonces, el efecto sobre las banderas de la 
+instrucci¢n "CP r" es el siguiente:
+
+Z=0 y CY=1 si A < r
+Z=1 y CY=0 si A = r
+Z=0 y CY=0 si A > r
+
+Y un £ltimo aviso: si trabajas con Compass deber s conectar la BIOS 
+manualmente antes de empezar. Vete al depurador ("debugger") y pulsa la "P". 
+Cuando te pida el slot entra el "0" (si tienes Turbo-R te pedir  tambi‚n el 
+subslot, entra tambi‚n el "0"). Cuando te pida "mapper page" pulsa enter.
+
+Pues ya est . ¨Has cargado el ensamblador? ¨Dispuesto a machacar el teclado? 
+­Vamos all ! Lo primero que haremos ser  ese programilla para llenar la 
+pantalla de As que propuse al final de la segunda entrega. Como en modo texto 
+la pantalla mide 80 columnas por 23 filas, hemos de imprimir 1840 As. Vaya, 
+qu‚ fastidio; si fueran menos de 256 lo ten¡amos m s f cil:
+
+	ORG #A000
+
+	LD B,200	;O los que sean, hasta 255 
+	LD A,"A"        ;o LD A,65
+BUCLE:	CALL #A2
+	DJNZ BUCLE
+	RET
+
+Parece mentira que un programa tan corto me permita hacer tantos comentarios:
+
+- No olvides nunca el ORG. A partir de ahora yo no lo pondr‚ m s.
+- Observa la enorme utilidad de la etiqueta BUCLE.
+- Ojo: estamos llamando a #A2 alegremente, porque estamos trabajando con la 
+BIOS conectada. Recuerda que #A2 imprime en pantalla el car cter inidicado en 
+el acumulador.
+- La rutina de impresi¢n de un car cter no modifica el acumulador. De lo 
+contrario, la instrucci¢n 'LD A,"A"' deber¡a estar dentro del bucle. 
+- Es imprescindible dotar al programa de una buena documentaci¢n. No ahorres 
+comentarios: recuerda que al ensamblar son ignorados.
+- Una vez ensamblado el programa, hay dos maneras de ejecutarlo. Bien desde 
+el propio ensamblador (suelen incluir una opci¢n para ejecutar un programa 
+ensamblado y volver despu‚s al ensamblador), bien saliendo al BASIC y 
+haciendo:
+
+DEFUSR=&HA000 : ? USR(0)
+
+En cualquier caso es necesario el RET al final, ya que de lo contrario el Z80 
+ejecutar¡a lo primero que encontrara tras tu programa, y lo m s probable en 
+estos casos es conseguir una perfecta emulaci¢n del Windows.
+
+Bueno, bueno, lo que quer¡amos era un bucle de 1840 pasos, ¨verdad? Pues 
+vamos all :
+
+PASOS:	EQU 80*23
+CHPUT:	EQU #A2
+CARACT: EQU "A"
+
+	LD BC,PASOS
+BUCLE:	LD A,CARACT
+	CALL CHPUT
+	DEC BC
+	LA A,B
+	OR C
+	JR NZ,BUCLE
+	RET
+
+Para empezar, observa que el uso de etiquetas hace el programa mucho m s 
+comprensible, y de f cil modificaci¢n (si tu programa tiene 34 bucles 
+parecidos a este y te da el venazo de imprimir la "B" en vez de la "A", s¢lo 
+tienes que cambiar la definici¢n de la etiqueta CARACT). El nombre de la 
+rutina #A2 no me lo he inventado yo: cada rutina de la BIOS tiene asignado un 
+nombre que nadie nos obliga a usar, pero es recomendable hacerlo, sobre todo 
+si otra persona va a leer nuestro listado.
+
+Pero veamos c¢mo hemos hecho el bucle. Despu‚s de cada iteraci¢n 
+decrementamos BC (el contador) y hacemos un OR de B y C (para lo cual 
+necesitamos usar el acumulador, que es siempre el primer argumento de las 
+instrucciones l¢gicas). Repasa la instrucci¢n OR: el resultado de la 
+operaci¢n ser  cero s¢lo si cada uno de los bits de B y C es cero. En caso 
+contrario seguimos con el bucle. Acost£mbrate a estas triqui¤uelas con las 
+operaciones l¢gicas, las usaremos pero que muy mucho.
+
+Otro detalle importante: ¨qu‚ pasar¡a si CHPUT machacara el par BC? Nos 
+ver¡amos obligados a guardarlo y recuperarlo en cada iteraci¢n. Pues para eso 
+est  la pila:
+
+	...
+	PUSH BC
+	CALL CHPUT
+	POP BC
+	...
+
+Como ya vimos hace alg£n tiempo, la pila es un buen lugar para guardar datos 
+temporalmente mientras usamos los registros para otra cosa. Otra soluci¢n es 
+usar otros registros; por ejemplo, si s¢lo us ramos el registro B y 
+estuvi‚ramos seguros de que CHPUT no toca E podr¡amos hacer:
+
+	...
+	LD E,B
+	CALL CHPUT
+	LD B,E
+	...
+
+Ahorrando PUSH y POP ahorramos accesos a memoria, con lo cual el programa 
+gana velocidad. Pero no te comas el coco: rara vez necesitar s un control tan 
+cr¡tico de la velocidad de ejecuci¢n, y menos ahora que est s empezando. As¡ 
+que ya lo sabes: si necesitas guardar un dato temporalmente y no tienes muy 
+clara la disponibilidad de los registros, no te lo pienses; usa la pila, que 
+para eso est , y a otra cosa.
+
+Y ahora vamos a ver otro ejemplo de bucle: una rutina de impresi¢n. No, no es 
+que tenga efectos especiales ni realidad virtual ni 34 japonesas 
+renderizadas; aqu¡ "impresi¢n" viene de "imprimir", no de "impresionar". La 
+rutina en cuesti¢n imprime la cadena que comienza en TEXTO y termina con un 
+byte cero:
+
+PRINT:	LD HL,TEXTO
+BUCLE:	LD A,(HL)
+	OR A	       ;M s corto que CP 0
+	RET Z	       ;Termina si el byte leido es 0
+	CALL CHPUT
+	INC HL
+	JR BUCLE	
+TEXTO:	DB "I hate axes!!",0
+
+La t‚cnica de almacenar cadenas de texto con un byte de terminaci¢n es muy 
+usada, y permite realizar este tipo de bucles, en el que no conocemos de 
+antemano el n£mero de iteraciones: simplemente, vamos imprimiendo hasta 
+encontrar el byte de terminaci¢n, el cero en este caso. "¨Y por qu‚ el cero?" 
+S¡, podr¡amos haber usado cualquier otro, pero el cero viene bastante bien 
+para esto: no existe ning£n car cter cuyo c¢digo ASCII sea el 0, con lo cual 
+no hay peligro de que un car cter de la cadena sea confundido con el byte de 
+terminaci¢n; y adem s podemos comprobar el car cter con un OR A (que equivale 
+a CP 0 pero ocupa un byte menos).
+
+INSISTO: ­­DOCUMENTACION, POR FAVOR!!
+
+Como eres tan avispado ya te habr s dado cuenta de que el programa anterior 
+s¢lo funciona si CHPUT no modifica el par HL, y antes ya hemos supuesto que 
+no modifica BC. La pregunta ahora es: ¨qu‚ demonios modifica o no modifica 
+CHPUT? O m s generalmente, ¨c¢mo pdemos saber qu‚ registros modifica una 
+rutina, y ya que estamos, cuales son sus par metros de entrada y salida?
+
+Si recuerdas, ya nos hicimos una pregunta parecida hace alg£n tiempo: ¨cu l 
+es el efecto de tal o cual instrucci¢n sobre las banderas? La soluci¢n est , 
+de nuevo, en la documentaci¢n. Toda rutina ha de ir acompa¤ada de una buena 
+documentaci¢n (lo m s f cil es incluirla como cabecera de la propia rutina en 
+forma de comentario), que indique:
+
+- Nombre de la rutina.
+- Direcci¢n de inicio.
+- Funci¢n que realiza la rutina.
+- Par metros de entrada.
+- Par metros de salida.
+- Registros modificados.
+
+En el caso de la CHPUT, ya conocemos la direcci¢n de inicio (#00A2), los 
+par metros de entrada (el car cter a imprimir en A), y nos faltaba saber que 
+no hay par metros de salida ni registros modificados. Es decir, su 
+descripci¢n es algo como esto:
+
+CHPUT (#00A2)
+  Imprimie un car cter.
+ENTRADA:  A = Car cter a imprimir.
+SALIDA:   -
+MODIFICA: -
+
+Todas las rutinas de la BIOS tienen una descripci¢n como esta, y no tienes 
+m s que agenciarte un listado de la BIOS (hay para elegir: en el MSX2 
+Technical Handbook lo tienes en ingl‚s, en un fichero que acompa¤a al 
+COMPASS en holand‚s, y en HNOSTAR#35 en castillero) para ponerte a investigar 
+y probar las que m s te gusten. De todas formas, cada vez que te ponga un 
+ejemplo que use una rutina de la BIOS, pondr‚ su descripci¢n.
+
+Pero lo importante es que te metas esto en el hacha, digo en la cabeza: la 
+mayor parte del tiempo que dedicar s a programar en ensamblador se te ir  en 
+programar subrutinas, y es importante que dotes a cada una de ellas de una 
+buena documentaci¢n: como m¡nimo la descripci¢n, y mejor si vas poniendo 
+comentarios a lo largo del listado. De esta forma no te costar  nada retomar 
+el hilo de lo que estabas haciendo si un buen d¡a decides ampliar aquella 
+rutina que dejaste a la mitad cuando te fuiste de la guarder¡a, o aquella 
+otra que heredaste de tu abuela; o reusar una rutina antigua (propia o ajena) 
+en otro programa...
+
+Como ejemplo vamos a rehacer nuestra rutina de impresi¢n, esta vez un poco 
+m s sofisticada:
+
+;PRINT (#A000)
+;  Imprime una cadena de car cteres.
+;ENTRADA:  HL = Direcci¢n de inicio de la cadena
+;	   A  = car cter de terminaci¢n
+;SALIDA:   BC = Longitud de la cadena, sin contar el car cter de terminaci¢n
+;MODIFICA: HL, AF
+
+CHPUT:	EQU #00A2
+	ORG #A000
+
+PRINT:	PUSH DE
+	LD BC,0 	;Inicializaci¢n del contador de longitud
+	LD D,A		;Guardamos en D el car cter de finalizaci¢n 
+
+BUCLE:	LD A,(HL)
+	CP D
+	JR Z,FIN	;Finaliza si hemos encontrado el car cter de fin.
+
+	CALL CHPUT
+	INC HL		;Siguiente car cter
+	INC BC		;Incremento del contador
+	JR BUCLE
+	
+FIN:	POP DE		;Finalizaci¢n
+	RET
+
+Como puedes ver, gracias a la cabecera cualquier persona puede usar esta 
+rutina, sin necesidad de saber qu‚ instrucciones contiene ni cual es su 
+estructura (mismamente como si formara parte de la BIOS); y gracias a los 
+comentarios te resultar  facil comprender su estructura y funcionamiento, 
+cuando dentro de 34 a¤os decidas modificarla o ampliarla.
+
+Un comentario sobre los registros modificados. Habr s visto que al principio 
+de la rutina guardamos el par DE, recuper ndolo al final; esto es l¢gico, ya 
+que este par no est  incluido en la lista de registros modificados y en 
+un momento dado usamos el registro D. La pregunta es: ¨podr¡amos habernos 
+ahorrado el PUSH DE y el POP DE, e incluir DE en la lista de registros 
+modificados? ¨Y no podr¡amos tambi‚n haber hecho un PUSH HL/POP HL, 
+eliminando as¡ HL de la lista de registros modificados? Pues s¡. Como pone en 
+los yogures, hay miles de premios. En el arte de la programaci¢n siempre hay 
+muchas formas de hacer lo mismo, y encontrar la mejor no siempre es f cil; de 
+hecho, muchas veces tendr s que elegir entre varias opciones igualmente 
+v lidas. La decisi¢n final es tuya.
+
+En concreto, para este programa de impresi¢n s¡ que habr¡a sido una buena 
+idea olvidarse de guardar el par DE, ya que de esta forma podemos cambiar el 
+JR Z,FIN por un RET Z y eliminar las dos £ltimas lineas, con lo cual 
+acortamos la rutina. Con la pr ctica cazar s estos detalles al vuelo, lo que 
+te permitir  realizar programas cada vez m s cortos y optimizados. Y, por 
+favor, perm¡teme inisitir: no ahorres documentaci¢n.
+
+­­­MUCHO CUIDADO!!! A m¡ ya me ha pasado una vez, y es un error dif¡cil de 
+detectar. Si se te ocurre poner en una rutina algo as¡...
+
+;Inicio de la rutina
+
+	PUSH uno,otro
+	...
+	...
+	CP lokesea
+	RET Z
+	...
+	...
+	POP otro,uno
+	RET
+
+...te volver s loco. Algunas veces (cuando la comparaci¢n resulte en Z=0) la 
+rutina funcionar  de maravilla, pero las dem s se te colgar , o empezar  a 
+salir ro¤a por la pantalla, o sonar  una m£sica del SaveR... Para evitar 
+problemas, NUNCA pongas un RET Z (o equivalente con otra bandera) en medio de 
+una rutina. Cuando quieras colocar una finalizaci¢n de la rutina usa la 
+t‚cnica del JR Z,FIN como en la rutina PRINT que hemos visto antes; s¢lo si 
+al terminarla ves que no has guardado ning£n registro al principio, cambia 
+estos JR FIN por RET. Y cuando una rutina se te cuelgue, ya sabes qu‚ es lo 
+primero que tienes que comprobar...
+
+INVERSIONATOR
+
+Como veo que sigues vivo despu‚s del serm¢n sobre la documentaci¢n (parezco 
+un guardia civil cualquiera), y ahora que ya eres un experto (m s o menos) en 
+bucles y subrutinas,  vamos a dise¤ar una ¡dem un pel¡n m s complicada: 
+Inversionator. Bajo este est£pido nombre se esconder  una no menos est£pida 
+rutina cuya funci¢n ser ... (redoble: trrrrr...) ­­Transformar las may£sculas 
+de una cadena en min£sculas y viceversa!!
+
+¨Qu‚ te crees, que porque hayas afilado y abrillantado el hacha me da m s 
+miedo? ­Pues no se¤or, ya es imposible que me d‚ m s miedo, sobre todo cuando 
+la coges con cara de s dico asesino como ahora! Ya s‚ que a t¡ no te interesa 
+para nada desmayuscular o desminuscular o lo que sea una cadena, que lo que 
+quieres es programar el Nemesis 34, pero hay que ir poco a poco, y este ser  
+un buen ejemplo de dise¤o de una rutina. Seguro que los de Konami empezaron 
+as¡. "­Pero si no hay kanjis may£sculos ni min£sculos!" Estooo... bueno, pues 
+preg£ntale a esa japonesa c¢mo empezaron los de Konami. 
+
+(Es incre¡ble... ha picado... se ha girado y he aprovechado para salir 
+corriendo...)
+
+Bueno, a lo que ¡bamos. Queremos dise¤ar una rutina, ¨por d¢nde empezamos? 
+Antes de preguntarnos COMO haremos tal cosa siempre hemos de saber QUE 
+queremos hacer exactamente, as¡ que vamos a empezar por la punta del iceberg, 
+o el meollo de la cuesti¢n, o la madre del cordero: ll mese a gusto del 
+consumiente a la cabecera de la rutina.
+
+;MAYMIN (#A000)
+;  Convierte las may£sculas de una cadena en min£sculas y viceversa.
+
+Procura elegir un nombre para la subrutina que sea corto pero lo 
+suficientemente autoexplicativo, piensa que si en medio de un listado te 
+encuentras un CALL JFDR&!#FGL, por mucha relaci¢n que tenga esa etiqueta con 
+la filosof¡a intr¡nsecamente trascendental de la rutina, no vas a recordar 
+para qu‚ demonios sirve. En cuanto a la descripci¢n, no conviene pasarse de 
+dos o tres lineas.
+
+Vamos con las entradas. Est  claro que la entrada de esta rutina ser  una 
+cadena, o mejor dicho, un puntero a cadena. Y aqu¡ ya tenemos que empezar a 
+tomar decisiones: ¨La cadena ha de estar terminada con un car cter especial? 
+En ese caso, ¨Fijo, o a elegir? O por el contrario, ¨ser  necesario 
+especificar la longitud?
+
+Cualquiera de las tres opciones es v lida. Tenemos entonces tres posibles 
+entradas:
+
+;ENTRADA: HL = Cadena, acabada en 0 (o en lo que sea)
+
+;ENTRADA: HL = Cadena
+;	  A  = Car cter de terminaci¢n de la cadena
+
+;ENTRADA: HL = Cadena
+;	  B  = Longitud de la cadena
+
+Otra opci¢n algo m s retorcida, pero que har  nuestra rutina m s flexible, es 
+la que nosotros vamos a implementar (yej, yej):
+
+;ENTRADA: HL = Cadena
+;	  Cy = 0 -> A = Car cter de terminaci¢n, B ignorado
+;	  Cy = 1 -> B = Longitud de la cadena, A ignorado
+
+Ahora, quien use la rutina podr  elegir entre ambas opciones, simplemente 
+poniendo el acarreo a cero (OR A) o a uno (SCF) y usando A o B a su 
+conveniencia. Adem s, como una opci¢n bastante frecuente es la de terminar 
+una cadena con el car cter 0, basta un XOR A para matar dos p jaros de un 
+tiro (repasa las operaciones l¢gicas y las banderas). Es frecuente usar el 
+acarreo como bandera para elegir entre dos opciones de entrada (por ejemplo, 
+la rutina de lectura/escritura de disco de la BIOS lee sectores si Cy=0 a la 
+entrada, y los escribe si Cy=1).
+
+Tambi‚n podr¡amos haber hecho lo mismo prescindiendo del acarreo:
+
+;ENTRADA: HL = Cadena
+;	  B  = 0 -> A = Car cter de terminaci¢n de la cadena
+;	  B <> 0 -> B = Longitud de la cadena, A ignorado
+
+Ahora  pasemos a la salida. Evidentemente, la rutina ha de devolver la cadena 
+debidamente modificada, pero ¨ha de sobreescribir la cadena original, o crear 
+una nueva? En este £ltimo caso, necesitamos un nuevo par metro de entrada: la 
+direcci¢n en la que depositar la cadena nueva...
+
+;ENTRADA: HL = Cadena de origen
+;	  DE = Direcci¢n cadena de destino
+;	  Cy = 0 -> ...
+;	  Cy = 1 -> ...
+
+Y la salida queda tal que as¡:
+
+;SALIDA:  Cadena convertida en DE, acabada con el mismo c racter
+;	    que la original si Cy=0 a la entrada
+;	  Cadena original inalterada en HL
+;	  B = Longitud de la cadena sin contar la terminaci¢n
+
+Es bastante razonable que si la cadena original tiene un car cter de 
+terminaci¢n, la cadena creada tambi‚n lo tenga y sea el mismo. ¨Y por qu‚ 
+devolvemos la longitud de la cadena en B? No es imprescindible, pero gracias 
+a esta funci¢n (que tampoco nos costar  mucho a¤adir) podremos usar esta 
+funci¢n para obtener la longitud de una cadena con car cter de terminaci¢n.
+
+Antes de terminar con los par metros de salida vamos a tratar una cuesti¢n 
+importante. Hasta ahora hemos sido muy optimistas. "­S¡, has sido muy 
+optimista al creer que no te alcanzar¡a!" ­­Cielos, el hombre hacha!! Menos 
+mal que corro a m s megaherzios que ‚l.
+
+Dec¡a que hemos sido muy optimistas, porque hemos supuesto que nuestras 
+rutinas siempre realizan correctamente su funci¢n. Pero en la mayor¡a de las 
+rutinas que realicemos siempre habr  una o m s condiciones de error, 
+generadas normalmente por unos par metros de entrada incorrectos; por tanto 
+hemos de dise¤ar las rutinas de forma que sean capaces de detectar cualquier 
+error y avisarnos adecuadamente (por ejemplo, t£ mismo estar s harto de ver 
+"Axe error: target escaped").
+
+¨Y c¢mo se hace esto? Normalmente se utiliza el acumulador. Si la rutina ha 
+terminado bien, valdr  cero; en caso contrario contendr  un c¢digo de error:
+
+;SALIDA: Cadena tal
+;	 Cadena cual
+;	 B = Longitud
+;	 A = Error:
+;	     0 -> No hay error
+;	     1 -> La cadena contiene c¢digos de control (<32)
+;	     2 -> Se han procesado 255 car cteres y no se ha encontrado
+;		  el car cter de terminaci¢n (si Cy=0 a la entrada)
+;	     3 -> Cy=1 y B=0 a la entrada, o
+;		  Cy=0 y la cadena s¢lo contiene
+;		       el car cter de terminaci¢n
+
+Bueno, vale, tal vez he exagerado un poco. El error 1 es bastante 
+surrealista, porque en una cadena de texto real puede haber c¢digos de 
+control como cambios de l¡nea o tabuladores; el error 2 puede eliminarse si 
+se dise¤a la rutina de tal forma que admita textos de m s de 255 car cteres 
+(usando BC para la longitud en lugar de s¢lo B); y el error 3 puede, 
+simplemente, ser ignorado (si la cadena est  vac¡a, la rutina no hace nada y 
+vuelve).
+
+As¡ pues, vemos c¢mo una misma rutina puede no tener ninguna condici¢n de 
+error o tener tres, o incluso 34, dependiendo de lo que consideres como 
+error. Como siempre la decisi¢n es tuya.
+
+Un £ltimo detalle respecto a los errores. Al igual que los propios errores, 
+t£ eres el que se inventa el c¢digo asociado a cada error, pero es costumbre 
+asociar el c¢digo 0 a la ausencia de error, para poder hacer esto:
+
+	CALL MAYMIN
+	OR A
+	JP NZ,ERROR
+OK:	CALL YASTA
+
+...ya que, como dice el refr n, un OR vale m s que mil CPs.
+
+"Bad joke detected. Target locked. Axe approaching."
+
+­­­KRAAASCH!!!
+
+"Target escaped. Error distance: 0.0034 mm"
+
+T¡o, esta vez s¡ que ha estado cerca. Ta has superado. Voy a tener que 
+espabilar si quiero seguir operativo...
+
+Bueno, pues s¢lo nos queda la lista de registros modificados. Aqu¡ tenemos 
+bastante libertad, pero es costumbre preservar los punteros a cadenas y dejar 
+el par AF a merced de las hachas divinas; en cuanto a IX e IY, si no son 
+usados como par metros de entrada o salida lo mejor es dejarlos tambi‚n 
+ilesos. Queda el par BC. Como vamos a usar B como entrada y salida no tiene 
+mucho sentido guardar BC, por tanto abandonaremos C a sus suerte, y ya 
+tenemos la £ltima l¡nea de la cabecera:
+
+;MODIFICA: C
+
+Las banderas normalmente se presuponen modificadas. Esto se puede dejar as¡, 
+pero si una vez terminada la rutina nos damos cuenta de que no tocamos C para 
+nada no estar¡a mal sacarlo de la lista de registros modificados.
+
+Bueeeno, pues ya tenemos completa la cabecera de nuestra rutina; nos ha 
+costado unas cuantas l¡neas pero ha valido la pena, porque ahora sabemos 
+EXACTAMENTE qu‚ es lo que queremos que haga nuestra rutina, con lo cual la 
+programaci¢n de la misma ser  un proceso, al menos, ordenado (al contrario 
+que mi cuarto... snif...) Bueno, resumiendo:
+
+;MAYMIN (#A000)
+;  Convierte las may£sculas de una cadena en min£sculas y viceversa.
+;ENTRADA:  HL = Cadena de origen
+;	   DE = Buffer para la cadena de destino
+;	   Cy = 0 -> A = Car cter de terminaci¢n, B ignorado
+;	   Cy = 1 -> B = Longitud de la cadena, A ignorado
+;SALIDA:   Cadena convertida en DE, acabada con el mismo caracter
+;	     que la original si Cy=0 a la entrada
+;	   Cadena original inalterada en HL
+;	   B = Longitud de la cadena sin contar la terminaci¢n
+;	   A = Error:
+;	       0 -> No hay error
+;	       1 -> La cadena contiene c¢digos de control (<32)
+;	       2 -> Se han procesado 255 car cteres y no se ha encontrado
+;		    el car cter de terminaci¢n (si Cy=0 a la entrada)
+;	       3 -> Cy=1 y B=0 a la entrada, o
+;		    Cy=0 y la cadena s¢lo contiene
+;			 el car cter de terminaci¢n
+;MODIFICA: C
+
+Puede parecer larga, pero cr‚eme, cuando tu biblioteca de rutinas alcance un 
+tama¤o respetable y tus programas no sean m s que un puzzle de unas y otras, 
+agradecer s tenerlas todas bien documentadas. El tiempo que pierdes dise¤ando 
+y documentando una rutina lo compensas con creces a la hora de usarla.
+
+AL ACNE, QUE ES LO QUE SE VE
+
+Una vez tenemos la cabecera, podemos empezar con la rutina. Las dos primeras 
+l¡neas est n cantadas:
+
+MAYMIN: PUSH HL
+	PUSH DE
+
+...y nada m s empezar ya hemos de pararnos y darle curro a las neuronas. 
+Vamos a ver, nos han pasado una cadena que hemos de recorrer, pero nos pueden 
+haber pasado su longitud de dos formas distintas. As¡ pues, ¨programamos dos 
+bucles de b£squeda? Us‚ase, ¨programamos un bucle que recorra la cadena hasta 
+que ya no queden carc cteres (como la rutina de imprimir tropecientas "A") y 
+otro que la recorra buscando un car cter de terminaci¢n (como PRINT), para 
+usar uno u otro seg£n la entrada?
+
+No es una soluci¢n muy limpia. Lo mejor es programar un solo bucle para un 
+tipo de entrada, y en caso de recibir la entrada del otro tipo, convertirla. 
+Es decir, tenemos dos opciones:
+
+- Programar un bucle que recorra la cadena de entrada hasta encontrar un 
+car cter de terminaci¢n. Si a la entrada Cy=1, a¤adir primero un car cter de 
+terminaci¢n cualquiera al final de la cadena.
+- Programar un bucle que recorra la cadena de entrada conociendo de antemano 
+el n£mero de iteraciones, es decir, su longitud. Si a la entrada Cy=0, hallar 
+primero la longitud de la cadena.
+
+Parece un dif¡cil dilema, pero si piensas un poco m s (se piensa mejor 
+dejando el hacha en el suelo, te lo garantizo) ver s enseguida que la mejor 
+opci¢n es la segunda, porque:
+
+1. Nadie nos ha dado permiso para modificar la cadena original a¤adi‚ndole 
+nada: s¢lo tenemos derecho a escribir en la zona de memoria que comienza en 
+DE.
+2. De todas formas hemos de devolver la longitud de la cadena en B, as¡ que 
+si ya la medimos al principio afilamos dos hachas de un tiro.
+
+Pues nada, visto esto ya podemos continuar con la rutina:
+
+	LD (TERM),A
+	CALL NC,MEDIR
+	JR NC,FIN2	;Si MEDIR devuelve Cy=0, terminamos con error 2
+	LD A,B
+	OR A
+	JR Z,FIN3	;Error 3 si la cadena est  vac¡a	
+	LD (LONGIT),A
+
+"­Eh, un momento, para el carro!" Vale, admito que esto merece un par de 
+explicaciones. TERM y LONGIT son dos variables en las que guardaremos, 
+respectivamente, el car cter de terminaci¢n y la longitud de la cadena; el 
+uso de variables para datos "fijos" de la rutina hace la misma m s 
+comprensible y evita las complicaciones derivadas de ir arrastrando datos en 
+le pila o en otros registros. 
+
+¨Que d¢nde est n estas variables? Pues dentro de la rutina, concretamente al 
+final de la misma (para que no interfieran con el c¢digo ejecutable y para 
+seguir un orden). Es decir, que despu‚s de todo el c¢digo antes de dar por 
+terminada la rutina a¤adiremos:
+
+TERM:	db 0
+LONGIT: db 0
+
+M s cosas. MEDIR es otra subrutina, ejecutada s¢lo si Cy=0, que se encargar  
+de medir la longitud de la cadena. Como se trata de una subrutina secundaria 
+(interna a otra rutina), su cabecera puede ser un poco m s chapucera. He aqu¡ 
+su c¢digo:
+
+;MEDIR: Devuelve en B la longitud de la cadena HL
+;	Termina con Cy=0 si hay error 2,
+;	en caso contrario con Cy=1
+;	Modifica A y C
+
+MEDIR:	PUSH HL  
+	LD C,A	 
+	LD B,0
+
+	LD A,#FF	;Informamos que Cy=0 a la entrada
+	LD (TERM_F),A
+
+BUCMED: LD A,(HL)	;Cogemos car cter
+	CP C		;¨Es el de terminaci¢n?
+	JR Z,FINMED	;S¡: terminamos
+
+	INC B		;No: incrementamos contador...
+	JR Z,FINM2	;(¨Error 2?)
+	INC HL		;...y pasamos al siguiente car cter
+	JR BUCMED
+
+FINMED: POP HL
+	SCF
+	RET
+
+FINM2:	POP HL
+	OR A
+	RET
+
+Aunque no lo parezca, s¡ hemos tenido en cuenta la disponibilidad de los 
+registros:
+
+- A: Ya la hemos guardado en TERM antes de ejecutar la rutina, as¡ que nos lo 
+podemos cargar.
+- B: Si hemos llamado a esta rutina es porque Cy=0 a la entrada, es decir, B 
+no conten¡a ning£n dato £til.
+- C: Est  en la lista de registros modificados.
+- HL: Esta s¡ hemos de guardarla, pues apunta a la cadena.
+
+Tanto si MEDIR se ejecuta como si no, tras el CALL NC,MEDIR tendremos en B la 
+longitud de la cadena, que almacenaremos en LONGIT. TERM_F es una variable 
+(la F es de "flag", bandera) que ponemos a #FF si hemos pasado un car cter de 
+terminaci¢n, en caso contrario la dejamos a su valor inicial, es decir, 0. 
+Nos har  falta para saber, al final de la rutina, si hemos de poner o no 
+car cter de terminaci¢n en la cadena creada.
+
+La detecci¢n del error 2 la realizamos examinando B una vez incrementado. Si 
+se pasa de 255 volver  a 0, y en ese caso activar  Z tras el INC. Volveremos 
+entonces con Cy=0 (no confundir con el acarreo de entrada), situaci¢n que el 
+programa principal detectar  y terminar  con error 2. He aqu¡ otro m‚todo 
+para tratar errores sencillos (del tipo "hay o no hay error"): usar el 
+acarreo. Observa por qu‚ no podemos saltar sirectamente a FIN2 desde dentro 
+de MEDIR...
+
+Cuesti¢n importante: ¨no ser¡a m s l¢gico volver con Cy=1 si hay error, y 
+Cy=0 si no lo hay? S¡, pero esto implicar¡a esta modificaci¢n en el programa:
+
+	CALL NC,MEDIR
+	JR C,FIN2
+
+Entonces, si a la entrada tenemos Cy=1, MEDIR no se ejecutar , y al llegar al 
+JR C,FIN2 continuaremos con Cy=1, con lo cual el error 2 es inevitable. En 
+cambio, tal como lo hemos hecho nosotros tenemos:
+
+	CALL NC,MEDIR
+	JR NC,FIN2
+
+Si Cy=1 a la entrada, tanto el CALL como el JR son ignorados; si Cy=0 a la 
+entrada, se realiza la llamada a MEDIR, de cuyo resultado depende que la 
+ejecuci¢n salte o no a FIN2. No pongas esa cara, que no es tan complicado...
+
+¨Y d¢nde se ponen las subrutinas de una rutina? Despu‚s del programa 
+principal pero antes de las variables.
+
+Pues parece que ya, sin m s proleg¢menos, podemos ponernos a masacrar la 
+cadena (en sentido figurado, as¡ que suelta el hacha). Pero antes hemos de 
+hacernos una pregunta aparentemente bastante est£pida pero imprescindible si 
+queremos continuar: ¨qu‚ es una may£scula y qu‚ es una min£scula?
+
+La respuesta correcta en este contexto (porque no creo que tu profe de lengua 
+estuviera muy convencido) es la siguiente: una may£scula es un car cter cuyo 
+c¢digo ASCII est  comprendido entre 65 y 90. Una min£scula, idem de idem 
+entre 97 y 122. Si representamos la tabla ASCII linealmente, tenemos:
+
+xxx...xxx   ccc...ccc	MMM...MMM   ccc...ccc	mmm...mmm   ccc...ccc
+1   -  31   32	-  64	65  - 90    91	-  96	97  - 122   123 - 255
+C¢digos     Car ct.	May£sc.     Car ct.	Min£sc.     Car ct.
+control     no alfab.		    no alfab.		    no alfab.
+
+Ya s‚ que no estamos en la EGB para andar con dibujitos est£pidos, pero 
+tampoco estamos en Pesadilla en Ca'n Sbert y bien que le das al hacha (o lo 
+intentas). Este esquema nos permitir  dise¤ar la estrategia a la hora de 
+convertir los car cteres, estrategia que ser  algo as¡ como esto:
+
+- Coger car cter si no ha acabado el bucle.
+- Si es menor de 32, terminar con error 1.
+- Si es menor de 65, no es alfab‚tico: no modificarlo, escribirlo y goto 
+  coger.
+- Si es mayor de 122, idem.
+
+Si llegamos a este punto, es que el car cter est  entre 65 y 122:
+
+- Si es menor de 91, es una may£scula. Convertir a min£scula, escribirlo y 
+  goto coger.
+- Si es mayor de 96, es una min£scula. Convertir a may£scula, escribirlo y 
+  goto coger.
+- Si hemos llegado aqu¡ es que est  entre 91 y 96: no es alfab‚tico, 
+  escribirlo sin modificarlo y goto coger.
+
+¨Qu‚ te ha parecido? Puede ser un planteamiento de una l¢gica aplastante, 
+pero no es inmediato. Vale, igual sigues pensando que tanto trabajo para 
+convertir una mayusculaci¢n (no s‚ si este palabro existe pero me da igual) 
+es un poco absurdo, pero piensa que en el futuro, si aspiras a realizar 
+programas m¡nimamente complejos tendr s que pelearte con estructuras de datos 
+algo m s complicadas (que muchas veces dise¤ar s t£ mismo), y es importante 
+que adquieras una buena metodolog¡a (es decir, ordenada).
+
+Volvemos a lo mismo: una vez que tenemos el QUE, pasar al COMO esta chupao. 
+Atenci¢n:
+
+COGER:	LD A,(HL)	;Cogemos car cter
+	CP 32
+	JR C,FIN1	;Error 1 si es menor de 32 
+
+	CP "A"          ;Lo colocamos en DE sin modificar si menor de 32...
+	JR C,PONER
+	CP "z"+1        ;...o mayor o igual que 123
+	JR NC,PONER
+
+CHKMAY: CP "Z"+1        ;¨Es may£scula?
+	JR NC,CHKMIN	;No: comprobamos si es min£scula
+	ADD "a"-"A"     ;S¡: convertimos a may£scula
+	JR PONER
+
+CHKMIN: CP "a"          ;¨Es min£scula?
+	JR C,PONER	;No: lo colocamos en DE sin modificar
+	SUB "a"-"A"     ;S¡: convertimos a min£scula
+
+PONER:	LD (DE),A	;Colocamos el car cter, convertido o no, en DE...
+	INC HL		;...y seguimos con el bucle
+	INC DE
+	DJNZ COGER
+
+De haber empezado a codificar esto sin el esquema previo, probablemente nos 
+habr¡amos hecho el hacha un l¡o. Una vez hemos acabado el bucle queda poca 
+cosa por hacer:
+
+	LD A,(TERM_F)
+	OR A
+	JR Z,NOTERM
+	
+	LD A,(TERM)	;Ponemos el car cter de terminaci¢n
+	LD (DE),A	;si la cadena original ten¡a (TERM_F=#FF)
+
+NOTERM: LD A,(LONG)
+	LD B,A
+ 
+	XOR A		;Terminamos sin error
+	JR FIN
+
+FIN1:	LD A,1		;Finalizaciones con error
+	JR FIN
+FIN2:	LD A,2
+	JR FIN
+FIN3:	LD A,3
+FIN:	POP DE
+	POP HL
+	RET
+
+Observa que, al final del bucle, DE apunta justo despu‚s del £ltimo car cter 
+de la cadena creada, por lo que podemos poner el car cter de terminaci¢n con 
+un simple LD (DE),A. Finalmente cargamos en B la longitud, y terminamos sin 
+error. A continuaci¢n colocamos las distintas finalizaciones con error, y 
+despu‚s vendr  la subrutina MEDIR y las variables. A¤adimos un poco de 
+perejil, y ya tenemos nuestra rutina lista para servir.
+
+Resumiendo...
+
+;MAYMIN (#A000)
+;  Convierte las may£sculas de una cadena en min£sculas y viceversa.
+;ENTRADA:  HL = Cadena de origen
+;	   DE = Buffer para la cadena de destino
+;	   Cy = 0 -> A = Car cter de terminaci¢n, B ignorado
+;	   Cy = 1 -> B = Longitud de la cadena, A ignorado
+;SALIDA:   Cadena convertida en DE, acabada con el mismo caracter
+;	     que la original si Cy=0 a la entrada
+;	   Cadena original inalterada en HL
+;	   B = Longitud de la cadena sin contar la terminaci¢n
+;	   A = Error:
+;	       0 -> No hay error
+;	       1 -> La cadena contiene c¢digos de control (<32)
+;	       2 -> Se han procesado 255 car cteres y no se ha encontrado
+;		    el car cter de terminaci¢n (si Cy=0 a la entrada)
+;	       3 -> Cy=1 y B=0 a la entrada, o
+;		    Cy=0 y la cadena s¢lo contiene
+;			 el car cter de terminaci¢n
+;MODIFICA: C
+
+MAYMIN: PUSH HL
+	PUSH DE
+
+	CALL NC,MEDIR
+	JR NC,FIN2	;Si MEDIR devuelve Cy=0, terminamos con error 2
+	LD A,B
+	OR A
+	JR Z,FIN3	;Error 3 si la cadena est  vac¡a	
+	LD (LONGIT),A
+
+COGER:	LD A,(HL)	;Cogemos car cter
+	CP 32
+	JR C,FIN1	;Error 1 si es menor de 32 
+
+	CP "A"          ;Lo colocamos en DE sin modificar si menor de 32...
+	JR C,PONER
+	CP "z"+1        ;...o mayor o igual que 123
+	JR NC,PONER
+
+CHKMAY: CP "Z"+1        ;¨Es may£scula?
+	JR NC,CHKMIN	;No: comprobamos si es min£scula
+	AND %11011111	;S¡: convertimos a may£scula
+	JR PONER
+
+CHKMIN: CP "a"          ;¨Es min£scula?
+	JR C,PONER	;No: lo colocamos en DE sin modificar
+	OR %00100000	;S¡: convertimos a min£scula
+
+PONER:	LD (DE),A	;Colocamos el car cter, convertido o no, en DE...
+	INC HL		;...y seguimos con el bucle
+	INC DE
+	DJNZ COGER
+
+	LD A,(TERM_F)
+	OR A
+	JR Z,NOTERM
+	
+	LD A,(TERM)	;Ponemos el car cter de terminaci¢n
+	LD (DE),A	;si la cadena original ten¡a (TERM_F=#FF)
+
+NOTERM: LD A,(LONG)
+	LD B,A
+ 
+	XOR A		;Terminamos sin error
+	JR FIN
+
+FIN1:	LD A,1		;Finalizaciones con error
+	JR FIN
+FIN2:	LD A,2
+	JR FIN
+FIN3:	LD A,3
+FIN:	POP DE
+	POP HL
+	RET
+
+;MEDIR: Devuelve en B la longitud de la cadena HL
+;	Termina con Cy=0 si hay error 2,
+;	en caso contrario con Cy=1
+;	Modifica A y C
+
+MEDIR:	PUSH HL  
+	LD (TERM),A 
+	LD C,A	 
+	LD B,0
+
+	LD A,#FF	;Informamos que Cy=0 a la entrada
+	LD (TERM_F),A
+
+BUCMED: LD A,(HL)	;Cogemos car cter
+	CP C		;¨Es el de terminaci¢n?
+	JR Z,FINMED	;S¡: terminamos
+
+	INC B		;No: incrementamos contador...
+	JR Z,FINM2	;(¨Error 2?)
+	INC HL		;...y pasamos al siguiente car cter
+	JR BUCMED
+
+FINMED: POP HL
+	SCF
+	RET
+
+FINM2:	POP HL
+	OR A
+	RET
+
+TERM:	db 0
+TERM_F: db 0
+LONGIT: db 0
+
+Como ver s he hecho un par de retoques: he movido la instrucci¢n LD (TERM),A 
+al interior de la rutina MEDIR, ya que si no pasamos car cter de terminaci¢n 
+no hay por qu‚ usar esta variable; y en cuanto a la conversi¢n 
+may£scula-min£scula y viceversa con una operaci¢n l¢gica, lo ver s claro si 
+observas los c¢digos ASCII de las may£sculas y de las min£sculas en formato 
+binario.
+
+¨Qu‚? ¨Te ha parecido larga la rutina? Je, je, pobrecito... esto no es nada 
+comparado con las rutinas de verdad (es decir, las que sirven para algo) que 
+ir s programando a lo largo de tu vida. Pero t£ tranquilo, por muy largas que 
+sean no tienes nada que temer si procedes como el Z80 manda, es decir:
+
+- Primero, hay que saber qu‚ es lo que har  exactamente la rutina, y a partir 
+de ah¡ dise¤ar la cabecera.
+- Debes tener las ideas claras con respecto a las estructuras de datos que 
+vas a manejar, sin escatimar esquemas ayudativos (otra palabra cuya 
+existencia desconozco, pero en RET...).
+- A la hora de programar, plant‚ate antes de cada bloque de instrucciones qu‚ 
+va a hacer ese bloque, sigue un orden y no ahorres comentarios ni variables.
+
+Si as¡ lo haces, con un mucho de pr ctica (y con informaci¢n t‚cnica) ser s 
+capaz de programar cualquier cosa que te propongas. No, un detector de 
+japonesas no; lo siento, ya lo he intentado yo, pero falta el hard adecuado. 
+Ya hablar‚ con Henrik o con Padial...
+
+EN EL PROXIMO CAPITULO...
+
+Enhorabuena: si has conseguido soportarme hasta este punto, a estas alturas 
+ya eres capaz de programar por tu cuenta, o eso creo. Empieza con cosas 
+sencillitas y ve aumentando la complejidad de tus desarrollos hasta que hayas 
+programado el SD Snatcher 2, entonces av¡same, te har‚ unas cuantas m£sicas y 
+nos repartimos los beneficios de la venta (a ver si cre¡as que te estaba 
+ense¤ando ensamblador por gusto...)
+
+Bueno, ahora en serio (o algo menos en broma): aparte de coger pr ctica, s¢lo 
+te falta profundizar en la arquitectura del MSX, y eso es lo que haremos a 
+partir del pr¢ximo Easymbler. Como aperitivo ah¡ van un par de rutinas de la 
+BIOS que pueden serte £tiles para ir haciendo cosillas:
+
+BREAKX (#00B7)
+  Comprueba la pulsaci¢n de CTRL+STOP
+ENTRADA:  -
+SALIDA:   Cy=1 si CTRL+STOP est n pulsadas
+MODIFICA: AF
+
+Gracias a esta rutina podr s realizar programas que hagan algo 
+indefinidamente y finalicen al pulsar CTRL+STOP:
+
+START: ...
+       ...
+       CALL BREAKX
+       JR NC,START
+       RET
+
+Ah¡ van otras, relacionadas con la lectura del teclado y la salida por 
+pantalla:
+
+GTSTCK (#00D5)
+  Lee el estado del joystick o los cursores
+ENTRADA:  A=Joystick a leer (1 o 2, 0 para los cursores)
+SALIDA:   A=Direcci¢n del joystick leida (0 a 8, como STICK del BASIC)
+MODIFICA: Todos los registros
+
+GTTRIG (#00D8)
+  Lee el estado de los botones del joystick o la barra espaciadora
+ENTRADA:  A=Bot¢n a leer (1 o 3: joystick 1, 2 o 4: joystick 2, 0: espacio)
+SALIDA:   A=0	-> Bot¢n no pulsado
+	  A=#FF -> Bot¢n pulsado
+MODIFICA: AF
+
+CHGET (#009F)
+  Espera que el usuario pulse una tecla
+ENTRADA:  -
+SALIDA:   A=Tecla pulsada
+MODIFICA: AF
+
+CLS (#00C3)
+  Borra la pantalla
+ENTRADA:  Z=1
+SALIDA:   -
+MODIFICA: AF, BC, DE
+
+POSIT (#00C6)
+  Posiciona el cursor
+ENTRADA:  H=Coordenada X
+	  L=Coordenada Y
+SALIDA:   -
+MODIFICA: AF
+
+BEEP (#00C0)
+  Adivina...
+ENTRADA:  -
+SALIDA:   -
+MODIFICA: Todos los registros
+
+Con estas rutinas tienes m s que sificiente para realizar programas con un 
+interfaz de usuario b sico. No tengas miedo y ponte a investigar, lo peor que 
+te puede pasar (y de hecho te pasar  bastante) es colgar al ordenador, pero 
+de algo tiene que comer la tecla RESET, ¨no?
+
+Un par de cosillas m s acerca de la grabaci¢n de programas en ensamblador 
+para ser usados desde BASIC. Una vez ensamblado (en #A000, hab¡amos dicho) 
+has de grabar tu programa en formato binario, con #A000 como direcci¢n 
+inicial y de ejecuci¢n; como direcci¢n final has de poner la que te dice el 
+ensamblador cuando terminas de ensamblar. Ya puedes usar tus rutinas desde 
+BASIC haciendo lo siguiente:
+
+CLEAR 200,&HA000
+BLOAD"NOMBRE.BIN",R
+
+Para volver a ejecutar una rutina sin tener que volver a cargarla haz:
+
+DEFUSR=&HA000:A=USR(0)
+
+La instrucci¢n CLEAR reserva la memoria desde &HA000 hasta el final de la 
+zona de usuario para tus programas en ensamblador, de forma que puedes 
+disponer de esta parte de la memoria con la seguridad de que el int‚rprete 
+BASIC no la tocar . ¨Y d¢nde termina la zona de usuario? Depende del 
+ordenador y la cantidad de unidades de disco y programas residentes 
+instalados; de todas formas, si no tocas m s all  de #DE00 nunca tendr s 
+problemas.
+
+SE ME ACABO LA CUERDA
+
+Ya no tienes excusa. Tienes los conocimientos necesarios para empezar a 
+programar, as¡ que no te escaquees: deja de leer estas chorradas y, ­­a 
+machacar el teclado!! ­­­PERO YA!!!
+
+Ahora s¡ que termino, pero no te hagas ilusiones porque volver‚eeee... YIEJ, 
+YIEJ, YIEJ...
+
+TO BE CONTINUED... UNLUCKILY FOR YOU!
+
+

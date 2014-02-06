@@ -1,0 +1,1491 @@
+EASYMBLER
+
+POR QU METERME EN ESTE FREGADO
+
+    Bienvenido al curso de easymbler (ensamblador f cil) 
+de Konami  Man. Si  est s leyendo esto es que por fin te 
+has  decidido a  aprender a  programar en ensamblador. O 
+tal vez no acabas de decidirte, necesitas quiz  un empuú 
+joncito...
+    ¨Por qu‚  programar en ensamblador? ­Con lo bonito y 
+sencillo que es el BASIC! Bien, yo te dir‚ por qu‚.
+
+-  Los programas  ensamblados son los m s veloces. Te lo 
+garantizo.
+- Puedes  aprovechar al 100% las posibilidades del ordeú 
+nador.  Incluyendo pleno  acceso a  la memoria  (s¡, s¡, 
+nada de  disponer £nicamente de 23K de RAM : 128K, 256K, 
+1024K... seg£n tu m quina).
+-  Un programa ensamblado ocupa menos que su equivalente 
+BASIC. Pero mucho menos.
+- ­­El Nemesis est  programado en ensamblador!!
+
+    Probablemente ya  hab¡as o¡do  hablar de todas estas 
+cualidades  del CM  (bueno, la  £ltima es  cosa m¡a...). 
+Pero un d¡a cogiste un listado por casualidad y... ­­soú 
+corro!! ¨Qu‚ es todo esto? ­No entiendo nada! Vale. Pero 
+recuerda el  primer listado  BASIC que viste. ¨Lo entenú 
+d¡as?  No. Ni  papa. ¨Lo entiendes ahora? ­Bueno, que si 
+lo entiendes...!  Pues lo mismo pasa con el CM. Y no hay 
+peros que valgan. Simplemente recuerda esto:
+
+*  Programar en  ensamblador resulta  complejo. Pero  no 
+dif¡cil.
+
+    En efecto.  La particularidad  del CM  radica en que 
+est s  programando el  Z80 del modo m s directo posible. 
+Una instrucci¢n  suelta te permite hacer poco m s que un 
+POKE,  una suma  o enviar  un dato a un puerto; por ello 
+son necesarias  bastantes instrucciones para hacer aqueú 
+llo  que en BASIC se resume, por lo general, en una sola 
+(si es que en BASIC tambi‚n se puede hacer). Pero con un 
+poco de pr ctica y un mucho de organizaci¢n no hay raz¢n 
+para que no podamos desenvolvernos en la programaci¢n en 
+ensamblador. Te lo digo por experiencia.
+    Si has conseguido llegar hasta aqu¡ probablemente ya 
+he logrado, al menos, quitarte ese miedo al CM que todos 
+tenemos cuando  no lo  conocemos (yo  tambi‚n lo  ten¡a, 
+pero  no tuve la suerte de encontrar un texto de iniciaú 
+ci¢n tan  genial como ‚ste... vale, s¢lo bromeaba, no me 
+pegu‚is...),  o incluso  puede que te haya convencido de 
+que no se puede vivir sin saber programar en ensamblador 
+(bueno, para m¡ "vivir" y "programar" son sin¢nimos). En 
+cualquier caso, sigue leyendo: no te arrepentir s.
+
+¨QU ES EL ENSAMBLADOR?
+
+    Paciencia. Antes  de ponernos  a programar  hemos de 
+entrar  un poco  en situaci¢n.  Algunos de los conceptos 
+que introducir‚  ahora no  resultan imprescindible  para 
+programar,  pero el  conjunto nos servir  para tener una 
+idea de  por d¢nde  nos movemos,  y de  por qu‚ el CM es 
+distinto a los dem s lenguajes de programaci¢n.
+    Como  posiblemente ya sabr s, tu MSX contiene diverú 
+sos circuitos  integrados (chips para los que no quieren 
+escribir  tanto) imprescindibles para su funcionamiento. 
+El que  ahora nos interesa es el Z80: el procesador cenú 
+tral,  el que  controla todo el tinglado, el que ejecuta 
+siempre el programa. Al Z80 est n conectados el procesaú 
+dor de  v¡deo (VDP),  el generador  de sonido  (PSG), la 
+memoria  y los slots de expansi¢n, entre otros. Esto, de 
+forma muy, pero que muy resumida, es un MSX.
+    Por ahora  nos interesa el Z80. ¨Qu‚ es un Z80? Pues 
+ni  m s ni menos que un pedazo de piedra capaz de proceú 
+sar (tratar,  manejar, manosear...) datos. No pongas esa 
+cara,  y no  subestimes los pedazos de piedra (f¡jate en 
+las pir mides:  tambi‚n est n  hechas de pedazos de pieú 
+dra; pero ‚stas no procesan datos). Bueno, a lo nuestro. 
+Este  pedazo de piedra necesita estar conectado al mundo 
+exterior (los chips nombrados antes) si realmente quiere 
+procesar datos  y aspirar a algo m s que a decorar (cosa 
+por  otra parte  l¢gica: ¨c¢mo va a procesar datos si no 
+recibe los datos?), y de hecho lo est , por una serie de 
+l¡neas de  conexi¢n, que forman los llamados buses ("caú 
+minos" para los datos), conectadas a sus patillas.
+    Simplifiquemos:  nuestro  Z80  est   conectado,  por 
+ahora,  £nicamente a  un chip  de memoria,  y £nicamente 
+tiene patillas para mandarle a la memoria una direcci¢n, 
+y para  intercambiar datos con ‚sta; es decir, memoria y 
+Z80  est n conectados por medio de s¢lo dos buses: el de 
+datos y  el de direcciones (mentira podrida, claro, pero 
+he  simplificado para  no asustar  a nadie.  De hecho no 
+necesitamos m s detalles.)
+    As¡ pues, tenemos un procesador y un chip de memoria 
+interconectados de  forma que  pueden intercambiar datos 
+(s¡,  exactamente igual  que cuando  haces PEEK o POKE). 
+Concretemos un  poco: un dato, en el caso del Z80, es un 
+n£mero  de 8  bits, es decir, un n£mero entero entre 0 y 
+255. Un  n£mero de este tipo se denomina byte. En cuanto 
+a  la memoria,  un Z80  es capaz de direccionar directaú 
+mente 64Kbytes,  es decir,  leer/escribir en una memoria 
+de  65536 bytes. "­Pero si mi MSX tiene 128K!" Ya hablaú 
+remos de eso m s adelante (por algo he dicho direccionar 
+"directamente"). Estos  n£meros tan  raros vienen  dados 
+por  el n£mero  de patillas del Z80: 8 para intercambiar 
+datos y  16 para  enviar direcciones.  ¨No encuentras la 
+relaci¢n?  Tranquilo, m s  adelante explicar‚ el sistema 
+de numeraci¢n binario, y tus dudas ser n despejadas.
+    Vamos progresando: nuestra memoria tiene hasta 65536 
+datos (0...255) y nuestro Z80 puede leerlos, procesarlos 
+y volverlos  a escribir.  De hecho,  es pr cticamente lo 
+£nico  que puede hacer. "­Venga ya! ­­El Nemesis no funú 
+ciona a  base de  leer-procesar-escribir!!" Pues s¡, t¡o 
+listo: el Nemesis, el Metal Gear, el SD Snatcher y cualú 
+quier otro programa funcionan de esta forma.
+    As¡ pues, si queremos que nuestro Z80 funcione (proú 
+cese un dato), le hemos de indicar:
+
+- D¢nde est  el dato (o datos, caso de una suma, p. ej.) 
+a procesar.
+-  Qu‚ queremos  que haga  con el (los) dato(s) (tipo de 
+proceso).
+- D¢nde queremos que almacene el resultado del proceso.
+
+    En el  fondo lo  que estamos haciendo es enviarle al 
+Z80 un dato junto a unas instrucciones de uso. "Instrucú 
+ciones... esto me suena... ­Claro! Las instrucciones del 
+BASIC." Bingo.
+    Seguimos avanzando. Una instrucci¢n es una orden que 
+se  le da  al procesador para que realice un determinado 
+proceso con  un dato.  ¨Y qu‚ formato tiene una instrucú 
+ci¢n? Pues el £nico formato que el Z80 es capaz de reciú 
+bir:  bytes. Ni  m s ni  menos. As¡  como en  BASIC cada 
+instrucci¢n se  identifica con una palabra en ingl‚s, en 
+CM las instrucciones son bytes: uno para las m s cortas, 
+cinco  para las  m s largas  (el conjunto  de bytes  que 
+forman una  instrucci¢n se  denomina su codigo de operaú 
+ci¢n).  Y como  sabr s del BASIC, detr s de una instrucú 
+ci¢n siempre  viene otra,  y otra,  y... en  resumen: un 
+programa.
+    "Pues  si un programa en ensamblador consiste £nicaú 
+mente en  n£meros, apaga y v monos; esto es imposible de 
+aprender."  Tranquilo, no te espantes: est  todo previsú 
+to,  te  garantizo que  programar en  ensamblador no  es 
+teclear miles de n£meros. Paciencia.
+    ¨Qu‚ tenemos  hasta ahora? No poca cosa: un procesaú 
+dor  de datos  conectado a una memoria que, casualmente, 
+contiene datos;  y una manera de ordenarle al procesador 
+que  procese datos: envi ndole bytes, que conforman insú 
+trucciones que,  a su  vez, forman  un programa  una vez 
+puestas en secuencia.
+    A estas alturas ya est s en condiciones de ver (­por 
+fin!)  un  sencillo  programa en  ensamblador. Atenci¢n: 
+­All  va!
+
+3A 34 00
+ED 44
+32 01 22
+
+    ­Ya est ! No era tan dif¡cil, ¨verdad? Un momento... 
+¨qu‚  haces con  ese hacha?  ­No lo hagas! ­Piensa en tu 
+familia, tu  Twingo, tu MSX! Ah... ¨que el hacha es para 
+m¡?  Eh...  Je,  je... c lmate,  hombre, no  cometas una 
+estupidez;  te dije  antes que no programar¡as a base de 
+n£meros y lo mantengo. Te vuelvo a pedir paciencia.
+    El programa  consta de  tres instrucciones, que como 
+ves no son m s que secuencias de bytes (est n expresados 
+en  notaci¢n hexadecimal; si no la conoces tranquilo, la 
+explico m s  adelante), tal como te hab¡a contado antes. 
+¨Y qu‚ hace el programa? Simplemente lee el contenido de 
+la  direcci¢n de  memoria &H0034,  le cambia  el signo y 
+deposita el resultado en &H2201.
+    No te  asustes, ahora describo paso por paso el proú 
+grama;  normalmente, a la hora de programar, no nos ponú 
+dremos a  realizar un  an lisis tan  detallado, pero  es 
+importante  que, al  menos una vez, examines un programa 
+con este nivel de detalle.
+    Lo primero  que hace  el Z80 al ejecutar el programa 
+es  leer el  valor &H3A  de memoria. Este byte contiene, 
+para el  Z80, sufiente  informaci¢n como  para saber que 
+necesita leer dos bytes m s (adem s de informaci¢n sobre 
+el proceso a realizar, claro). As¡ pues, antes de ejecuú 
+tar  la instrucci¢n lee los dos bytes siguientes: &H34 y 
+&H00. Con  estos dos  bytes compone una direcci¢n de meú 
+moria:  &H0034 (s¡,  ya s‚ que los bytes est n guardados 
+al rev‚s; no te preocupes por ahora). A continuaci¢n lee 
+el byte contenido en &H0034 y lo deposita en el acumulaú 
+dor  (Una  posici¢n  de  memoria especial  (un registro) 
+situada en el interior del Z80). Res£men: "Lee el conteú 
+nido de &H0034 y depos¡talo en el acumulador."
+    Seguimos: el  Z80 lee  &HED, y  al descodificar este 
+byte  sabe que  necesita leer  otro: &H44.  La orden es: 
+"Cambia el  signo del  byte contenido en el acumulador". 
+M s: el Z80 lee &H32, y se da cuenta de que necesita dos 
+bytes  m s. Los lee: &H01 y &H22. La orden es: "Deposita 
+el contenido del acumulador en &H2201".
+    Eso es  lo que  hace, y  fin del programa. Bueno, no 
+exactamente;  el  Z80  no puede  estarse quieto:  lo que 
+ahora  har¡a es  leer la siguiente posici¢n de memoria y 
+seguir ejecutando  programa. Si  no hay programa... peor 
+para  t¡: el Z80 interpretar  los bytes que encuentre en 
+memoria como  instrucciones; si  son byes  aleatorios lo 
+m s  probablemente es que el ordenador acabe colg ndose. 
+Tranquilo, repito que est  todo previsto.
+    Pues esto  es todo  lo que  hace el  Z80: ir leyendo 
+bytes de memoria, traducirlos a instrucciones y ejecutar 
+‚stas.  S¡, en  esto consiste  el c¢digo m quina; y este 
+proceso de  lectura-ejecuci¢n no  se detiene mientras el 
+Z80  reciba alimentaci¢n  (el‚ctrica, se  entiende). "¨Y 
+c¢mo es que al arrancar el MSX, se va al BASIC y no hace 
+nada despu‚s del OK?" Los bucles de espera tambi‚n exisú 
+ten  en  CM,  listillo.  S¡: cuando  sale el  prompt del 
+BASIC,  el  Z80 se  pone a  ejecutar algo  equivalente a 
+esto: 10  IF INKEY$=""  THEN GOTO 10, por eso parece que 
+no hace nada. As¡ de simple.
+    Llegados  a este punto te habr s planteardo una preú 
+gunta que  puede dar  un poco  de miedo a primera vista: 
+"Si el Z80 s¢lo entiende esos c¢digos de operaci¢n, ¨qu‚ 
+co¤o es el BASIC?" ¨No te lo imaginas? El int‚rprete del 
+BASIC (o de cualquier otro lenguaje de alto nivel) no es 
+m s  que un  programa en  c¢digo m quina que se limita a 
+leer las  chorradas que le pasas por el teclado y traduú 
+cirlas a ¢rdenes (¢rdenes CM, desde luego) o, como siemú 
+pre,  soltarte un  "Sint  rror, giliposha". Fuerte, ¨eh? 
+Es como  cuando descubres  que la  tierra no se sostiene 
+sobre tortugas...
+
+LOS NEMONICOS
+
+    Por  tu cara deduzco que no te ha hecho gracia lo de 
+los c¢digos  de operaci¢n.  Adem s veo que le has cogido 
+el  gusto al  hacha. Veo tambi‚n que te acercas hacia m¡ 
+con cara  de "se va a enterar este estafador de mierda". 
+Veo que he de salir corriendo ahora mismo; bueno, por el 
+camino te explicar‚ algo que tal vez te tranquilice.
+    Cierto es que es imposible memorizar todos los c¢diú 
+gos de operaci¢n. Adem s, depurar un programa escrito de 
+esta  manera y  calcular las direcciones para los saltos 
+(­que tambi‚n  hay GOTO  y GOSUB en ensamblador, majos!) 
+se  convierte en  una tarea  mentalmente matadora. Y sin 
+embargo existe el Nemesis... ¨Acaso tiene el "Homo Konaú 
+mis" un  cerebro m s  desarrollado que  el resto  de los 
+humanos?  No, no  se trata de eso. Para que programar en 
+c¢digo m quina  no resulte  una misi¢n imposible para un 
+ser humano, cada vez que se desarrolla un procesador con 
+su  correspondiente  juego  de  instrucciones  se dise¤a 
+tambi‚n  un juego de nem¢nicos. Un nem¢nico es un nombre 
+simb¢lico que se le asigna a cada instrucci¢n con el fin 
+de facilitar  su memorizaci¢n y, de esta forma, "humaniú 
+zar" la redacci¢n de programas. Reescribamos el programa 
+anterior, aquel que le¡a-negaba-escrib¡a, con nem¢nicos. 
+El resultado es algo as¡:
+
+LD A,(&H0034)
+NEG
+LD (&H2201),A
+
+    ­Esto ya es otra cosa! Simplemente teniendo en cuenú 
+ta  que  LD  es  la  abreviatura  de  LoaD  (en  ingl‚s, 
+"Cargar"), A  la de  Acumulador, y NEG la de NEGar (camú 
+biar  el signo),  la cosa se vuelve un poco m s comprenú 
+sible,  ¨verdad?  Pues puedes  ir acostumbr ndote,  este 
+ser  el aspecto que tendr n tus programas en ensamblador 
+(s¢lo que  m s largos.  Muuuuucho m s largos...)
+    "Pero a ver, ¨no hab¡amos quedado en que el Z80 s¢lo 
+entiende bytes?"  Cierto: para  que un  programa escrito 
+con  nem¢nicos funcione,  ha de  ser traducido a c¢digos 
+num‚ricos (es  decir, ha  de ser ensamblado) por un proú 
+grama  especial llamado,  precisamente, ensamblador. "¨Y 
+c¢mo ha  sido programado  el ensamblador?" Pues con otro 
+ensamblador  m s antiguo  o con  alg£n lenguaje  de alto 
+nivel.  "¨Y  el primer  ensamblador?" Probablemente  con 
+otro ordenador ya existente: es lo que se llama ensablaú 
+je cruzado. "¨Y el primer ensamblador del primer ordenaú 
+dor?" Hijo, ¨y yo qu‚ s‚? El primer ordenador se prograú 
+maba a  base de  poner y  quitar cables y v lvulas. "­No 
+jodas!"  Que s¡...  (casi me gustaba m s hacha en ristre 
+pero con la boquita cerrada)
+    Una £ltima  cosa, a prop¢sito de esa sonrisita maliú 
+ciosa  en tu cara. S¡, podr¡as dise¤arte tu propio juego 
+de nem¢nicos, al estilo de TRAEACAPACA en lugar de LD, o 
+QUENOCO¥O,QUENO en  vez de  NEG. Pero  nosotros usaremos 
+los  nem¢nicos que  fueron dise¤ados  por los se¤ores de 
+Zilog (los que inventaron el Z80, ¨o acaso cre¡as que la 
+Z era  de "ZOI  ER MEHO"?)  hace ya  veinte a¤itos,  que 
+adem s  est n estandarizados y son los que todo el mundo 
+usa. Caso de utilizar tus propios nem¢nicos tendr¡as que 
+programar tu  propio ensamblador,  y adem s nadie sin tu 
+fino  sentido del  humor entender¡a  tus programas (y no 
+olvides que no eres el £nico que tiene un hacha...)
+    Estupendo: sabes  c¢mo funciona  un Z80  y sabes que 
+existen  los benditos  nem¢nicos. Ya  podemos ponernos a 
+empollar instrucciones  y empezar  a programar.  Pues me 
+temo  que... ¨has soltado el hacha? Bien, pues ahora nos 
+toca aprender un poco de... matem ticas. 
+
+EL SISTEMA BINARIO
+
+    Vaya, he  dicho la palabra maldita. Suelta el hacha, 
+hombre;  yo  tambi‚n  odio las  matem ticas, pero  en la 
+programaci¢n  en ensamblador,  tarde o  temprano siempre 
+hemos de  tratar n£meros binarios. Pero t£ tranquilo; en 
+el fondo el sistema binario es bastante facil¢n.
+    Observa  tus manos.  S¡, en estos momentos contienen 
+un hacha;  su‚ltalo. Veenga, su‚ltalo. As¡. Mucho mejor. 
+Observa  ahora tus  manos: ¨qu‚  tienen? Pues  ni m s ni 
+menos que  diez dedos.  As¡ pues,  es l¢gico que nuestro 
+sistema  de numeraci¢n  conste de  diez d¡gitos. De esta 
+forma, cuando queremos contar hacemos algo as¡:
+
+0 1 2 3 4 5 6 7 8 9
+
+    ­Guep!  ­­Nos  hemos  quedado  sin d¡gitos!!  No hay 
+problema: empleamos dos, y ya est :
+
+10 11 12 13 14 15 16 17 18 19 20 21 ... 98 99
+
+    ­De  nuevo  sin d¡gitos!  Pues nada,  nada: usaremos 
+tres.
+
+100 101 102 ... 198 199 200 ... 988 999
+
+    Le vamos  cogiendo el  truco: cada vez que un d¡gito 
+pasa  de 9,  vuelve a  0 y se incrementa el d¡gito de su 
+izquierda. Cuando  es el  de m s  a la  izquierda el que 
+pasa  de 9,  simplemente a¤adimos un 1 a su izquierda, y 
+vuelta a empezar.
+    Decimos que  el sistema  decimal es un sistema posiú 
+cional:  el valor de cada d¡gito depende de su posici¢n. 
+As¡, el  n£mero 1974 (que casualmente corresponde al a¤o 
+de  nacimiento del  gran Konami  Man) en realidad signiú 
+fica:
+
+4 + 7*10 + 9*100 + 1*1000 = 4 + 70 + 900 + 1000
+
+    O, con m s formalidad matem tica:
+
+4*10^0 + 7*10^1 + 9*10^2 + 1*10^3
+
+    El d¡gito de m s a la derecha se multiplica por diez 
+elevado a cero, el siguiente por diez elevado a uno... y 
+as¡  con  todos los  d¡gitos que  haya. En  resumen, que 
+cualquier n£mero  decimal se puede descomponer en potenú 
+cias de diez.
+    Pues  la he  hecho buena:  te hago soltar el hacha y 
+ahora me  vienes con  la camisa de fuerza. Menos mal que 
+me  he acostumbrado a correr. Tranquilo, no me he vuelto 
+tarumba: esto  sigue siendo  un curso  de iniciaci¢n  al 
+ensamblador.
+    Todo  esto a venido a cuento porque, antes de entrar 
+en un  nuevo sistema de numeraci¢n, es necesario conocer 
+m s  a fondo el propio sistema decimal, puesto que todos 
+funcionan igual:  s¢lo cambia  el n£mero de d¡gitos y la 
+base (el n£mero que elevamos a 0, 1, 2...)
+    "ZZZZZ..."  ­Eh! ­­Despierta!! Que ya empiezo con el 
+sistema binario.
+    Dec¡a al  principio que  nuestras manos  tienen diez 
+dedos.  Los ordenadores se han dise¤ado de forma que sus 
+"manos", es  decir, la  corriente el‚ctrica,  s¢lo tenga 
+dos  "dedos": valor  bajo (no  hay corriente, 0) y valor 
+alto (hay  corriente, 1). Esto se ha hecho as¡ por motiú 
+vos tecnol¢gicos que no vienen a cuento ahora. Lo imporú 
+tante  es que  los ordenadores (y el Z80, ofcoursemente) 
+"cuentan" con  £nicamente dos  d¡gitos: 0 y 1. Un bit no 
+es m s que un d¡gito binario ("Binary digIT").
+    Imaginemos  que nuestro  Z80 se  pone a  contar, tal 
+como lo har¡amos nosotros:
+
+0 1
+
+    Como no le quedan m s d¡gitos, a¤ade uno:
+
+10 11
+
+    Vaya,  otra  vez  sin  d¡gitos... bueno,  vamos a¤aú 
+diendo:
+
+100 101 110 111 -> 
+  -> ­Otro m s!: 1000 1001 1010 1011 1100 1101 1110 1111
+
+    Como ves  funciona exactamente  igual que el sistema 
+decimal  al que estamos acostumbrados, pero con s¢lo dos 
+d¡gitos. As¡,  si un n£mero decimal se pod¡a descomponer 
+en potencias de diez, un n£mero binario se descompone en 
+potencias de... ¨lo adivinas?
+
+101001 = 1*2^0 + 0*2^1 + 0*2^2 + 1*2^3 + 0*2^4 + 1*2^5 =
+       = 1*1   + 0*2   + 0*4   + 1*8   + 0*16  + 1*32  = 41
+
+    ­Ya  est : esto  son los n£mero binarios! No era tan 
+dif¡cil, ¨verdad?  As¡, para  transformar un  n£mero biú 
+nario  a decimal,  s¢lo has de fijarte en las posiciones 
+en las  que hay un 1, y sumar entonces dos elevado a esa 
+posici¢n (teniendo en cuenta que la posici¢n de m s a la 
+derecha  es la  cero, y que 2^0=1). Tampoco es necesario 
+aprenderse todas  las potencias  de dos de memoria: para 
+pasar  a la  siguiente basta multiplicar por dos. Aunque 
+t£  tranquilo:  a  medida  que programes  en ensamblador 
+acabar s  sabiendo  de  memoria,  como m¡nimo,  las diez 
+primeras potencias de dos.
+    Retrocedamos  un  poco:  recuerda  que el  Z80 puede 
+manejar datos  entre 0  y 255 porque s¢lo tiene 8 l¡neas 
+para  datos. Esto  quiere decir que puede tratar n£meros 
+entre 00000000 y 11111111, y
+
+11111111 = 1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 = 255
+
+    Observa que,  casualmente, 2^8 = 256. S¡: con n bits 
+podemos representar 2^n n£meros, de 0 a 2^n -1.
+    Recuerda  tambi‚n el  n£mero de  l¡neas para  direcú 
+ciones: 16. Esto da un total de 2^16 = 65536 direcciones 
+de memoria accesibles.
+    Ya sabemos  traducir n£meros  binarios a  decimales, 
+pero,  ¨y el  proceso inverso? Hay un procedimiento basú 
+tante sencillo que consiste en realizar divisiones suceú 
+sivas del  n£mero, qued ndonos  con los restos. Lo mejor 
+ser   ver directamente un ejemplo: ¨c¢mo se expresa 1974 
+en binario?
+
+1974 : 2 = 987, R = 0 -> bit 0
+ 987 : 2 = 493, R = 1 -> bit 1
+ 493 : 2 = 246, R = 1 -> bit 2
+ 246 : 2 = 123, R = 0 . . .
+ 123 : 2 =  61, R = 1
+  61 : 2 =  30, R = 1
+  30 : 2 =  15, R = 0
+  15 : 2 =   7, R = 1
+   7 : 2 =   3, R = 1
+   3 : 2 =   1, R = 1
+   1 : 2 =   0, R = 1 -> bit 10
+
+    Nos detenemos cuando el resultado de la divisi¢n sea 
+cero (dividendo  menor que  divisor, o  sea 2), y compoú 
+nemos el n£mero binario de la siguiente forma: empezamos 
+tomando  el £ltimo  resto obtenido, y vamos poniendo los 
+anteriores a su derecha (aprovecho para indicarte que el 
+bit situado  m s a  la izquierda en un n£mero binario se 
+denomina  bit m s significativo, bit de m s peso o, simú 
+plemente, MSB,  de "Most  Significative Bit";  el bit de 
+m s  a la  derecha es  el menos significativo, o LSB, de 
+"Less Significative Bit". De esta forma, el £ltimo resto 
+obtenido, que  es el  primero que tomamos, se transforma 
+en  el MSB  del n£mero binario resultante). As¡, 1974 en 
+binario se expresa como 11110110110.
+    "¨Ya est ?  ¨Hemos acabdo con los n£meros binarios?" 
+No,  por desgracia siguen vivos... Nos quedan a£n un par 
+de puntos  para liquidar  el asunto de los n£meros binaú 
+rios: la suma y los n£meros negativos.
+    "Pero... ¨es  que estos  engendros se pueden sumar?" 
+­Y  tanto! Y  adem s es  bien f cil, al igual que ocurre 
+con los  n£meros decimales. Simplemente hay que tener en 
+cuenta cuatro reglas: 0+0=0, 0+1=1+0=1, 1+1=0 y me llevo 
+1, 1+1+1 que me llevaba =1 y me llevo 1. Ejemplo: 0111 + 
+0011 (es decir, 7+3) => 0111
+
+      + 0011
+        ----
+					   ????
+
+- Empezamos por los bits de la derecha: 1+1=10, es decir 
+0 y me llevo 1:
+ 
+					     1
+        0111
+					 + 0011
+					   ----
+					      0
+
+-  Seguimos hacia  la izquierda: 1 + 1 + 1 que llevaba = 
+11, es decir 1 y me llevo 1:
+
+         1
+        0111
+      + 0011
+        ----
+          10
+
+- M s: 1 + 0 + 1 que llevaba = 10, es decir 0 y me llevo 
+1:
+
+        1
+        0111
+					 + 0011
+					   ----
+					    010
+
+- ­Animo, que ya terminamos! 0 + 0 + 1 que llevaba = 1, y ya est :
+
+					   0111
+					 + 0011     
+					   ----
+					   1010
+
+    El resultado es 1010 = 10, es decir, 7+3, l¢gicamenú 
+te.  Como ves,  de dif¡cil  no tiene  nada. S¢lo hay que 
+tener cuidado  con un  posible desbordamiento, es decir, 
+el  resultado puede necesitar m s bits que los dos n£meú 
+ros iniciales:
+
+        1111
+      + 0010
+        ----
+					  10001  
+
+    Aqu¡, 15+2=17,  que no cabe en 4 bits. Este fen¢meno 
+se  denomina desbordamiento, y hay que tenerlo en cuenta 
+a la hora de programar: recuerda que los datos que maneú 
+ja el  Z80 son de 8 bits; por tanto no puedes almacenar, 
+por  ejemplo, el  resultado de  200+100 en un solo byte. 
+Pero t£  tranquilo, el  Z80 dispone  de mecanismos espeú 
+ciales  para  tratar  desbordamientos, como  veremos m s 
+adelante.
+    Queda  el asunto  de los  n£meros negativos. Existen 
+varias formas de expresar un n£mero negativo en notaci¢n 
+binaria; nosotros  iremos al  grano y pasaremos directaú 
+mente al complemento a dos, que es el m‚todo usado en la 
+pr ctica  por ser compatible con las operaciones de suma 
+y resta.
+    Para expresar un n£mero negativo en notaci¢n binaria 
+en complemento  a dos,  simplemente hay que hacer lo siú 
+guiente:
+
+- Expresar el valor absoluto (n£mero sin signo) en binaú 
+rio normal.
+- Invertirlo: cambiar los ceros por unos y viceversa.
+- Sumarle uno.
+
+    As¡, para expresar -34 en complemento a dos:
+
+0100010 -> 1011101 -> 1011110
+
+    Y  ya  est :  la representaci¢n  binaria de  -34, en 
+complemento  a dos, es 1011110. Veamos si este m‚todo es 
+consistente: ¨qu‚  pasa si buscamos el complemento a dos 
+de -34, es decir, -(-34)?
+
+1011110 -> 0100001 -> 0100010
+
+    Obtenemos  de nuevo  el 34:  as¡ pues, el m‚todo del 
+complemento a  dos funciona. S¢lo has de tener en cuenta 
+que  el  n£mero  de bits  necesario para  representar un 
+n£mero  puede cambiar  con respecto  al binario puro: en 
+efecto, con  n bits pod¡amos representar n£meros entre 0 
+y  2^n -1.  En complemento a dos a£n podemos representar 
+2^n n£meros distintos, pero ahora la mitad ser n positiú 
+vos y  la otra  mitad negativos. Por ejemplo, con 8 bits 
+pod¡amos  representar del 0 al 255; en complemento a dos 
+ser n  n£meros  entre -128  y 127  (128 negativos  + 127 
+positivos +  el cero  =256). En  general, con n bits los 
+l¡mites de representaci¢n son -(2^n)/2 y (2^n)/2 -1.
+    "¨Y c¢mo puedo distinguir a simple vista si un n£meú 
+ro expresado  en complemento a dos es positivo o negatiú 
+vo?"  F cil: observa  el MSB.  Si es  cero, el n£mero es 
+positivo. Si  es uno,  negativo. As¡  de simple.  Haz la 
+prueba:  con 8 bits el m ximo n£mero representable es el 
+127, en  binario 01111111;  el m¡nimo  es -128, es decir 
+10000000.  Sabemos sumar. Sabemos expresar n£meros negaú 
+tivos. ¨Sabemos  restar...? ­Claro! ¨Qu‚ es restar, sino 
+sumar  un n£mero positivo y uno negativo? En efecto: A-B 
+no es m s que A+(-B).
+    Veamos un  ejemplo: 5-2,  usando 8  bits. Si hacemos 
+una suma normal y corriente obtendremos:
+
+			      00000101
+			    + 11111110
+			      --------
+			     100000011
+
+    ­El  resultado  tiene  un bit  m s! ¨Se  ha generado 
+desbordamiento?  Imposible,  el  resultado es  3 y  cabe 
+holgadamente  en 8 bits. Este bit sobrante se llama acaú 
+rreo y  debe ignorarse.  En efecto, si as¡ lo hacemos el 
+resultado de la resta es correcto: 00000011 = 3.
+    Retrocedamos ahora un pcoo y veamos una simple suma: 
+126+3.
+
+			      01111110
+			    + 00000011
+			      --------- 				
+			      10000001
+
+    Ateni‚ndonos  a las  reglas del  complemento a  dos, 
+vemos que  el resultado  es... -127.  ¨C¢mo es  posible? 
+Ahora  s¡ ha  habido desbordamiento,  a pesar  de que no 
+sobre ning£n  bit. En  efecto, el  resultado correcto es 
+129, que no cabe en ocho bits; por eso hemos obtenido un 
+resultado absurdo.
+    "­Pues s¡ que estamos listos! Ahora resulta que, con 
+esto  del complemento a dos, puedes tener desbordamiento 
+sin bits  sobrantes, y  puedes tener  bits sobrantes sin 
+desbordamiento.  A que  cojo el hacha otra vez..." Estas 
+un poco  nerviosillo, ¨verdad?  Tranquilo, hay una regla 
+sencilla  para averiguar  si el resultado de una suma ha 
+producido desbordamiento.
+    Observa el MSB de los dos sumandos. Si uno es cero y 
+el  otro  uno, est s  sumando un  n£mero positivo  y uno 
+negativo: seguro  que no  hay desbordamiento, as¡ que si 
+se  produce un  acarreo ign¢ralo y qu‚date con el resulú 
+tado, que  seguro que es correcto. En cambio, si los dos 
+MSB  son iguales  es que  los dos  n£meros son del mismo 
+signo: el  resultado tambi‚n  ha de  tener ese signo (es 
+decir,  el mismo  MSB); en caso contrario ha habido desú 
+bordamiento y el resultado no es correcto.
+    Pues ya  hemos visto todo lo que necesit bamos sobre 
+n£meros  binarios. "­Oye,  que no  me gusta este tipo de 
+bromas! ­A  que cojo  el hacha...!" Te juro por San Seed 
+que hemos acabado la secci¢n sobre notaci¢n binaria. Que 
+s¡, hombre, si al final todo llega...
+
+LAS OPERACIONES LOGICAS
+
+    Seguramente  ya  las  habr s  usado  en tus  andares 
+BASICeros,  o al  menos habr s o¡do hablar de ellas: las 
+famosas NOT,  AND, OR y XOR. En esta ocasi¢n se trata de 
+operaciones  entre dos  bits que dan como resultado otro 
+bit, sin  m s historias. Como no quiero aburrirte, y veo 
+que  te encaminas  ansiosamente hacia el hacha, paso sin 
+m s a  describir estas  operaciones; ver s c¢mo acabamos 
+enseguida (o este t¡o acaba conmigo enseguida...)
+
+* NOT: negaci¢n. NOT 0 = 1, NOT 1 = 0, es la £nica opeú 
+  raci¢n de un solo bit.
+
+* AND:  producto l¢gico,  vale uno  s¢lo si los dos bits 
+  son uno:
+
+       0 AND 0 = 0
+       0 AND 1 = 0
+       1 AND 0 = 0
+       1 AND 1 = 1
+
+* OR: suma  l¢gica, vale uno si al menos uno de los dos 
+  bits vale uno.
+
+       0 OR 0 = 0
+       0 OR 1 = 1
+       1 OR 0 = 1
+       1 OR 1 = 1
+
+* XOR:  OR exclusiva. El resultado es uno si s¢lo uno de 
+  los bits es uno.
+
+       0 XOR 0 = 0
+       0 XOR 1 = 1
+       1 XOR 0 = 1
+       1 XOR 1 = 0
+
+    Estas  operaciones l¢gicas  (hay m s, pero me las he 
+saltado porque no las necesitaremos) son important¡simas 
+en la  programaci¢n en  ensamblador, se usan incluso m s 
+que  la suma.  Ya lo ir s descubriendo a medida que proú 
+grames, que  ser  dentro  de poco (suelta el hacha, rey, 
+anda, porfa...) 
+
+LA NOTACION HEXADECIMAL
+
+    Juro  por San  Burton que  esta es la £ltima secci¢n 
+matem tico-num‚rica. Piensa  que el Konamimanicidio est  
+penado  por la  ley (supongo...), rel jate y disfruta de 
+esta genial secci¢n (por decir algo).
+    Volvemos al  s¡mil de los dedos. Imagina un snatcher 
+que  ha salido defectuoso y tiene 16 dedos en las manos; 
+as¡, su  sistema de  numeraci¢n tiene  16 d¡gitos: es el 
+llamado sistema hexadecimal. Como nuestro pobre snatcher 
+s¢lo  conoce  diez  d¡gitos (de  hecho no  existen m s), 
+emplea  las letras  de la  A a la F para representar los 
+cinco d¡gitos  que hay  despu‚s del 9. As¡, si se pone a 
+contar...
+
+1 2 3 4 5 6 7 8 9 A B C D E F
+
+    Ya  conoces la  historia: ahora toca a¤adir otro d¡ú 
+gito...
+
+10 11 12 ... 19 1A 1B 1C 1D 1E 1F 20 ...
+
+    Atenci¢n que  esto puede  llegar a  ser hasta diverú 
+tido:  ¨qu‚ n£mero  viene tras el 99...? ­el 9A, por suú 
+puesto! ¨Y  tras el 9F? ­­El A0!! Tras el A9 el AA, tras 
+el  AF el B0... y as¡ hasta el FF, que viene seguido por 
+el... ­­­100!!! ­Yupi! ­Viva! ­Fiesta! (a ver si convenú 
+zo al  menda de  que suelte  el hacha,  y mientras  va a 
+buscar la camisa de fuerza huyo...)
+    As¡  pues, la  historia se  repite: cualquier n£mero 
+hexadecimal se puede descomponer en potencias de 16...
+
+7B6 =  6*16^0 + 11*16^1 + 7*16^2 = 6*1 + 11*16 + 7*256 = 
+    =  1974 (caramba...)
+
+    ...  y para pasar un n£mero de decimal a hexadecimal 
+sigue siendo  v lido el  m‚todo de  las divisiones suceú 
+sivas:
+
+1974 : 16 = 123, R = 6
+ 123 : 16 =   7, R = 11 -> B
+   7 : 16 =   0, R = 7
+
+    Resultado: 1974 en hexadecimal es 7B6, por si a£n no 
+lo  hab¡as notado.  Y por  £ltimo, indicarte  que con  n 
+d¡gitos puedes representar 16^n n£meros.
+    "­Cuando por fin hab¡amos acabado con los binarios e 
+¡bamos a  ponernos por  fin a  programar, se  saca de la 
+manga  un sistema de base 16! Primero le pongo la camisa 
+de fuerza  y luego  le doy  con el hacha." Tranquiiiilo, 
+caaaaalma,  hombre,  ahora  te explico  la utilidad  del 
+sistema hexadecimal.
+    A  ver, ¨cu ntos  n£meros puedes representar con dos 
+d¡gitos hexadecimales?  Pues 16^2  = 256.  ­Caramba, qu‚ 
+casualidad,  si es la cantidad de n£meros representables 
+con un  byte! S¡: hexadecimalmente hablando, con un byte 
+puedes representar 100 n£meros, de 0 al FF... ­son n£meú 
+ros  redondos!  ¨Y  con  cuatro  d¡gitos?  Pues  16^4  = 
+= 65536... ­­64Kbytes!! Exactamente  10000 posiciones de 
+memoria, de  0 a  FFFF, son las que puede direccionar el 
+Z80.
+    Veamos  ahora el pseudo-m s dif¡cil todav¡a: ­­pasar 
+de binario  a hexadecimal!!  "­Ya est !  ­Le doy  con el 
+hacha...!"  Calma, hombre,  que me estoy cansando de coú 
+rrer.  He  dicho  pseudo-m s  dif¡cil todav¡a  porque en 
+realidad nos  encontramos ante  el m s  f cil imposible. 
+Para  pasar  un  n£mero de  binario a  hexadecimal basta 
+dividirlo  en grupos  de 4 bits, y convertir cada grupo, 
+que representar   un n£mero  entre 0  y 15,  a su d¡gito 
+hexadecimal correspondiente.
+    Ejemplo:  ¨recuerdas el  binario de 1974? S¡ hombre: 
+11110110110. Lo  dividimos en  grupos de cuatro bits (un 
+grupo  de cuatro bits recibe el nombre de nibble), empeú 
+zando por la derecha; si el £ltimo grupo (el situado m s 
+a la  izquierda) no  tiene cuatro  bits simplemente a¤aú 
+dimos ceros a la izquierda:
+
+0111 1011 0110
+
+    Tenemos  que 0111  = 7,  1011 =  11 = B, y 0110 = 6, 
+luego 1974 en hexadecimal es 7B6. ­¨A que no te lo espeú 
+rabas?! Por  eso es tan importante la notaci¢n hexadeciú 
+mal:  permite expresar bytes con s¢lo dos d¡gitos, faciú 
+litando adem s  un m‚todo  muy sencillo  de conversi¢n a 
+notaci¢n binaria.
+    Retrocedamos  un  poco  (bueno...  bastante),  hasta 
+aquel primer programa de ejemplo. El c¢digo de operaci¢n 
+de NEG, expresado en hexadecimal, era ED 44. Como E = 14 
+= 1110,  D = 13 = 1101 y 4 = 0100, tenemos que lo que en 
+realidad  el  Z80  est  recibiendo  por sus  patillas es 
+11101101,  seguido  de  01000100; un  uno significa  que 
+llega  corriente a  la patilla  correspondiente, un cero 
+que no  llega. As¡ es como realmente recibe las instrucú 
+ciones  el Z80; ¨no es m s c¢modo expresarlas en hexadeú 
+cimal...?  (que  s¡,  que  nosotros usaremos  nem¢nicos, 
+tranquilo)
+    Pues  ya  hemos  terminado con  las matem ticas.  De 
+regalo,  y como premio por haber soportado tan pacienteú 
+mente tan  pesada secc¢n,  he aqu¡  una tabla de converú 
+si¢n/referencia  r pida  de  decimal a  hexadecimal y  a 
+binario para nibbles:
+
+  Dec   Hex   Bin         Dec   Hex   Bin
+--------------------    --------------------
+|  0  |  0  | 0000 |    |  8  |  8  | 1000 |
+--------------------    --------------------
+|  1  |  1  | 0001 |    |  9  |  9  | 1001 |
+--------------------    --------------------
+|  2  |  2  | 0010 |    | 10  |  A  | 1010 |
+--------------------		  --------------------
+|  3  |  3  | 0011 |    | 11  |  B  | 1011 |
+--------------------		  --------------------
+|  4  |  4  | 0100 |    | 12  |  C  | 1100 |
+--------------------		  --------------------
+|  5  |  5  | 0101 |    | 13  |  D  | 1101 |
+--------------------		  --------------------
+|  6  |  6  | 0110 |    | 14  |  E  | 1110 |
+--------------------		  --------------------	    
+|  7  |  7  | 0111 |    | 15  |  F  | 1111 |     
+--------------------		  --------------------
+
+RESUMEN DE CONCEPTOS
+
+    Este  apartado en  un resumen  de los  conceptos m s 
+importantes que  hemos visto  hasta ahora;  est  pensado 
+para  fijar ideas,  aunque tambi‚n  te puede servir como 
+referencia r pida en el futuro. Ah¡ va:
+
+    - El  Z80 es el procesador central del MSX. Es capaz 
+de  procesar datos  en funci¢n  de una  serie de ¢rdenes 
+(instrucciones). Tanto  los datos como las instrucciones 
+tienen forma de bytes.
+    -  La memoria  conectada al  Z80 es  la encargada de 
+almacenar los  datos y  las instrucciones  que forman el 
+programa. Memoria y Z80 se comunican a trav‚s del bus de 
+datos  (8 l¡neas  de conexi¢n)  y del bus de direcciones 
+(16 l¡neas).  Tambi‚n hay  un bus bus de control, claro, 
+pero a nivel de programaci¢n no nos interesan. El Z80 es 
+capaz de direccionar (o gestionar) directamente 64Kbytes 
+de memoria, es decir, 65536 bytes (1K=1024).
+    -  Una instrucci¢n es una orden dada al Z80 para que 
+realice una  determinada acci¢n (normalmente procesar un 
+dato,  aunque tambi‚n  hay otro  tipo de  instrucciones, 
+p.ej. para  generar saltos).  Est  formada por uno o m s 
+bytes;  en este  caso, tras leer el primero y descodifiú 
+carlo el  Z80 ya  sabe cu ntos  bytes forman la instrucú 
+ci¢n,  y los  lee de memoria antes de realizar cualquier 
+otra acci¢n.
+    -  El  c¢digo de  operaci¢n de  una instrucci¢n  es, 
+precisamente, el  listado ordenado  de los  bytes que la 
+conforman. Por ejemplo, el c¢digo de operaci¢n de NEG es 
+ED  44, que  no es lo mismo que 44 ED. Aunque el Z80 los 
+trata en  formato binario,  los pobres  mortales solemos 
+manejarlos transformados a hexadecimal.
+    -  Los nem¢nicos  son nombres simb¢licos asociados a 
+cada c¢digo  de operaci¢n,  con el  fin de  facilitar su 
+memorizaci¢n y tratamiento por parte de los humanos. Por 
+ejemplo,  NEG para  ED 44.  Para que el Z80 los entienda 
+han de  ser transformados a c¢digos de operaci¢n (ensamú 
+blados)  y guardados en memoria, bien a mano (­socorro!) 
+bien por un programa ensamblador.
+    - Ensamblar  un programa  no es m s que traducir los 
+nem¢nicos  a c¢digos de operaci¢n. La palabra "ensamblaú 
+dor" se  refiere tanto al programa encargado de realizar 
+esta  pesada acci¢n,  como al  lenguaje de  programaci¢n 
+basado en los nem¢nicos.
+    - El  sistema de  numeraci¢n binario  se basa  en la 
+descomposici¢n  de los  n£meros en  potencias de dos; un 
+n£mero binario  est  compuesto  por bits.  Es el sistema 
+usado  de forma natural por los ordenadores y sus compoú 
+nentes en general, y por el Z80 en particular.
+    - Un  bit es un d¡gito binario. S¢lo puede tomar dos 
+valores posibles: 0 o 1.
+    - Un byte es un n£mero de 8 bits, entre 0 y 255.
+    -  Un nibble  es un  n£mero de 4 bits, entre 0 y 15. 
+Tambi‚n, por extensi¢n, un d¡gito hexadecimal.
+    - El  £ltimo bit a la izquierda de un n£mero binario 
+es  el que tiene m s peso en el n£mero. Por ello es llaú 
+mado bit de m s peso, bit m s significativo o MSB.
+    - An logamente,  el primer  bit por la derecha es el 
+bit de menos peso, bit menos significativo o LSB.
+    -  Complemento a  dos es  el nombre del m‚todo usado 
+para  expresar  n£meros negativos  en notaci¢n  binaria. 
+Consiste en  invertir el valor absoluto del n£mero (camú 
+biar  los ceros  por unos  y viceversa) y posteriormente 
+sumar uno al resultado. El MSB de un n£mero expresado en 
+complemento a  dos es siempre cero si el n£mero es posiú 
+tivo, y uno si es negativo.
+    - Cuando el resultado de una suma o resta en binario 
+consta  de m s  bits que  los sumandos  decimos que  hay 
+desbordamiento.  En  la teor¡a  no representa  problema, 
+pero no  debemos olvidar que en la pr ctica el n£mero de 
+bits  por dato  est  limitado  (a 8 en el caso del Z80). 
+Por este  motivo los procesadores disponen de mecanismos 
+especiales para tratar desbordamientos (y acarreos).
+    -  Acarreo es  un bit extra que puede generarse a la 
+hora de  realizar operaciones de suma y resta en compleú 
+mento  a dos.  Se debe  ignorar y tomar el resto de bits 
+como  resultado  correcto. No  confundir acarreo  (es un 
+bit) con  desbordamiento (es una situaci¢n): puede haber 
+uno sin que se genere el otro.
+    -  Las operaciones  l¢gicas (NOT,  OR, AND,  XOR) se 
+efect£an entre  dos bits  y dan como resultado otro bit. 
+Son  muy importantes en la programaci¢n en ensamlador. - 
+El sistema  de numeraci¢n hexadecimal se basa en la desú 
+composici¢n  de los  n£meros en potencias de 16. Los d¡ú 
+gitos hexadecimales  son los  n£meros del  0 al  9 y las 
+letras  A a F. Existe un procedimiento muy sencillo para 
+pasar un  n£mero binario  a hexadecimal y viceversa, meú 
+diante la descomposici¢n directa en nibbles.
+    - En un sistema de numeraci¢n basado en potencias de 
+B  (lo llamamos  el sistema  de base  B), con  N d¡gitos 
+pueden expresarse  B^N n£meros distintos, de 0 a B^N -1. 
+En  el caso de usar complemento a dos (pasando el n£mero 
+a binario, realizando el complemento y volviendo luego a 
+base B),  el rango  de representaci¢n  va de  -(B^N)/2 a 
+(B^N)/2 -1. Tranquilo: nosotros s¢lo usaremos B=2 y B=16 
+(y  B=10, ofcoursemente).  En el pasado tambi‚n se usaba 
+B=8 (sistema octal, ya en desuso).
+
+    No est   mal, ¨verdad?  Ya sabemos  bastantes cosas. 
+S¡,  ya s‚  que a£n  no hemos  programado nada, pero era 
+necesario: todos  estos conceptos son b sicos si quieres 
+programar  en ensamblador.  De todas  formas no intentes 
+retenerlos: basta  que te suenen, y para cuestiones conú 
+cretas no dudes en consultar este resumen, o alg£n libro 
+de programaci¢n, 34 veces por minuto si es necesario. Te 
+garantizo  que con  la pr ctica  todo este marem gnum de 
+informaci¢n te  resultar  tan  familiar como la tabla de 
+multiplicar.  ¨Que no  te lo  crees? Todo  lo que llevas 
+le¡do lo  he escrito  sin consultar texto alguno. S¡: de 
+memoria...  y si yo puedo, ¨por qu‚ no t£, cuando tengas 
+pr ctica?
+
+ESTRUCTURA DEL Z80
+
+    Veo una l grima correr por tu mejilla, al tiempo que 
+sueltas el  hacha con  cara de felicidad. El sentimiento 
+es mutuo (uf...), yo tambi‚n estaba empezando a hartarme 
+de matem ticas (y de hacha, claro).
+    Poca  cosa nos  queda por  decir del  Z80 en  lo que 
+respecta al  exterior. Ya  sabemos que  est  conectado a 
+diversos  circuitos, de los cuales s¢lo hemos hablado de 
+la memoria (de hecho, cualquier chip o perif‚rico con el 
+que el  Z80 pueda comunicarse puede contemplarse como si 
+fuera memoria). Esta conexi¢n se realiza mediante el bus 
+de  datos, el bus de direcciones y el bus de control. De 
+este £ltimo  no hemos  hablado, ya  que no  es necesario 
+conocer  su funcionamiento para programar. De todas forú 
+mas no  est  de  mas tener  una idea  general sobre  las 
+funciones  de este  bus. Formando  el bus de control nos 
+encontramos l¡neas de petici¢n y reconocimiento de inteú 
+rrupciones (un perif‚rico puede interrumpir temporalmenú 
+te el  desarrollo normal de un programa para ejecutar su 
+propia  subrutina: esto  es una interrupci¢n. Ya retomaú 
+remos el tema). Tambi‚n, por supuesto, l¡neas de control 
+de la memoria; as¡, cada vez que el Z80 quiere acceder a 
+memoria ha  de advert¡rselo,  e indicar si quiere leer o 
+escribir;  la memoria, por su parte, ha de avisar cuando 
+el dato est  en el bus de ¡dems listo para ser recogido. 
+Por £ltimo os mencionar‚ que hay una l¡nea especial para 
+provocar  una  reinicializaci¢n  (reset)  del procesador 
+(que comienza  entonces a  ejecutar programa a partir de 
+la  posici¢n 0000),  as¡ como,  por supuesto,  una l¡nea 
+conectada a  un reloj  que proporciona  3,5 millones  de 
+pulsos  por  segundo,  proporcionando al  procesador una 
+referencia temporal imprescindible para su funcionamienú 
+to.  Pasemos al interior del Z80. Creo haber dicho antes 
+que el Z80 no es m s que un pedazo de piedra... pues eso 
+es lo  que encontramos  en su  interior: capas de piedra 
+(b sicamente  silicio) formando  transistores, condensaú 
+dores y  dem s parafernalia electr¢nica. Pero tranquilo: 
+al  igual que a la hora de programar usamos nem¢nicos en 
+lugar de  bytes, tambi‚n a la hora de describir el inteú 
+rior  del Z80 emplearemos un modelo comprensible, basado 
+en registros.
+    As¡ pues, ateni‚ndonos a nuestro modelo, en el inteú 
+rior  del  Z80 podemos  encontrar los  siguientes compoú 
+nentes:
+
+    - Registros  de prop¢sito general. Un registro no es 
+m s  que una  memoria para  un s¢lo  dato; el  Z80 tiene 
+registros de  8 bits y registros de 16 bits. Los de este 
+grupo  se  denominan  "de prop¢sito  general" porque  no 
+tienen  una funci¢n  espec¡fica determinada de antemano: 
+el cometido  de estos  registros depender  del programa, 
+est n  ah¡ para  que el  programador (­t£!) los use como 
+mejor le convenga. Podr¡amos compararlos a las variables 
+del BASIC. La ventaja de los registros con respecto a la 
+memoria convencional  es clara:  al estar situados en el 
+interior  del Z80,  el acceso  a ellos resulta mucho m s 
+r pido. Adem s,  muchas operaciones  de proceso de datos 
+(de  hecho la  mayor¡a) s¢lo pueden realizarse con estos 
+registros, y no con la memoria directamente.
+    - Registros  de uso  espec¡fico. Cada  uno de  estos 
+registros  tiene una  raz¢n de  ser, una funci¢n espec¡ú 
+fica:  el  Z80 los  usa al  controlar el  desarrollo del 
+programa. Aunque  son accesibles  al programador,  nunca 
+los usaremos para almacenar nuestros propios datos, y no 
+los modificaremos a no ser que estemos muy seguros de lo 
+que  hacemos, pues  nos arriesgamos  a un cuelgue de los 
+que hacen ‚poca.
+    - Unidad Aritm‚tico L¢gica (ALU). Tiene dos entradas 
+y una  salida, y  es la encargada de realizar las operaú 
+ciones  aritm‚ticas (suma,  resta, ajuste  decimal), las 
+operaciones l¢gicas  y las  rotaciones y desplazamientos 
+(­Guep!  ­De estas  no hab¡amos hablado! Tranquilo: verú 
+las, veremoslas).
+    - Unidad de control. Es la encargada de descodificar 
+las instrucciones y controlar, en general, el desarrollo 
+de  las  operaciones a  realizar y  la coordinaci¢n  del 
+sistema. Recuerda  que "el Z80 sabe, tras leer el primer 
+byte  de una instrucci¢n, si ha de leer m s"; pues bien, 
+es aqu¡ donde se toma tal decisi¢n, tras la descodificaú 
+ci¢n del primer byte.
+    - Por  supuesto, los buses: el de datos (conectado a 
+todos  los registros, la ALU y la unidad de control), el 
+de direcciones  (conectado a  ciertos registros),  el de 
+control, y buses internos encargados de la interconexi¢n 
+de los diferentes elementos del procesador.
+
+    ­Y  se acab¢! Esto es, en suma, un Z80. "¨De verdad? 
+­¨No hay  m s?!" En  lo que a programaci¢n respecta, no. 
+De  hecho, yo  no conozco muchos m s detalles del Z80, y 
+en el libro de programaci¢n que tengo tampoco se especiú 
+fica gran  cosa m s (est  bien, me has pillado: ahora no 
+escribo tan de memoria...) Bueno, podemos pasar a examiú 
+nar  con detalle  la parte  que nos interesa: los regisú 
+tros.
+
+LOS REGISTROS DEL Z80
+ 
+    De todas  las partes del Z80 explicadas anteriormenú 
+te, unicamente necesitamos conocer a fondo los registros 
+a  la hora  de programar;  y, como veremos, no todos los 
+registros tienen la misma importancia...
+    Empezaremos  esta  andadura  registrera  con Los  de 
+prop¢sito general,  los "nuestros". Los que tiene el Z80 
+son:
+
+    *  El acumulador,  o registro  A, de  8 bits.  Es el 
+registro m s  vers til del  Z80; muchas operaciones s¢lo 
+pueden realizarse si el dato ha sido cargado previamente 
+en  el acumulador. Recuerda NEG, la instrucci¢n que camú 
+biaba el  signo de un byte; esta instrucci¢n act£a siemú 
+pre,  £nica y  exclusivamente sobre el dato contenido en 
+el acumulador.
+    * El  registro de estado o de banderas, o registro F 
+(de  "flags"). Este registro no es exactamente de prop¢ú 
+sito general;  lo he puesto aqu¡ porque est  unido f¡siú 
+camente  al acumulador,  y bajo determinadas circunstanú 
+cias puede verse el par AF como un registro de 16 bits.
+    Aunque  f¡sicamente  se trata  de un  registro de  8 
+bits, en  realidad el  registro de estado est  compuesto 
+por  seis banderas  de un bit (dos bits quedan sin uso). 
+Estas "banderas"  se activan o desactivan en funci¢n del 
+resultado de las operaciones realizadas por las diferenú 
+tes  instrucciones. As¡,  en la descripci¢n detallada de 
+cada instrucci¢n no puede faltar el efecto causado sobre 
+las banderas.
+    La  situaci¢n f¡sica de las banderas sobre el regisú 
+tro F es la siguiente:
+
+S  Z  -  H  -  P/V  N  C
+
+    Como ya he dicho, cada bandera se activa o desactiva 
+(se pone  a 1 o a 0) en funci¢n de la instrucci¢n ejecuú 
+tada,  pero se  puede hacer (y de hecho voy a hacer) una 
+descripci¢n general de la funci¢n de cada una de ellas:
+
+    - S: bandera de signo. Esta bandera refleja el signo 
+(el MSB) del resultado de determinadas operaciones aritú 
+m‚ticas,  l¢gicas,  de rotaci¢n  o desplazamiento,  y de 
+algunas  operaciones  de  transferencia  de datos  entre 
+registros.
+    - Z:  bandera cero.  Se activa si el resultado de la 
+operaci¢n  realizada por la instrucci¢n es cero. Ojo, no 
+te confundas:  el valor  de la  bandera es UNO cuando el 
+resultado de la operaci¢n es CERO.
+    -  H: bandera de acarreo mitad. Se activa cuando hay 
+acrreo del  bit 3  al 4  en una operaci¢n aritm‚tica. Es 
+usada  por el  Z80 y  raramente resultar   £til para  el 
+programador (s¡: ­­t£!!).
+    -  P/V:  paridad/desbordamiento. Esta  bandera tiene 
+dos funciones  distintas, dependiendo de la instrucci¢n. 
+Tras  una operaci¢n l¢gica o de rotaci¢n/desplazamiento, 
+la bandera  se activa  si el  n£mero de bits puestos a 1 
+del  resultado es  par (bueno, yo nunca le he encontrado 
+la utilidad  a esto, pero supongo que la tendr ...) Tras 
+una  operaci¢n aritm‚tica  se activa  si se ha producido 
+desbordamiento.  "¨Desbordamiento?   Me  suena..."  ­S¡, 
+hombre! Es el mismo desbordamiento del que habl bamos en 
+la  secci¢n de notaci¢n binaria: el resultado de la opeú 
+raci¢n no  cabe en  8 bits.  He aqu¡ un "mecanismo espeú 
+cial" de los que te mencion‚.
+    -  N: resta.  Se activa tras una resta, se desactiva 
+tras una  suma. Al igual que H, normalmente s¢lo es £til 
+para el propio Z80.
+    - C: acarreo. ­S¡!, aquel bit in£til que se generaba 
+al restar.  Helo aqu¡.  Entonces dije  que es  hab¡a que 
+despreciarlo,  pero m s adelante veremos que en las insú 
+trucciones de rotaci¢n y desplazamiento, as¡ como en las 
+sumas y  restas de  16 bits, la bandera de acarreo juega 
+un  papel vital.
+
+    Un  par de  cosillas sobre las banderas antes de seú 
+guir. Algunas instrucciones del Z80, una vez ejecutadas, 
+activar n o  desactivar n algunas  banderas, dejando las 
+otras  tal como  estaban. Otras instrucciones no tocar n 
+ninguna bandera. Esto es importante a la hora de prograú 
+mar,  ya  que las  instrucciones de  salto condicionadas 
+(equivalentes a  IF...GOTO) se basan en el estado de las 
+banderas;  es importante comprobar que antes de un salto 
+de este  tipo no  haya instrucciones  que nos las machaú 
+quen.  Como ya he dicho antes, en todo texto que detalle 
+las caracter¡sticas  de las  instrucciones del Z80 ha de 
+constar el efecto sobre las banderas.
+    Ufff...  menuda paliza,  ¨eh? Recuerda:  no intentes 
+retener.  Simplemente  lee  con  calma. Cuando  lo hayas 
+le¡do 34  veces ya  empezar  a  sonarte... (no, el hacha 
+no,  s¢lo bromeaba...)  Bueno, quedan  m s registros por 
+ver. ­Animo!
+
+    * Los  pares BC,  DE y  HL. Cada  uno de estos pares 
+puede  usarse como  un registro  de 16  bits, o como dos 
+registros de 8 bits (entonces se transforman en B, C, D, 
+E, H  y L).  Est n conectados al bus de direcciones, por 
+tanto  pueden usarse como punteros a memoria cuando funú 
+cionan a  pares (p.ej., existe la instrucci¢n LD A,(HL): 
+"carga  en el  acumulador el contenido de la posici¢n de 
+memoria apuntada por HL". Parece mentira la capacidad de 
+resumen que tienen los nem¢nicos, ¨verdad?)
+    * Los  registros ¡ndice:  IX e  IY. Se  trata de dos 
+registros  de 16  bits. Esta  es la  versi¢n oficial, la 
+suministrada por  Zilog; la realidad es que tambi‚n pueú 
+den  usarse como  cuatro registros  de 8 bits (IXh, IXl, 
+IYh, IYl)  mediante instrucciones ocultas, no documentaú 
+das por Zilog. ¨A qu‚ jugaban? Vete a saber. Igual estaú 
+ban  borrachos,  celebrando  mi  segundo  aniversario... 
+(­pero hombre, no ves que es co¤a! ­­A ver si empe¤as el 
+hacha de una puta vez!!)
+    Estos  dos registros  est n pensados para ser usados 
+como punteros  a memoria, pero tienen una caracter¡stica 
+de  la que no disponen los pares BC, DE y HL: la indexaú 
+ci¢n. Explicome:  ya has  visto que,  con la instrucci¢n 
+adecuada, puedes cargar en el acumulador el contenido de 
+la  posici¢n de  memoria apuntada  por HL,  DE o  BC: LD 
+A,(HL), o  LD A,(DE),  o LD A,(BC). Pues bien, existe la 
+instrucci¢n  LD A,(IX+nn), donde nn es un desplazamiento 
+(¡ndice) comprendido  entre -128  y 127;  de esta  forma 
+puedes  acceder facilmente a una tabla de datos, simpleú 
+mente cargando IX con la direcci¢n de la base. Ejemplo:
+
+LD IX,#1000  ; # es el indicador de n£mero hexadecimal
+             ; usado  normalmente por los ensambladores.
+             ; El punto y coma sirve para insertar
+             ; comentarios en  el listado  (como el REM 
+             ; del BASIC), que por supuesto son ignorados
+             ; al ensamblar.
+LD A,(IX)    ; Cargamos A con el contenido de #1000
+LD B,(IX+2)  ; Cargamos B con el contenido de #1002
+LD H,(IX-1)  ; Cargamos H con el contenido de #0FFF
+ADD  B       ; Con  esta instrucci¢n  y la  siguiente 
+             ; realizamos la operaci¢n:
+SUB H        ; A = A + B - H
+LD (IX+12),A ; Guardamos  el resultado  de la operaci¢n 
+             ; en #100C
+
+    Ni te  has dado  cuenta y  has visto  (y seguro  que 
+comprendido perfectamente) otro programa en ensamblador, 
+esta  vez algo  m s largo...  no es dif¡cil, ¨verdad? De 
+paso hemos  visto un par de instrucciones nuevas: ADD B, 
+que  suma (ADDition) A y B, dejando el resultado en A; y 
+SUB H,  que resta (SUBstraction) H de A, dejando tambi‚n 
+el  resultado en  A. "Pero... ¨y las banderas?" Dado que 
+se trata de un ejemplo muy sencillo hemos pasado ol¡mpiú 
+camente de ellas. "¨Y si ha habido desbordamiento?" Peor 
+para nosotros; simplemente el resultado ser  incorrecto, 
+pero el Z80 no explotar , ni nada parecido.
+    Por supuesto,  todo lo  dicho para  IX es igualmente 
+v lido para IY.
+    *  Los registros  alternativos: cuentan que el ziloú 
+guero que dise¤¢ el Z80 estaba borracho ese d¡a. El caso 
+es que  el Z80 dispone de dos pares de registros AF, BC, 
+DE  y HL;  se ve  que al llegar a los indexados ya hab¡a 
+dormido  la  mona. Para  intentar disimular  un poco  el 
+desaguisado organiz¢  el Z80  de forma que s¢lo un juego 
+de  registros es visible en un mismo instante; para reaú 
+lizar el  intercambio con  el juego  alternativo existen 
+las  instrucciones EX AF,AF' (que oculta AF y hace visiú 
+ble AF',  su alter-ego)  y EXX  (que oculta BC, DE, HL y 
+desenvaina  los alternativos BC', DE', HL'). Por supuesú 
+to, volviendo a ejecutar EX AF,AF' y EXX recuperamos los 
+registros originales.
+    Estos son  to... estos son to... estos son todos los 
+registros de prop¢sito general, amigos. Veamos ahora los 
+de uso espec¡fico.
+    * EL PC. "­Hereje!" ­Tranquilo! PC significa Program 
+Counter  (contador de  programa). Este registro contiene 
+la direcci¢n  en memoria  de la  siguiente instrucci¢n a 
+ejecutar;  cada vez  que el Z80 lee uno de los bytes que 
+forman la  instrucci¢n en curso incrementa este registro 
+autom ticamente. "¨Y si pasa de #FFFF...?" Pues mira por 
+donde, tampoco en este caso el Z80 explota. Simplemente, 
+vuelve  a empezar  por 0000.  * El  SP, o  Stack Pointer 
+(puntero de  pila). La  pila es  una estructura de datos 
+extremadamente £til a la hora de programar, e imprescinú 
+dible  en el  proceso de ejecuci¢n de subrutinas. Trataú 
+remos la pila con m s detalle en la siguiente secci¢n.
+    *  El  registro I,  o registro  de interrupci¢n.  Se 
+utiliza £nicamente  con un  tipo de  interrupci¢n que el 
+MSX no usa, por lo que no volveremos a hablar de ‚l.
+    *  Registro R  o de  refresco de memoria. La memoria 
+principal del MSX es de tipo din mico, es decir, necesiú 
+ta ser refrescada (le¡da y reescrita) continuamente para 
+mantener la  informaci¢n. El Z80 se ayuda de este regisú 
+tro  para realizar  este proceso.  En una  demo de  Anma 
+sal¡a  un  "starfield"  (entramado  de estrellas  que se 
+acercan) muy  majo, y  en el  texto que  simult neamente 
+aparec¡a  explicaban que dicho efecto hab¡a sido prograú 
+mado  usando  el registro  de refresco...  me lo  expliú 
+quen...
+    * El registro de instrucci¢n (IR, Instruction Regisú 
+ter). Situado  dentro de  la unidad de control, este reú 
+gistro  almacena el £ltimo byte de la instrucci¢n actual 
+le¡do, listo as¡ para su descodificaci¢n. No nos intereú 
+sa a efectos de programaci¢n.
+    ­Uf! Muchos  registros, ¨verdad? La verdad es que no 
+son  tantos. Para  que lo veas m s claro he preparado un 
+esquema en  el que  se agrupan los registros en forma de 
+tabla,  de forma  que tengas una referencia con un golpe 
+de vista (­Ay! ­Mis ojos...!)
+
+-------------                       -------------
+|  A  |  F  |   <- EX AF,AF' ->     |  A' |  F' |
+------------- - - - - - - - - - - - -------------
+|  B  |  C  |   <-           ->     |  B' |  C' |
+-------------                       -------------
+|  D  |  E  |   <-   EXX     ->     |  D' |  E' |
+-------------                       -------------
+|  H  |  L  |   <-           ->     |  H' |  L' |
+-------------                       -------------
+
+-------------
+|  I  |  R  |
+-------------                         -------------
+|    IX     |  - Con instrucciones -> | IXh | IXl |
+-------------                         -------------
+|    IY     |  -      ocultas      -> | IYh | IYl |
+-------------                         -------------
+|    SP     |
+-------------
+|    PC     |
+-------------
+
+    Ahora est   un poco  m s claro, ¨verdad? Una vez m s 
+puedo  garantizarte y  te garantizo que cuando lleves un 
+m¡nimo tiempo  programando te sabr s de memoria la tabla 
+de  registros. Y  ahora, se¤oras  y se¤ores, la estrella 
+es... ­la pila!
+
+LA PILA
+
+    "­Ah, si,  la pila!" ¨Te suena? "­S¡, claro! ¨La del 
+reloj  o la  de la  calculadora?" Estooo... ¨me dejas el 
+hacha un moment¡n? ¨No? Pues entonces calla, que aqu¡ el 
+£nico que  suelta estupideces  soy yo,  y sigamos con lo 
+nuestro.
+    Imagina  que te has pasado la tarde jugando al Nemeú 
+sis en  vez de hacer los deberes, y mam  te ha castigado 
+a  fregar los platos hasta que Guilian Seed despierte de 
+su hibernaci¢n.  ¨Qu‚? ¨Que  eres ya  un poco mayorcito? 
+Bueno, pues retrocede mentalmente hasta tus a¤os mozos e 
+imagina  que te  has pasado la tarde jugando al Nemesis, 
+versi¢n ENIAC.
+    As¡, feliz, contento y motivado, empiezas tu apasioú 
+nante tarea  fregadora con una marcada expresi¢n de odio 
+en tu cara. Dejas reluciente el primer plato, y lo depoú 
+sitas  en el escurridor. El segundo plato lo dejas sobre 
+el primero, el tercero sobre el segundo, y as¡ sucesivaú 
+mente: est s formando una pila de platos.
+    De repente piensas en tu maldito destino; el castigo 
+es tremendamente  injusto (al fin y al cabo estabas salú 
+vando  un planeta),  y en  un arrebato de rabia no se te 
+ocurre otra  cosa que romper platos. ¨Cu l es el primero 
+que  coges? El  £ltimo que  has fregado,  que est  sobre 
+todos los  dem s, en  la parte  superior de  la pila. Tu 
+rabia contin£a, y esta vez coges el siguiente plato, que 
+es el pen£ltimo que hab¡as liberado de materia ro¤osa.
+    Este arrebato te cuesta alargar el castigo hasta que 
+James  Burton libere Nemesis, pero t£ te lo has buscado; 
+lo que  nos interesa ahora es la pila de platos. Si camú 
+bias ‚stos por datos, y el escurridor por la memoria, ya 
+tenemos  la pila  del Z80. Se trata de una estructura de 
+datos tipo  LIFO ("Last In, First Out"), en la que, como 
+su  propio nombre  proclama, el  £ltimo en  entrar es el 
+primero en salir.
+    Para introducir  datos en  la pila  disponemos de la 
+instrucci¢n  PUSH  rr  ("empujar"), donde  rr puede  ser 
+cualquiera  de los  pares AF,  BC, DE,  HL, IX, IY; esto 
+significa que  los datos se introducen en la pila de dos 
+en dos bytes. Para sacar los datos existe la instrucci¢n 
+POP rr ("extraer"). El registro SP apunta, precisamente, 
+al  byte inferior  del £ltimo dato introducido; cada vez 
+que ejecutas PUSH o POP el Z80 actualiza autom ticamente 
+el puntero. Pero, ¨qu‚ significa exactamente "actualizar 
+el puntero"?  En el  Z80 la  pila crece  hacia abajo, es 
+decir, hacia direcciones de memoria inferiores. As¡, una 
+instrucci¢n  PUSH  implica  un decremento  de SP  en dos 
+unidades (recuerda que estamos introduciendo dos bytes), 
+mientras que POP provoca el correspondiente incremento.
+    No  pocas  veces  he visto  esa expresi¢n  que ahora 
+mismo tu cara refleja, y que me indica claramente que no 
+has  entendido nada  de nada.  Bueno, haz  lo siguiente: 
+l‚ete otra  vez el p rrafo anterior, ahora m s despacio, 
+y luego observa este ejemplo que vale m s que 34 millarú 
+dos de palabras:
+    Sup¢n  que SP apunta a la direcci¢n #1000. Represenú 
+taremos un trozo de la memoria de la siguiente manera:
+
+        -------
+        | ??  | #0FFB
+        -------
+        | ??  | #0FFC
+        -------
+        | ??  | #0FFD
+        -------
+        | ??  | #0FFE
+        -------
+        | ??  | #0FFF
+        -------
+  SP -> | ??  | #1000
+        -------
+
+    S¡, he  representado la memoria creciendo hacia abaú 
+jo,  al rev‚s  de lo  que resultar¡a  l¢gico. No,  no se 
+trata de otra de mis excentricidades: en cualquier texto 
+que represente  la memoria en forma esquem tica ver s el 
+mismo  sentido de crecimiento en las direcciones. Ignoro 
+el motivo  de esta  convenci¢n, pero de todas formas nos 
+resultar   £til para  comprender el funcionamiento de la 
+pila, ya que de este modo s¡ responde al concepto intuiú 
+tivo de  pila creciendo  hacia arriba, al menos gr ficaú 
+mente.  "??" representa datos desconicidos para nosotros 
+(en la  memoria siempre hay datos, aunque no sepamos qu‚ 
+datos).
+    Bueno, tenemos SP apuntando a #1000, y ejecutamos lo 
+siguiente:
+
+LD HL,#1122
+PUSH HL
+
+    La  memoria y  el puntero de pila quedan entonces de 
+la siguiente forma:
+
+        -------
+        | ??  | #0FFB
+        -------
+        | ??  | #0FFC
+        -------
+        | ??  | #0FFD
+        -------
+  SP -> | #22 | #0FFE
+        -------
+        | #11 | #0FFF
+        -------
+        | ??  | #1000
+        -------
+
+    Ahora ejecutamos lo siguiente:
+
+LD IX,#AABB
+PUSH IX
+
+    Y en cuanto a la memoria...
+
+        -------
+        | ??  | #0FFB
+        -------
+  SP -> | #BB | #0FFC
+        -------
+        | #AA | #0FFD
+        -------
+        | #22 | #0FFE
+        -------
+        | #11 | #0FFF
+        -------
+        | ??  | #1000
+        -------
+
+    Ahora hacemos trampa:
+
+INC SP
+
+    La instrucci¢n  INC sirve para incrementar cualquier 
+registro o par de registros, incluido el SP. Ahora teneú 
+mos la memoria tal que as¡:
+
+        -------
+        | ??  | #0FFB
+        -------
+        | #BB | #0FFC
+        -------
+  SP -> | #AA | #0FFD
+        -------
+        | #22 | #0FFE
+        -------
+        | #11 | #0FFF
+        -------
+        | ??  | #1000
+        -------
+
+    Y si ahora hacemos 
+
+POP BC
+
+    Ejercicio:  intenta adivinar  t£ solo qu‚ valor conú 
+tendr  el  par BC  tras esta instrucci¢n, y c¢mo quedar  
+la memoria y el SP.
+
+    Soluci¢n:  BC albergar   un bonito #22AA en su inteú 
+rior, y la memoria quedar  tal que as¡:
+
+        -------
+        | ??  | #0FFB
+        -------
+        | #BB | #0FFC
+        -------
+        | #AA | #0FFD
+        -------
+        | #22 | #0FFE
+        -------
+  SP -> | #11 | #0FFF
+        -------
+        | ??  | #1000
+        -------
+
+    Un detalle  importante: la  instrucci¢n PUSH implica 
+modificar  la memoria  mediante la  introducci¢n de  dos 
+bytes, pero POP no borra estos bytes; simplemente actuaú 
+liza el  par de  registros implicado, y naturalmente SP, 
+quedando los datos de la pila inalterados.
+    ¨Ves  c¢mo con  ejemplos se entiende la gente? Ahora 
+entiendes perfectamente  el funcionamiento de la pila, y 
+adem s,  como en el fondo lo que est s haciendo es estuú 
+diar, mam   te ha  levantando el  castigo y ya no has de 
+fregar.
+    Lo  que tal  vez no veas tan claro es la utilidad de 
+la pila. Utilidad tiene, y mucha, te lo aseguro. La pila 
+tiene dos  usos principales:  almacenamiento temporal de 
+datos  que no  podemos perder pero est n ocupando un reú 
+gistro que  necesitamos para  otros fines, y copia de la 
+direcci¢n de retorno de una subrutina.
+    Veamos  un ejemplo de lo primero. Sup¢n que en alg£n 
+punto de  tu programa necesitas negar el contenido de la 
+posici¢n  de memoria  #1974, pero  tienes el  acumulador 
+ocupado con  alg£n otro dato £til. Una soluci¢n es hacer 
+lo siguiente:
+
+PUSH AF
+LD A,(#1974)
+NEG
+LD (#1974),A
+POP AF
+
+    ¨Lo  has pillado?  Es como  si le  dijeras a la pila 
+"sostenme  este  dato  un  momento  mientras  niego este 
+otro". Al  terminar este  trozo de  programa el  dato de 
+#1974  ha sido  negado, pero  el par  AF no  se ha visto 
+afectado.
+    Hablemos ahora  de las  subrutinas. Si recuerdas del 
+BASIC,  la  instrucci¢n  GOSUB te  permite ejecutar  una 
+subrutina  (que no es m s que otra porci¢n de programa), 
+volviendo al  punto de  partida con un simple RETURN. En 
+ensamblador  la  instrucci¢n  de llamada  es CALL  dddd, 
+donde dddd es la direcci¢n de memoria en la que comienza 
+la subrutina, y la instrucci¢n de retorno es RET.
+    Cuando el Z80 ejecuta una subrutina necesita guardar 
+en alg£n sitio la direcci¢n en la que se ha realizado la 
+llamada,  para poder continuar con la ejecuci¢n del proú 
+grama principal  una vez  se da  la orden  de retorno. Y 
+este  sitio es ni m s ni menos que la pila. As¡, la insú 
+trucci¢n CALL  dddd equivale  a estas dos pseudoinstrucú 
+ciones:
+
+"PUSH PC"
+"LD PC,dddd"
+
+    Estas  instrucciones no  existen, pero simbolizan lo 
+que en  realidad hace  el Z80 cuando recibe una orden de 
+llamad  a subrutina:  guardar el contador de programa en 
+la pila  exactamente como  hace la instrucci¢n PUSH y he 
+descrito antes, y cargarlo con la direcci¢n de inicio de 
+la subrutina, que empieza a ejecutarse inmediatamente.
+    Al  final de dicha subrutina debe haber una instrucú 
+ci¢n RET, que equivale a:
+
+"POP PC"
+
+    En efecto,  el valor  antiguo del PC es recuperado y 
+el  programa contin£a  desde la instrucci¢n siguiente al 
+CALL. Como ves, si no hubiera pila no habr¡a subrutinas.
+    Una pregunta que deber¡a haberte surgido: si la pila 
+se  usa  para guardar  datos temporales  y tambi‚n  para 
+guardar la  direcci¢n de  retorno de las subrutinas, ¨no 
+puede  surgir alg£n  conflicto entre ambas funciones? En 
+otras palabras:  dentro de  una subrutina,  ¨puede haber 
+PUSH y POP sin que el Z80 se haga un l¡o con la pila? La 
+respuesta  es: s¡, pero siguiendo una regla muy sencilla 
+pero de  muy f cil  olvido (al  menos en  mi caso). Esta 
+regla  dice que  dentro de  una subrutina ha de haber el 
+mismo n£mero de PUSH que de POP, es decir, el puntero de 
+pila ha  de apuntar,  al llegar al RET, exactamente a la 
+misma  direcci¢n que apuntaba cuando la subrutina empez¢ 
+tras el  CALL. De  no ser  as¡, tras  el RET el programa 
+continuar   en la  primera direcci¢n que encuentre en la 
+pila, y  aunque el  Z80 tiene  una gran resistencia y ni 
+a£n  as¡ explota, lo m s probable es que el MSX se cuelú 
+gue cual windows con m s de dos ventanas abiertas.
+    ¨Qu‚  m s  te podr¡a  contar de  la pila?  Existe la 
+instrucci¢n LD SP,rr donde rr puede ser HL, IX o IY, que 
+te permite  situar la pila en el lugar de la memoria que 
+m s  te convenga;  de hecho en el manual t‚cnico del MSX 
+se recomienda  situar la  pila en un lugar adecuado como 
+primera  acci¢n  a  realizar en  un programa  hecho como 
+ASCII  manda. Yo  debo ser  un programador de los chapuú 
+ceros, ya  que nunca inicializo la pila; y de todas forú 
+mas  no es  imprescindible, pues la plataforma de ejecuú 
+ci¢n de  un programa  CM es  siempre el  DOS o el BASIC, 
+entornos que ya se encargan de cargar el SP con un valor 
+adecuado  antes de  pasar el control a tu programa. Pero 
+ah¡ queda  la recomendaci¢n de los expertos...
+    Y, bueno, esto es lo que hay con respecto a la pila. 
+Si a£n  no te  has convencido de su importancia t£ tranú 
+quilo,  ya me dar s la raz¢n a medida que cojas pr ctica 
+programativa...
+
+
