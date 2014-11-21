@@ -1,0 +1,2153 @@
+	;--- TEXTOR 1.0
+	;--- An awful text editor - Just a sample of NestorMan use
+	;--- By Konami Man, 5-2001
+
+
+;-------------------------
+;---  Macros and EQUs  ---
+;-------------------------
+
+;* Direct NestorMan function calling
+
+nesman:	macro	@f
+	call	#4100+@f*3
+	endm
+
+
+;* Semi-direct NestorMan function calling
+
+;nesman:     macro   @f
+;            ld      c,@f
+;            call    #4139
+;            endm
+
+
+;* Indirect NestorMan function calling
+
+;nesman:     macro   @f
+;            ld      c,@f
+;            ld      de,#2202
+;            call    EXTBIO
+;            endm
+
+
+;* BIOS functions
+
+ENASLT:	equ	#0024
+FILVRM:	equ	#0056
+LDIRMV:	equ	#0059
+LDIRVM:	equ	#005C
+INITXT:	equ	#006C
+CHGET:	equ	#009F
+H_CHGE:	equ	#FDC2
+EXTBIO:	equ	#FFCA
+
+
+;* DOS function calls
+
+_DIRIO:	equ	#06
+_DIRIN:	equ	#07
+_STROUT:	equ	#09
+_BUFIN:	equ	#0A
+_OPEN:	equ	#43
+_CREATE:	equ	#44
+_CLOSE:	equ	#45
+_DUP:	equ	#47
+_READ:	equ	#48
+_WRITE:	equ	#49
+_SEEK:	equ	#4A
+_IOCTL:	equ	#4B
+_TERM:	equ	#62
+_DEFAB:	equ	#63
+_DEFERR:	equ	#64
+_EXPLAIN:	equ	#66
+
+
+;* System variables
+
+LINL40:	equ	#F3AE
+CRTCNT:	equ	#F3B1
+CNSDFG:	equ	#F3DE
+VALTYP:	equ	#F663
+DAC:	equ	#F7F6
+CGPBAS:	equ	#F924
+EXPTBL:	equ	#FCC1
+
+
+	org	#100
+
+;------------------------
+;---  Initialization  ---
+;------------------------
+
+	;--- Copies the whole program to page 2,
+	;    so BIOS can be switched to page 0
+	;    and NestorMan code segment to page 1
+
+	ld	hl,CODE
+	ld	de,#8000
+	ld	bc,CODEND-CODSTART
+	ldir
+	jp	#8000
+
+CODE:	org	#8000
+CODSTART:	;
+
+	;--- Checks for the presence and version of NestorMan
+
+	ld	de,#2202
+	xor	a
+	ld	c,1
+	call	EXTBIO	;Executes function 1 via EXTBIO
+	or	a
+	jp	nz,OKINIT1
+
+	ld	de,NONMAN_S	;Ends if no NestorMan installed
+NMAN_ERR:	ld	c,_STROUT
+	call	5
+	ld	de,NEEDNMAN_S
+	ld	c,_STROUT
+	call	5
+	ld	b,0
+	ld	c,_TERM
+	jp	5
+
+OKINIT1:	ld	hl,#0101
+	ex	de,hl
+	call	COMP
+	ld	de,BADNMAN_S
+	jp	nc,NMAN_ERR	;Ends if NestorMan version is < 1.11
+
+	ld	a,b	;Saves NestorMan slot+segment information
+	ld	(NM_SLOT),a
+	ld	a,c
+	ld	(NM_SEG),a
+
+	;--- Sets abort and disk error routines
+
+	ld	c,_DEFAB
+	ld	de,ABRUT
+	call	5
+
+	ld	c,_DEFERR
+	ld	de,ERRUT
+	call	5
+
+	;--- Obtains mapper support routines (PUT_P1 is needed)
+
+	xor	a
+	ld	de,#0402
+	call	EXTBIO
+	ld	bc,#1F
+	add	hl,bc
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ld	(PUT_P1+1),bc	;Sets PUT_P1 appropriately
+
+	;--- Switches NestorMan slot+segment on page 1
+	;    and BIOS on page 0
+
+	ld	a,(NM_SLOT)	;Recovers slot on B
+	ld	h,#40	;and switches it
+	call	ENASLT
+
+	ld	a,(NM_SEG)	;Recovers segment on C
+	call	PUT_P1	;and switches it
+
+	ld	a,(EXPTBL)	;Swicthes BIOS on page 0
+	call	PUTSLOT0
+	ei
+
+	;--- Paging is OK, now sets 80 columns/24 lines text mode
+
+	ld	a,80
+	ld	(LINL40),a
+	ld	a,24
+	ld	(CRTCNT),a
+	xor	a
+	ld	(CNSDFG),a	;key off
+	call	INITXT
+
+	;--- Modifies pattern generator table for bold characters
+	;    and cursor up/down/right drawings
+
+	ld	hl,(CGPBAS)
+	ld	bc,192*8
+	add	hl,bc	;HL = VRAM address of pattern for ch. 192
+	ex	de,hl
+	ld	hl,VRAMDATA
+	ld	bc,22*8	;22 characters will be defined
+	call	LDIRVM
+
+	;--- Creates 10 lists for the buffers
+	;    and inserts a dummy item on each one
+
+	ld	hl,BUFDATA	;First clear the buffer data area...
+	ld	de,BUFDATA+1
+	ld	bc,6*10-1
+	ld	(hl),0
+	ldir
+
+	ld	a,-1	;...and sets all list ids to -1
+	ld	hl,BUFDATA	;(not created yet)
+	ld	de,6
+	ld	b,10
+SETBUF:	ld	(hl),a
+	add	hl,de
+	djnz	SETBUF
+
+	ld	hl,BUFDATA
+	ld	b,10
+MKLISTS:	push	hl,bc
+	xor	a
+	nesman	20	;Creates list
+	ld	de,NOMEML_S
+	jp	c,RTERROR	;Runtime error if can't be created
+	push	af
+	ld	ix,0
+	ld	b,3
+	ld	iy,SPACE
+	ld	hl,1
+	nesman	24	;Inserts item (one space character)
+	pop	af
+	pop	bc,hl
+	ld	(hl),a	;Sets list number
+	inc	hl
+	ld	(hl),0	;Sets line at the top of screen as 0
+	inc	hl
+	ld	(hl),0	;(2 bytes)
+	inc	hl
+	ld	(hl),0	;Sets current screen line at 0
+	inc	hl
+	ld	(hl),1	;Sets the number of lines to 1
+	inc	hl
+	ld	(hl),0	;(2 bytes)
+	inc	hl
+	djnz	MKLISTS
+
+	ld	a,(BUFDATA)
+	ld	(CURLIST),a	;Current list is the one for buffer 0
+	xor	a
+	ld	(CURBUF),a	;Current buffer is 0
+
+	;--- Creates a list for the filenames associated to each buffer
+	;    and inserts 11 dummy items on it
+
+	xor	a
+	nesman	20	;Creates list
+	ld	de,NOMEML_S
+	jp	c,RTERROR	;Runtime error if can't be created
+	ld	(FILELIST),a
+	ld	b,11
+MKFLIST:	push	af,bc
+	ld	ix,0
+	ld	b,3
+	ld	iy,SPACE
+	ld	hl,1
+	nesman	24	;Inserts item (one space character)
+	pop	bc,af
+	djnz	MKFLIST
+
+	;--- Inserts three info lines in buffer 0
+
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,2	;Sets the list pointer to the
+	nesman	23	;end of the list
+	ld	iy,INIT_S
+
+PUTINITS:	ld	c,-1
+	ld	a,(iy)	;Ends when an empty line is found
+	or	a
+	jr	z,PUTINI3
+
+	push	iy
+PUTINI2:	ld	a,(iy)	;Read characters until a 0 is found
+	inc	c
+	inc	iy
+	or	a
+	jr	nz,PUTINI2
+	ld	b,0
+	ex	(sp),iy
+
+	push	bc	;Insert items always before the current
+	pop	hl	;one (which is the last one)
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,1
+	nesman	24
+	ld	(#FAF0),a
+	ld	de,OUTMEM_S
+	jp	c,RTERROR
+
+	call	GETBUFD	;Increases the number of items
+	ld	l,(ix+4)
+	ld	h,(ix+5)
+	inc	hl
+	ld	(ix+4),l
+	ld	(ix+5),h
+
+	pop	iy
+	jr	PUTINITS
+
+PUTINI3:	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,1	;Sets the list pointer back to the
+	nesman	23	;start of the list
+
+	;--- Initializes the text menu info
+
+	call	UPD_BUFN
+	call	UPD_NUML
+	call	UPD_CURL
+
+	;--- Last settings and jump to main loop
+
+	xor	a
+	ld	(CLIPB),a
+	ld	(DSKERR),a
+	ld	a,-1
+	ld	(DUPFH),a
+	ld	(DUPFH1),a
+	ld	(TEMPLIST),a
+	call	SHOWMENU
+	call	SHOWTXT
+	call	SHOWCUR
+	;jp      MAIN
+
+
+;-------------------
+;---  Main loop  ---
+;-------------------
+
+	;--- Gets key and decides action
+
+MAIN:	ld	c,_DIRIO
+	ld	e,#FF
+	call	DOS
+	or	a
+	jr	z,MAIN
+
+	;Quit?
+
+	cp	"Q"
+	jr	z,KEY_Q
+	cp	"q"
+	jr	z,KEY_Q
+
+	;Change current buffer?
+
+	cp	"0"
+	jr	c,NONUM
+	cp	"9"+1
+	jr	c,KEY_NUM
+NONUM:	;
+
+	;Delete current buffer?
+
+	cp	"A"
+	jp	z,KEY_A
+	cp	"a"
+	jp	z,KEY_A
+
+	;Cursor up?
+
+	cp	30
+	jp	z,KEY_CUP
+
+	;Cursor down?
+
+	cp	31
+	jp	z,KEY_CDWN
+
+	;Home?
+
+	cp	11
+	jp	z,KEY_HOME
+
+	;Shift+home?
+
+	cp	12
+	jp	z,KEY_SHOME
+
+	;Cut line?
+
+	cp	"X"
+	jp	z,KEY_X
+	cp	"x"
+	jp	z,KEY_X
+
+	;Copy line?
+
+	cp	"C"
+	jp	z,KEY_C
+	cp	"c"
+	jp	z,KEY_C
+
+	;Paste line?
+
+	cp	"V"
+	jp	z,KEY_V
+	cp	"v"
+	jp	z,KEY_V
+
+	;Edit line?
+
+	cp	"E"
+	jp	z,KEY_E
+	cp	"e"
+	jp	z,KEY_E
+
+	;Insert line?
+
+	cp	"I"
+	jp	z,KEY_I
+	cp	"i"
+	jp	z,KEY_I
+
+	;Load file?
+
+	cp	"L"
+	jp	z,KEY_L
+	cp	"l"
+	jp	z,KEY_L
+
+	;Save file?
+
+	cp	"S"
+	jp	z,KEY_S
+	cp	"s"
+	jp	z,KEY_S
+
+	;--- Unknown key, return to main loop
+
+	jp	MAIN
+
+	;--- Quit
+
+KEY_Q:	ld	de,QUIT_S	;Asks "sure?" first,
+	call	ASKSURE	;if "no", return to main loop
+	jp	c,TERMOK
+
+	call	SHOWMENU
+	jp	MAIN
+
+	;--- Change buffer
+
+KEY_NUM:	sub	"0"	;Updates current buffer variable
+	ld	(CURBUF),a
+
+	call	GETBUFD	;Updates current list variable
+	ld	a,(ix)
+	ld	(CURLIST),a
+
+	jp	KEY_COMMON
+
+	;--- Delete current buffer
+
+KEY_A:	ld	de,DELBUF_S	;Asks "sure?" first,
+	call	ASKSURE	;if "no", returns to main loop
+	jp	c,KEY_A2
+
+	call	SHOWMENU
+	jp	MAIN
+
+KEY_A2:	call	GETBUFD
+	push	ix
+	ld	a,(ix)
+	ld	ix,0	;Destroys the list and creates a new one
+	nesman	22
+	or	a
+	nesman	20
+
+	pop	ix	;Inserts a dummy element on the list
+	push	ix
+	ld	(ix),a
+	ld	(CURLIST),a
+	ld	b,2
+	ld	hl,1
+	ld	iy,SPACE
+	ld	ix,0
+	nesman	24
+
+	pop	hl
+	inc	hl
+	ld	(hl),0	;Sets line at the top of screen as 0
+	inc	hl
+	ld	(hl),0	;(2 bytes)
+	inc	hl
+	ld	(hl),0	;Sets current screen line at 0
+	inc	hl
+	ld	(hl),1	;Sets the number of lines to 1
+	inc	hl
+	ld	(hl),0	;(2 bytes)
+
+	jp	KEY_COMMON
+
+	;--- Cursor down
+
+KEY_CDWN:	call	GETBUFD
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	ld	c,(ix+3)
+	ld	b,0
+	add	hl,bc	;HL = Current absolute line
+	ld	e,(ix+4)
+	ld	d,(ix+5)	;DE = Number of lines
+	dec	de
+	call	COMP	;Does nothing if already at the last line
+	jp	z,MAIN
+
+	ld	a,c
+	cp	19
+	jr	z,KEY_CDW2
+
+	push	bc	;If not at screen line 19 already,
+	call	DELCUR	;just make cursor to go down one line,
+	pop	bc	;update "current screen line" information,
+	inc	c	;advance pointer and finish
+	ld	(ix+3),c
+	call	SHOWCUR
+	call	UPD_CURL
+	call	SHOWMENU
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,3
+	nesman	23
+	jp	MAIN
+
+KEY_CDW2:	push	ix	;Cursor was at screen line 19:
+	call	DELCUR
+	ld	hl,80	;First scrolls up the screen and
+	ld	de,VRAMBUF	;cleans line 19
+	ld	bc,19*80
+	call	LDIRMV
+	ld	hl,VRAMBUF
+	ld	de,0
+	ld	bc,19*80
+	call	LDIRVM
+	ld	hl,19*80
+	ld	bc,80
+	ld	a," "
+	call	FILVRM
+
+	pop	ix
+	ld	l,(ix+1)	;Increases the "First line at the
+	ld	h,(ix+2)	;top of the screen" information
+	inc	hl
+	ld	(ix+1),l
+	ld	(ix+2),h
+
+	;ld      de,20            ;Displays the last line
+	;add     hl,de            ;(the first at the screen + 20)
+	;push    hl
+	;pop     iy
+	ld	h,0
+	ld	b,3	;ld      b,5
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	23	;Sets the list pointer (advances it)...
+	ld	b,0
+	ld	h,1
+	ld	iy,LINBUF+2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	25	;...gets the line...
+	ld	hl,LINBUF+2
+	call	PUTMARK
+	call	BC77
+
+	;ld      hl,LINBUF+2
+	ld	de,19*80+2
+	call	LDIRVM
+	;ld      hl,LINBUF+2
+	;add     hl,bc
+	;ld      (hl),"$"
+	;ld      de,GO19_S
+	;ld      c,_STROUT
+	;call    DOS
+	;ld      de,LINBUF
+	;ld      c,_STROUT
+	;call    DOS              ;...and displays it
+
+	call	UPD_CURL	;Updates menu info, shows it and the
+	call	SHOWMENU	;cursor, and finishes
+	call	SHOWCUR
+	jp	MAIN
+
+	;--- Cursor up
+
+KEY_CUP:	call	GETBUFD
+	ld	a,(ix+3)
+	or	a
+	jr	z,KEY_CUP2
+
+	push	af	;If not at the screen top line already,
+	call	DELCUR	;just move cursor one line up, update
+	pop	af	;"current screen line" information,
+	dec	a	;make pointer to go back and terminate
+	ld	(ix+3),a
+	call	SHOWCUR
+	call	UPD_CURL
+	call	SHOWMENU
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,4
+	nesman	23
+	jp	MAIN
+
+KEY_CUP2:	ld	l,(ix+1)	;At the top line:
+	ld	h,(ix+2)	;First checks that the line at the
+	ld	a,h	;top is not the first one
+	or	l	;(in this case, does nothing)
+	jp	z,MAIN
+	dec	hl
+	ld	(ix+1),l	;Updates line at the top information
+	ld	(ix+2),h
+
+	;push    hl               ;Scroll down the screen and clean top line
+	call	DELCUR
+	ld	hl,0
+	ld	de,VRAMBUF
+	ld	bc,19*80
+	call	LDIRMV
+	ld	hl,VRAMBUF
+	ld	de,80
+	ld	bc,19*80
+	call	LDIRVM
+	ld	hl,0
+	ld	bc,80
+	ld	a," "
+	call	FILVRM
+
+	;pop     iy
+	;inc     iy
+	ld	h,0
+	ld	b,4	;ld      b,5
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	23	;Sets the list pointer (go back)...
+	ld	b,0
+	ld	h,1
+	ld	iy,LINBUF+2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	25	;...gets the line...
+	ld	hl,LINBUF+2
+	call	PUTMARK
+	call	BC77
+
+	;ld      hl,LINBUF+2
+	ld	de,2
+	call	LDIRVM
+	;ld      hl,LINBUF+2
+	;add     hl,bc
+	;ld      (hl),"$"
+	;ld      de,GO0_S
+	;ld      c,_STROUT
+	;call    DOS
+	;ld      de,LINBUF
+	;ld      c,_STROUT
+	;call    DOS              ;...and displays it
+
+	call	UPD_CURL	;Updates menu info, shows it and the
+	call	SHOWMENU	;cursor, and finishes
+	call	SHOWCUR
+	jp	MAIN
+
+	;--- Home
+
+KEY_HOME:	call	GETBUFD	;Sets to 0 the first line displayed
+	xor	a	;and the line relative to the top
+	ld	(ix+1),a	;of the secreen
+	ld	(ix+2),a
+	ld	(ix+3),a
+
+	ld	a,(CURLIST)	;Sets the list pointer to the first item
+	ld	ix,0
+	ld	b,1
+	nesman	23
+
+	jp	KEY_COMMON
+
+	;--- Shift+Home
+
+KEY_SHOME:	call	GETBUFD
+	ld	l,(ix+4)
+	ld	h,(ix+5)
+	dec	hl
+	ld	a,h
+	or	l
+	jp	z,MAIN	;Does nothing if the buffer is empty
+	dec	hl
+	ld	(ix+1),l	;Displays the last line at the top
+	ld	(ix+2),h	;of the screen
+	ld	a,1
+	ld	(ix+3),a
+
+	ld	a,(CURLIST)	;Sets the list pointer to the last item
+	ld	ix,0
+	ld	b,2
+	nesman	23
+
+	jp	KEY_COMMON
+
+	;--- Cut line
+
+KEY_X:	ld	a,3
+	ld	(XC_METHOD),a
+	call	KEY_XC
+	jp	c,MAIN
+
+	call	GETBUFD
+	ld	l,(ix+4)	;Decreases the number of lines
+	ld	h,(ix+5)
+	dec	hl
+	ld	(ix+4),l
+	ld	(ix+5),h
+
+	jp	KEY_COMMON
+
+	;--- Copy line
+
+KEY_C:	ld	a,1
+	ld	(XC_METHOD),a
+	call	KEY_XC
+	jp	c,MAIN
+	jp	KEY_COMMON
+
+	;--- Common code for cut and copy
+	;    Returns: Cy=1 to end with JP MAIN, 0 for JP KEY_COMMON
+
+KEY_XC:	call	GETBUFD
+	ld	l,(ix+4)	;Does nothing if the buffer is empty
+	ld	h,(ix+5)
+	dec	hl
+	ld	a,h
+	or	l
+	scf
+	ret	z
+
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	ld	c,(ix+3)
+	ld	b,0
+	add	hl,bc	;HL = Current absolute line
+	ld	e,(ix+4)
+	ld	d,(ix+5)	;DE = Number of lines
+	dec	de
+	call	COMP	;Does nothing if at the last item (dummy)
+	scf
+	ret	z
+
+	push	hl
+	pop	iy
+	inc	iy
+	ld	h,0
+	ld	b,5
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	23	;Sets the list pointer to the line
+	ld	b,0
+	ld	a,(XC_METHOD)
+	ld	h,a	;1 for copy, 3 for cut
+	ld	iy,CLIPB+1
+	ld	a,(CURLIST)
+	ld	ix,0	;Gets the line to the clipboard
+	nesman	25
+	ld	a,c
+	ld	(CLIPB),a
+
+	or	a
+	ret
+
+XC_METHOD:	db	0	;Stores 1 (obtain) or 3 (obtain+delete)
+
+	;--- Paste line
+
+KEY_V:	ld	a,(CLIPB)
+	or	a
+	jp	z,MAIN	;Returns if empty clipboard
+
+	call	GETBUFD
+	push	ix
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	ld	c,(ix+3)
+	ld	b,0
+	add	hl,bc	;HL = Current absolute line
+	push	hl
+	pop	iy
+	inc	iy
+	ld	h,0
+	ld	b,5
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	23	;Sets the list pointer to the line
+	ld	hl,(CLIPB)
+	ld	h,0
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,1
+	ld	iy,CLIPB+1
+	nesman	24	;Inserts the line before the current one
+	ld	de,OUTOF_S
+	jp	c,RTERROR
+
+	pop	ix
+	ld	l,(ix+4)	;Increases the number of lines
+	ld	h,(ix+5)
+	inc	hl
+	ld	(ix+4),l
+	ld	(ix+5),h
+
+	;push    ix
+	;ld      a,(CURLIST)      ;Sets the pointer to the next line
+	;ld      ix,0
+	;ld      b,3
+	;nesman  23
+
+	;pop     ix
+	ld	a,(ix+3)	;If already on screen line 19,
+	cp	19	;increases the first displayed line
+	jr	z,KEYV2
+
+	inc	(ix+3)
+	jp	KEY_COMMON
+
+KEYV2:	ld	l,(ix+1)	;Increases the total number of lines
+	ld	h,(ix+2)
+	inc	hl
+	ld	(ix+1),l
+	ld	(ix+2),h
+	jp	KEY_COMMON
+
+	;--- Edit line
+
+KEY_E:	call	GETBUFD
+	ld	l,(ix+4)	;Does nothing if the buffer is empty
+	ld	h,(ix+5)
+	dec	hl
+	ld	a,h
+	or	l
+	jp	z,MAIN
+
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	ld	c,(ix+3)
+	ld	b,0
+	add	hl,bc	;HL = Current absolute line
+	ld	e,(ix+4)
+	ld	d,(ix+5)	;DE = Number of lines
+	dec	de
+	call	COMP	;Does nothing if at the last line
+	jp	z,MAIN	;(which is the dummy list item)
+
+	;push    hl
+	;pop     iy
+	;inc     iy
+	;ld      h,0
+	;ld      b,5
+	;ld      a,(CURLIST)
+	;ld      ix,0
+	;nesman  23               ;Sets the list pointer to the line
+	ld	b,0
+	ld	h,1
+	ld	iy,EDBUF
+	ld	a,(CURLIST)
+	ld	ix,0	;Gets the line to EDBUF
+	nesman	25
+	ld	hl,EDBUF
+	add	hl,bc
+	ld	(hl),0	;Finishes the line with 0
+
+	call	NOMENU	;Shows "edit line" message
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	ld	de,EDLIN_S
+	ld	c,_STROUT
+	call	DOS
+	call	EDITLINE	;Offers line edition to the user
+	push	af
+	call	c,SHOWMENU
+	pop	af
+	jp	c,MAIN	;If aborted (ESC) does nothing more
+
+	ld	b,0
+	ld	h,2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	25	;Erases the old line from the list...
+
+	ld	hl,(NEWBUF+1)
+	ld	h,0
+	ld	b,1
+	ld	iy,NEWBUF+2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	24	;...and inserts the new one on its place.
+	ld	de,OUTOF_S
+	jp	c,RTERROR
+
+	ld	a,(CURLIST)	;Sets pointer on its old place
+	ld	ix,0	;(one item back)
+	ld	b,4
+	nesman	23
+
+	jp	KEY_COMMON
+
+	;--- Insert line
+
+KEY_I:	;call    GETBUFD
+	;ld      l,(ix+1)
+	;ld      h,(ix+2)
+	;ld      c,(ix+3)
+	;ld      b,0
+	;add     hl,bc            ;HL = Current absolute line
+
+	;push    hl
+	;pop     iy
+	;inc     iy
+	;ld      h,0
+	;ld      b,5
+	;ld      a,(CURLIST)
+	;ld      ix,0
+	;nesman  23               ;Sets the list pointer to the line
+
+	ld	hl,#0020	;Inserts space+0 on EDBUF
+	ld	(EDBUF),hl
+	call	NOMENU	;Shows "edit line" message
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	ld	de,INSLIN_S
+	ld	c,_STROUT
+	call	DOS
+	call	EDITLINE	;Offers line edition to the user
+	push	af
+	call	c,SHOWMENU
+	pop	af
+	jp	c,MAIN	;If aborted (ESC) does nothing more
+
+	ld	hl,(NEWBUF+1)
+	ld	h,0
+	ld	b,1
+	ld	iy,NEWBUF+2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	24	;Inserts the new line before current one
+	ld	de,OUTOF_S
+	jp	c,RTERROR
+
+	call	GETBUFD	;Increases the number of lines
+	ld	l,(ix+4)
+	ld	h,(ix+5)
+	inc	hl
+	ld	(ix+4),l
+	ld	(ix+5),h
+
+	;push    ix
+	;ld      a,(CURLIST)      ;Sets the pointer to the next line
+	;ld      ix,0
+	;ld      b,3
+	;nesman  23
+
+	;pop     ix
+	ld	a,(ix+3)	;If already on screen line 19,
+	cp	19	;increases the first displayed line
+	jr	z,KEYI2
+
+	inc	(ix+3)
+	jp	KEY_COMMON
+
+KEYI2:	ld	l,(ix+1)
+	ld	h,(ix+2)
+	inc	hl
+	ld	(ix+1),l
+	ld	(ix+2),h
+	jp	KEY_COMMON
+
+	;--- Load file
+
+KEY_L:	ld	a,(FILELIST)	;Sets the filenames list pointer
+	ld	ix,0	;to the item for the current buffer
+	ld	b,5
+	ld	iy,(CURBUF)
+	ld	iyh,0
+	inc	iy
+	ld	h,0
+	nesman	23
+
+	ld	a,(FILELIST)	;Obtains the last entered filename
+	ld	ix,0	;for the buffer
+	ld	b,0
+	ld	h,1
+	ld	iy,EDBUF
+	nesman	25
+	ld	hl,EDBUF
+	add	hl,bc
+	ld	(hl),0
+
+	call	NOMENU	;Shows "insert filename" message
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	ld	de,INSFL_S
+	ld	c,_STROUT
+	call	DOS
+	call	EDITLINE	;Offers line edition to the user
+	push	af
+	call	c,SHOWMENU
+	pop	af
+	jp	c,MAIN	;If aborted (ESC) does nothing more
+
+	ld	a,(FILELIST)	;Erases the old filename
+	ld	b,0	;from the list and inserts the new one
+	ld	h,2
+	ld	ix,0
+	nesman	25
+	ld	a,(FILELIST)
+	ld	ix,0
+	ld	b,1
+	ld	hl,(NEWBUF+1)
+	ld	h,0
+	ld	iy,NEWBUF+2
+	nesman	24
+	ld	de,OUTOF2_S
+	jp	c,RTERROR
+
+	call	LOADFILE
+
+	jp	KEY_HOME	;KEY_COMMON
+
+
+KEY_S:	jp	MAIN
+
+	;--- Common code for various key actions
+
+KEY_COMMON:	call	UPD_BUFN	;Updates menu info and shows it
+	call	UPD_NUML
+	call	UPD_CURL
+	call	SHOWMENU
+	call	SHOWTXT	;Shows lines and cursor,
+	call	SHOWCUR	;and returns to main loop
+	jp	MAIN
+
+
+;-----------------------
+;---  Main routines  ---
+;-----------------------
+
+;--- SHOWTXT: Shows text lines of current buffer, according to
+;             the first displayed line info
+
+SHOWTXT:	call	CLS
+	ld	a," "
+	ld	(LINBUF),a
+	ld	(LINBUF+1),a
+
+	ld	de,GO0_S	;Sets print cursor to the top of
+	ld	c,_STROUT	;the screen
+	call	DOS
+
+	ld	a,(CURLIST)
+	ld	ix,0
+	ld	b,0
+	nesman	23
+	push	af,ix	;Saves the current list pointer
+
+	call	GETBUFD
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	inc	hl
+	push	hl
+	pop	iy
+	ld	h,0	;H-IY = Item for the line to be
+	ld	a,(CURLIST)	;displayed at the top of the screen
+	ld	ix,0
+	ld	b,5
+	nesman	23	;Sets list pointer
+	ld	a,b	;A = Pointer status
+	ld	b,20	;Show up to 20 lines
+
+SHOWTX0:	bit	1,a	;Line print loop
+	jr	nz,ENDSHTX
+
+	push	bc	;Obtains line to LINBUF
+	ld	b,0
+	ld	h,1
+	ld	iy,LINBUF+2
+	ld	a,(CURLIST)
+	ld	ix,0
+	nesman	25
+	ld	hl,LINBUF+2
+	call	PUTMARK
+	call	BC77
+
+	;ld      hl,LINBUF+2
+	add	hl,bc	;Adds a "line feed" char and a "$" char
+	ld	(hl),13	;to the line and then prints it
+	inc	hl
+	ld	(hl),10
+	inc	hl
+	ld	(hl),"$"
+	ld	de,LINBUF
+	ld	c,_STROUT
+	call	DOS
+
+	ld	a,(CURLIST)	;Advances list pointer to the next item
+	ld	ix,0
+	ld	b,3
+	nesman	23
+
+	ld	a,b	;Continues to the next line (if any)
+	pop	bc
+	djnz	SHOWTX0
+
+ENDSHTX:	pop	iy,hl	;Restores the old list pointer
+	ld	a,(CURLIST)	;and finishes
+	ld	ix,0
+	ld	b,6
+	nesman	23
+	ret
+
+
+;--- SHOWCUR: Shows cursor according to the current line on the screen
+;             It is done by printing ESC,"Y",32+y,32+x,"$"
+;             but due to a MSX-DOS failure
+;             (32+4="$" and in ESC,"Y","$",32+x,"$" the first "$"
+;             is interpreted as the end of string mark instead of y=4),
+;             line 4 is located as line 5 + cursor up (char #1E).
+;             Does NOT erase the old cursor
+
+SHOWCUR:	call	GETBUFD
+	ld	a,(ix+3)
+	cp	4
+	ld	de,CURSOR5_S	;Line 4 is a special case
+	jr	z,SHOWC2
+	ld	de,CURSOR_S
+	add	#20
+	ld	(CURPOS),a
+SHOWC2:	ld	c,_STROUT
+	call	DOS
+	ret
+
+
+;--- DELCUR: Deletes cursor according to the current line on the screen
+;            It is done by printing ESC,"Y",32+y,32+x,"$"
+;            but due to a MSX-DOS failure
+;            (32+4="$" and in ESC,"Y","$",32+x,"$" the first "$"
+;            is interpreted as the end of string mark instead of y=4),
+;            line 4 is located as line 5 + cursor up (char #1E).
+
+DELCUR:	call	GETBUFD
+	ld	a,(ix+3)
+	cp	4
+	ld	de,DCURS5_S	;Line 4 is a special case
+	jr	z,DELC2
+	ld	de,DCURSOR_S
+	add	#20
+	ld	(DCURPOS),a
+DELC2:	ld	c,_STROUT
+	call	DOS
+	ret
+
+
+;--- ASKSURE: Shows the string pointed by DE and asks "Are you sure?"
+;             If the answer is "YES", returns Cy=1
+
+ASKSURE:	push	de	;Erases menu and locates cursor
+	call	NOMENU
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	pop	de
+
+	ld	c,_STROUT	;Shows passed string + "Sure?"
+	call	DOS
+	ld	de,SURE_S
+	ld	c,_STROUT
+	call	DOS
+
+	ld	c,_DIRIN	;Gets character
+	call	DOS	;and returns the appropriate Cy
+	and	%11011111
+	cp	"Y"
+	scf
+	ret	z
+	or	a
+	ret
+
+
+;--- EDITLINE: Edits a new line or an existing one
+;    Input:  The line to be edited on EDBUF, finished on 0
+;    Output: The new line on NEWBUF+2, its length on NEWBUF+1
+;            Cy=1 if aborted
+
+EDITLINE:	xor	a
+	ld	(ABORT),a
+	ld	hl,EDBUF
+	ld	(LINPNT),hl
+
+	ld	hl,H_CHGE	;Saves the old CHGET hook
+	ld	de,OLDCHGE
+	ld	bc,5
+	ldir
+
+	ld	a,#C3	;Sets the new CHGET hook
+	ld	(H_CHGE),a	;to jump to NEW_CHGE
+	ld	hl,NEW_CHGE	;#C3 is the code for JP
+	ld	(H_CHGE+1),hl
+
+	ld	a,159	;Reads line with DOS function _BUFIN
+	ld	(NEWBUF),a	;to buffer NEWBUF (max 159 chars)
+	ld	de,NEWBUF
+	ld	c,_BUFIN
+	call	DOS
+
+	ld	hl,OLDCHGE	;Restores the old CHGET hook
+	ld	de,H_CHGE
+	ld	bc,5
+	ldir
+
+	ld	a,(NEWBUF+1)	;If its is an empty line,
+	or	a	;inserts a dummy space
+	jr	nz,EDITLIN1	;(NestorMan can't handle empty items)
+	ld	hl,#2001
+	ld	(NEWBUF+1),hl
+
+EDITLIN1:	ld	a,(ABORT)	;Returns Cy=0 if OK, 1 if aborted
+	or	a
+	ret	z
+	scf
+	ret
+
+	;New CHGET hook 1: Gets characters from EDBUF
+	;instead of the keyboard, until a 0 is found
+
+NEW_CHGE:	ld	hl,(LINPNT)
+	ld	a,(hl)
+	inc	hl
+	ld	(LINPNT),hl
+	or	a
+	jr	nz,NEWCHEND
+
+	ld	hl,NEWCH2	;0 found: sets the hook to NEWCH2
+	ld	(H_CHGE+1),hl	;and returns a "cursor home" character
+	ld	a,11
+
+NEWCHEND:	ld	(SAVEIX),ix
+	pop	ix,bc,de,hl
+	ld	ix,(SAVEIX)
+	ret
+
+	;New CHGET hook 2: Reads a character from the keyboard,
+	;and if it is cursor up or down, it is discarded
+	;(to avoid circular buffer to be activated)
+	;or if it is ESC, sets ABORT and finishes
+
+NEWCH2:	ld	(SAVEIX),ix
+	ld	(SAVEIY),iy
+
+	pop	ix,bc,de,hl
+	ld	iy,NEWCH3
+	push	iy,hl,de,bc,ix
+
+	ld	ix,(SAVEIX)
+	ld	iy,(SAVEIY)
+	ei
+	jp	OLDCHGE
+
+NEWCH3:	cp	30	;Cursor up?
+	jp	z,CHGET
+	cp	31	;Cursor down?
+	jp	z,CHGET
+	cp	27	;ESC?
+	ret	nz
+	ld	a,#FF
+	ld	(ABORT),a
+	ld	a,13	;Returns CR mark to finish key input
+	ret
+
+SAVEIX:	dw	0
+SAVEIY:	dw	0
+LINPNT:	dw	0	;Pointer when getting chars from EDBUF
+ABORT:	db	0	;Whether line input was OK or aborted
+OLDCHGE:	ds	5	;Space for old CHGET hook
+
+
+;--- LOADFILE: Loads a file from disk on the current buffer
+;    Input: Filename on NEWBUF+2, string size on NEWBUF+1
+
+LOADFILE:	xor	a
+	nesman	20	;Creates a new list to load the file
+	ld	de,OUTOF_S	;and inserts a dummy item on it
+	jp	c,RTERROR
+	ld	(TEMPLIST),a
+	ld	ix,0
+	ld	b,2
+	ld	hl,1
+	ld	iy,SPACE
+	nesman	24
+	ld	de,OUTOF_S
+	jp	c,RTERROR
+
+	ld	bc,(NEWBUF+1)	;Converts NEWBUF+2 to ASCIIZ format
+	ld	b,0
+	ld	hl,NEWBUF+2
+	add	hl,bc
+	ld	(hl),0
+
+	ld	de,NEWBUF+2
+	ld	a,_OPEN
+	call	OPEN0
+	jr	z,LOADF2
+
+	;Disk error (read/write errors also jump here)
+
+	ld	b,a	;Obtains the error
+ERROP:	ld	de,NEWBUF+6	;explanation on NEWBUF+2
+	ld	c,_EXPLAIN	;(preceeded by "*** ")
+	call	DOS
+	ld	a,"*"
+	ld	(NEWBUF+2),a
+	ld	(NEWBUF+3),a
+	ld	(NEWBUF+4),a
+	ld	a," "
+	ld	(NEWBUF+5),a
+	ld	hl,NEWBUF+1
+LOADF3:	inc	hl
+	ld	a,(hl)
+	or	a
+	jr	nz,LOADF3
+	ld	(hl),13
+	inc	hl
+	ld	(hl),10
+	inc	hl
+	ld	(hl),"$"
+
+	call	CLOSE0	;Restores file handle 0,
+	ld	a,(TEMPLIST)	;destroys the new created list
+	ld	ix,0
+	nesman	22
+
+	ld	de,DERR_S
+LOADF30:	push	de
+	call	NOMENU	;Shows error message
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	pop	de
+	ld	c,_STROUT
+	call	DOS
+	ld	de,NEWBUF+2
+	ld	c,_STROUT
+	call	DOS
+	ld	de,PRESS_S
+	ld	c,_STROUT
+	call	DOS
+
+	ld	c,_DIRIN	;Waits for key pressing and returns
+	call	DOS	;to main loop
+	call	SHOWMENU
+	jp	MAIN
+
+	;File open OK
+
+LOADF2:	;
+	call	NOMENU	;Shows "loading file"
+	ld	de,GOMENU_S
+	ld	c,_STROUT
+	call	DOS
+	ld	de,LF_S
+	ld	c,_STROUT
+	call	DOS
+
+	ld	hl,1
+	ld	(NUMITEMS),hl
+	call	CLOSE1
+
+LOADF4:	call	EOF0
+	jp	nz,LOADF6
+	ld	a,10	;Executes LD_CHK with LF and EOF
+	call	LF_CHK	;After each execution and before the
+	call	EOF0	;first one, checks for EOF condition
+	jr	nz,LOADF6
+	ld	a,#1A
+	call	LF_CHK
+	call	EOF0
+	jr	nz,LOADF6
+	jr	LOADF41
+
+LF_CHK:	push	af
+	ld	c,_READ	;Reads one character.
+	ld	b,0	;If it is not A, back file pointer
+	ld	de,NEWBUF+2	;one position (otherwise do nothing,
+	ld	hl,1	;so the char is skipped).
+	call	DOS
+	ld	a,(NEWBUF+2)
+	pop	bc
+	cp	b
+	ret	z
+	ld	c,_SEEK
+	ld	b,0
+	ld	a,1
+	ld	de,-1
+	ld	hl,-1
+	call	DOS
+	ret
+
+LOADF41:	ld	c,_BUFIN	;Reads a line from the file
+	ld	a,159
+	ld	(NEWBUF),a
+	ld	de,NEWBUF
+	call	DOS
+	ld	a,(NEWBUF+1)
+	or	a
+	jr	nz,LOADF5
+	ld	hl,#2001	;If it is an empty line, put a dummy space
+	ld	(NEWBUF+1),hl	;(NestorMan can't handle empty items)
+
+LOADF5:	ld	hl,(NEWBUF+1)	;Inserts the line on the new list
+	ld	h,0
+	ld	iy,NEWBUF+2
+	ld	a,(TEMPLIST)
+	ld	ix,0
+	ld	b,1
+	nesman	24
+	ld	de,OUTOF_S
+	jp	c,RTERROR
+
+	ld	hl,(NUMITEMS)
+	inc	hl
+	ld	(NUMITEMS),hl
+
+	jp	LOADF4
+
+LOADF6:	call	CLOSE0	;File loaded; close FH 0,
+	call	RESTORE1	;restore FH 1,
+	call	GETBUFD	;destroy old buffer list, replace
+	ld	a,(ix)	;with the new one, update buffer info
+	push	ix	;and finish
+	ld	ix,0
+	nesman	22
+	pop	ix
+	ld	a,(TEMPLIST)
+	ld	hl,(NUMITEMS)
+	ld	(ix),a
+	ld	(CURLIST),a
+	xor	a
+	ld	(ix+1),a
+	ld	(ix+2),a
+	ld	(ix+3),a
+	ld	(ix+4),l
+	ld	(ix+5),h
+
+	ret		;jp      KEY_COMMON
+
+EOF0:	ld	b,0	;Returns NZ if FH 0 is at end of file
+	xor	a
+	ld	c,_IOCTL
+	call	DOS
+	bit	6,e
+	ret
+
+TEMPLIST:	db	0
+NUMITEMS:	dw	0
+
+
+
+;---------------------
+;---  Subroutines  ---
+;---------------------
+
+;--- Space for PUT_P1
+
+PUT_P1:	jp	0
+
+
+;--- Disk error handler routine
+
+ERRUT:	ld	(DSKERR),a	;Always aborts
+	ld	a,1
+	ret
+
+DSKERR:	db	0	;Disk error code, or 0 if no error
+
+
+;--- Abort routine: on disk error (DSKERR=-1), jumps to error routine ERROP
+;    (the same used when opening file).
+;    Otherwise (for example if CTRL-C pressed) returns without doing anything.
+;    The POP HL's are for restoring stack state
+
+ABRUT:	pop	hl
+	ld	a,(DSKERR)
+	or	a
+	ret	z
+
+	pop	hl
+	push	af
+	call	RESTORE1	;Restores standard I/O FHs
+	call	CLOSE0
+	pop	bc
+	xor	a
+	ld	(DSKERR),a
+	jp	ERROP	;Jumps to open/create file error routine
+
+
+;--- OPEN0:  Closes file handle 0 and opens a file, which will have then FH 0
+;    Input:  Filename ASCIIZ string on DE
+;            A=Function to use (_CREATE or _OPEN)
+;    Output: On disk error, Cy=1 and A=error code
+
+OPEN0:	push	af,de
+	ld	b,0
+	ld	c,_DUP
+	call	DOS
+	ld	de,DUPE_S
+	jp	nz,RTERROR
+	ld	a,b
+	ld	(DUPFH),a
+
+	ld	b,0
+	ld	c,_CLOSE
+	call	DOS
+
+	pop	de,af
+	ld	c,a
+	xor	a
+	ld	b,0
+	call	DOS
+	ret
+
+DUPFH:	db	-1
+
+
+;--- CLOSE0: Closes file handle 0 and restores it from FH
+;            (so makes FH 0 to be the keyboard again)
+
+CLOSE0:	ld	a,(DUPFH)	;Does nothing if FH=-1
+	inc	a
+	ret	z
+
+	ld	b,0	;Closes FH 0
+	ld	c,_CLOSE
+	call	DOS
+
+	ld	a,(DUPFH)	;Duplicates value of variable DUPFH.
+	ld	b,a	;Since the first available FH number
+	ld	c,_DUP	;will be chosen, it will be 0.
+	push	bc
+	call	DOS
+
+	pop	bc	;Closes DUPFH since it is not useful
+	ld	c,_CLOSE	;anymore.
+	call	DOS
+
+	ld	a,-1
+	ld	(DUPFH),a
+
+	ret
+
+
+;--- CLOSE1: Closes file handle 1 and opens it as "NUL"
+;            in order to avoid screen echo,
+;            saving first a duplicate of the old FH 1 on variable DUPFH1
+
+CLOSE1:	ld	b,1	;First, duplicates FH 1 (the screen)
+	ld	c,_DUP	;and saves it on variable DUPFH1
+	call	DOS
+	ld	de,DUPE_S
+	jp	nz,RTERROR
+	ld	a,b
+	ld	(DUPFH1),a
+
+	ld	b,1	;Closes FH 1
+	ld	c,_CLOSE
+	call	DOS
+
+	ld	de,NUL_S	;Opens file "NUL" (discard output),
+	ld	c,_OPEN	;since the smaller FH number available
+	xor	a	;will be used, it will be 1
+	call	DOS
+
+	ret
+
+DUPFH1:	db	-1	;-1 = FH 1 is not currently duplicated
+NUL_S:	db	"NUL",0
+
+
+;--- RESTORE1: Restores FH 1 from its duplicated
+
+RESTORE1:	ld	a,(DUPFH1)	;Does nothing if not duplicated
+	cp	-1
+	ret	z
+
+	ld	b,1	;Closes FH1 associated to NUL
+	ld	c,_CLOSE
+	call	DOS
+
+	ld	a,(DUPFH1)
+	ld	b,a	;Duplicates DUPF1; since the first
+	push	bc	;available FH will be used, it will
+	ld	c,_DUP	;be 1
+	call	DOS
+
+	pop	bc	;Closes DUPF1 since it is not useful
+	ld	c,_CLOSE	;anymore
+	call	DOS
+
+	ld	a,-1
+	ld	(DUPFH1),a
+	ret
+
+
+;--- Runtime error: displays string DE and finishes
+
+RTERROR:	push	de
+	call	CLOSE0
+	call	RESTORE1
+	call	INITXT
+	ld	de,RTE_S
+	ld	c,_STROUT
+	call	DOS
+	pop	de
+	ld	c,_STROUT
+	call	DOS
+	jp	TERM
+
+
+;--- OK termination
+
+TERMOK:	call	INITXT
+	call	CLOSE0
+	call	RESTORE1
+	ld	de,THANKS_S
+	ld	c,_STROUT
+	call	DOS
+	;jp      TERM
+
+
+;--- Termination: destroys all the lists, restores paging and finishes
+
+TERM:	ld	de,FREEING_S
+	ld	c,_STROUT
+	call	DOS
+
+	ld	hl,BUFDATA
+	ld	b,10
+	ld	de,6
+KILLISTS:	push	hl,bc,de	;Destroys the created lists
+	ld	a,(hl)	;(those with have not a -1 id on the
+	cp	-1	;buffer data area)
+	ld	c,22
+	ld	ix,0
+	call	nz,#4139
+	pop	de,bc,hl
+	add	hl,de
+	djnz	KILLISTS
+
+	ld	a,(FILELIST)	;Destroys also the filenames list
+	ld	ix,0
+	nesman	22
+
+	ld	a,(#F341)	;Restores TPA slot on page 0
+	call	PUTSLOT0
+	ei
+	ld	a,1
+	nesman	3
+	push	bc	;Restores TPA slot (reg. B)...
+	ld	a,b
+	ld	h,#40
+	call	ENASLT
+	pop	bc
+	ld	a,c	;...and TPA segment (reg. C) on page 1
+	call	PUT_P1
+
+	ld	c,_DEFAB	;Restores default abort and
+	ld	de,0	;disk error routines
+	call	5
+	ld	c,_DEFERR
+	ld	de,0
+	call	5
+
+	ld	a,(TEMPLIST)	;Destroys temporary load list if exists
+	cp	-1
+	ld	c,22
+	ld	de,#2202
+	ld	ix,0
+	call	nz,EXTBIO
+
+	ld	de,ERASEL_S	;Erases the "Freeing memory" message
+	ld	c,_STROUT
+	call	5
+
+	ld	b,0	;Finally, finishes 8-)
+	ld	c,_TERM
+	jp	5
+
+
+;--- DOS: Executes DOS function by temporarily switching
+;         TPA on page 0
+
+DOS:	push	af,bc,de,hl
+	ld	a,(#F341)
+	call	PUTSLOT0
+	ei
+	pop	hl,de,bc,af
+	call	5
+	push	af,bc,de,hl
+	ld	a,(EXPTBL)
+	call	PUTSLOT0
+	ei
+	pop	hl,de,bc,af
+	ret
+
+
+;--- CLS: Clears the text area of the screen
+
+CLS:	ld	hl,0
+	ld	a," "
+	ld	bc,80*20
+	call	FILVRM
+	ld	de,GO0_S
+	ld	c,_STROUT
+	call	DOS
+	ret
+
+
+;--- SHOWMENU: Prints menu text
+
+SHOWMENU:	ld	hl,MENUTEXT
+	ld	de,20*80
+	ld	bc,4*80
+	call	LDIRVM
+	ret
+
+
+;--- UPD_BUFN: Updates the current buffer info on the menu text
+
+UPD_BUFN:	ld	a,(CURBUF)
+	add	"0"
+	ld	(CURBUF_S),a
+	ret
+
+
+;--- UPD_CURL: Updates the current line info on the menu text
+
+UPD_CURL:	ld	hl,"  "	;First erases the previous number
+	ld	(CURLINE_S),hl
+	ld	(CURLINE_S+2),hl
+	ld	(CURLINE_S+3),hl
+
+	call	GETBUFD
+	ld	l,(ix+1)
+	ld	h,(ix+2)
+	ld	c,(ix+3)
+	ld	b,0
+	add	hl,bc	;HL = Current line
+	inc	hl
+
+	ld	(DAC+2),hl
+	ld	a,2
+	ld	(VALTYP),a
+	ld	ix,#3425	;Converts number to string
+	call	MATH
+
+	inc	hl	;HL = Number address
+	ld	de,CURLINE_S
+UPD_CURL0:	ld	a,(hl)	;Puts the number on CURLINE_S
+	or	a
+	ret	z
+	ld	(de),a
+	inc	hl
+	inc	de
+	jr	UPD_CURL0
+
+
+;--- UPD_NUML: Updates the number of lines info on the menu text
+
+UPD_NUML:	ld	hl,"  "	;First erases the previous number
+	ld	(NLINES_S),hl
+	ld	(NLINES_S+2),hl
+	ld	(NLINES_S+3),hl
+
+	call	GETBUFD
+	ld	l,(ix+4)
+	ld	h,(ix+5)
+	dec	hl	;HL = Actual number of lines
+
+	ld	(DAC+2),hl
+	ld	a,2
+	ld	(VALTYP),a
+	ld	ix,#3425	;Converts number to string
+	call	MATH
+
+	inc	hl	;HL = Number address
+	ld	de,NLINES_S
+UPD_NUML0:	ld	a,(hl)	;Puts the number on NLINES_S
+	or	a
+	ret	z
+	ld	(de),a
+	inc	hl
+	inc	de
+	jr	UPD_NUML0
+
+
+;--- GETBUFD: Returns on IX the current buffer data area starting address
+
+GETBUFD:	ld	ix,BUFDATA
+	ld	bc,(CURBUF)
+	ld	b,0
+	push	bc
+	pop	hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,bc
+	add	hl,bc
+	push	hl
+	pop	bc
+	add	ix,bc
+	ret
+
+
+;--- NOMENU: Erases the menu screen area
+
+NOMENU:	ld	hl,21*80
+	ld	bc,80*3
+	ld	a," "
+	call	FILVRM
+	ret
+
+
+;--- MATH: Executes Math-Pack routine IX by temporarily
+;          switching BASIC ROM on page 1
+
+MATH:	push	af,bc,de,hl
+	ld	a,(EXPTBL)
+	ld	h,#40
+	call	ENASLT
+	pop	hl,de,bc,af
+	ld	iy,MATH2
+	push	iy
+	jp	(ix)
+MATH2:	push	af,bc,de,hl
+	ld	a,(NM_SLOT)
+	ld	h,#40
+	call	ENASLT
+	ld	a,(NM_SEG)
+	call	PUT_P1
+	pop	hl,de,bc,af
+	ret
+
+
+;--- COMP
+;    Compares HL and DE (16 bit numbers in twos complement)
+;    Input:  HL, DE = numbers to be compared
+;    Output: C, NZ if HL > DE
+;             C,  Z if HL = DE
+;            NC, NZ if HL < DE
+;    Regist: AF
+
+COMP:	push	hl
+	or	a
+	sbc	hl,de
+	pop	hl
+	jp	p,HMAYD
+HMEND:	scf
+	ccf
+	ret
+HMAYD:	scf
+	ret
+
+
+;--- PUTMARK: Adds a cursor right mark to a line if it is >77 chars
+;    Input: HL = Starting address of string, BC = Length
+
+PUTMARK:	push	de,hl
+	push	bc
+	pop	hl
+	ld	de,78
+	call	COMP
+	jr	nc,PUTMK1
+	pop	hl
+	push	hl
+	ld	de,76
+	add	hl,de
+	ld	(hl),213
+PUTMK1:	pop	hl,de
+	ret
+
+
+;--- BC77: Makes BC to be equal to 77 if it is greater
+
+BC77:	push	hl,de
+	push	bc
+	pop	hl
+	ld	de,78
+	call	COMP
+	pop	de,hl
+	ret	nc
+	ld	bc,77
+	ret
+
+
+;--- PUTSLOT0
+;      Switches a slot on page 0 without using ENASLT
+;      Returns with interrupts inhibited
+;    Input:   A = Slot to switch
+;    Output:  -
+;    Regist:  AF
+
+PUTSLOT0:	di
+	push	hl,de,bc
+	ld	c,a	;C = Slot+subslot a conectar
+	and	%00000011	;B = Slot a conectar (=C and 3)
+	ld	b,a
+
+	in	a,(#A8)
+	and	%11111100
+	or	b
+	ld	d,a	;D = Nuevo valor a mandar a #A8
+
+	ld	a,c	;Slot expandido?
+	bit	7,a
+	jr	z,OCU_PPR
+
+	ld	a,b
+	rrca
+	rrca
+	ld	b,a	;B = Slot a conectar, en pagina 3
+	ld	a,d
+	or	b
+	out	(#A8),a	;Slot conectado en pagina 3
+
+	ld	a,c
+	and	%00001100
+	sra	a
+	sra	a	;B = Subslot a conectar
+	ld	b,a
+
+	ld	a,(-1)	;Conexion del subslot
+	cpl
+	and	%11111100
+	or	b
+	ld	(-1),a
+
+	ld	a,d	;Conexion del slot
+	out	(#A8),a
+
+	ld	hl,#FCC5
+	ld	a,c
+	and	%00000011	;E = Slot conectado
+	ld	e,a
+	ld	d,0
+	add	hl,de
+	ld	a,(hl)
+	and	%11111100
+	or	b
+	ld	(hl),a
+	jr	OCU_FPS
+
+OCU_PPR:	ld	a,d
+	out	(#A8),a
+OCU_FPS:	pop	bc,de,hl
+	ret
+
+
+;-------------------
+;---  Data area  ---
+;-------------------
+
+;* Strings
+
+NONMAN_S:	db	"Error: NestorMan not installed!",13,10,"$"
+BADNMAN_S:	db	"Error: Invalid NestorMan version!",13,10,"$"
+NEEDNMAN_S:	db	"TexTor needs NestorMan 1.11 or higher.",13,10,"$"
+RTE_S:	db	"TexTor runtime error!",13,10,"$"
+NOMEML_S:	db	"Not enough free memory to create lists for text buffers.",13,10,"$"
+OUTOF_S:	db	"Out of memory - can't create new lines or expand existing ones.",13,10,"$"
+OUTOF2_S:	db	"Out of memory - can't update the filenames list.",13,10,"$"
+DUPE_S:	db	"Can't create file handle - probably, out of DOS internal memory.",13,10,"$"
+DERR_S:	db	"Disk error!",13,10,"$"
+PRESS_S:	db	"Press any key... $"
+LF_S:	db	"Loading file...",13,10,"$"
+LS_S:	db	"Saving file...",13,10,"$"
+INSFL_S:	db	"Insert path+filename to load and press ENTER, or abort with ESC:",13,10,"$"
+INSFS_S:	db	"Insert path+filename to save and press ENTER, or abort with ESC:",13,10,"$"
+FREEING_S:	db	13,10,"Freeing memory, please wait...$"
+THANKS_S:	db	"Thank you for using TexTor 1.0!",13,10
+	db	"(^^)/",13,10,"$"
+ERASEL_S:	db	27,"l",#1E,"$"
+EDLIN_S:	db	"Edit the line and press ENTER, or abort with ESC:",13,10,"$"
+INSLIN_S:	db	"Type the line to be inserted and press ENTER, or abort with ESC:",13,10,"$"
+INIT_S:	db	"TexTor 1.0 - The awful text editor",0
+	db	"Just a simple example of NestorMan use. See the source code!",0
+	db	"By Konami Man, 5-2001  -  http://www.konamiman.com",0
+	db	"----- (a partir de aki, paja!, usease pruebas) -----",0
+	db	"Las flores del campo",0
+	db	"son buenas para la oreja",0
+	db	"Te la pones asinnes...",0
+	db	"Y!!! Te crece la oreja...",0
+	db	"Es triste tener que no tener nada",0
+	db	"Yo por mi, yo al cuadrado!",0
+	db	"Uno de cada dos por tres son seis",0
+	db	"Oeee",0
+	db	"Omoloiosolo!",0
+	db	"Soy la ley donde la haya",0
+	db	"Anda ke nooo...",0
+	db	"Super por ahi!",0
+	db	"Animo ke keda poko",0
+	db	"Que me voy a Japon!!!",0
+	db	"Po fiiin!!",0
+	db	"Que ya tocaba no??",0
+	db	"Arooooou...",0
+	db	"Uenoastaya!",0
+	db	"De hecho, mas al uso imposible...",0
+	db	"O algo.",0
+	db	"No sere yo quien bla, bla...",0
+	db	"YASTATOA",0
+	db	0
+OUTMEM_S:	db	"Out of memory when inserting text lines.",13,10,"$"
+SURE_S:	db	"Are you sure? (Y/N) $"
+QUIT_S:	db	"Quit TexTor and lose all unsaved buffers data",13,10,"$"
+DELBUF_S:	db	"Delete all lines on current buffer",13,10,"$"
+
+SPACE:	db	" "	;For dummy item setting
+
+
+;* Cursor
+;  213 is the cursor character, #1E is cursor up
+
+CURSOR_S:	db	27,"Y"
+CURPOS:	db	0,32,213,"$"
+CURSOR5_S:	db	27,"Y",32+5,32,#1E,213,"$"	;Special sequence for column 4
+
+
+;* Delete cursor
+;  #1E is cursor up
+
+DCURSOR_S:	db	27,"Y"
+DCURPOS:	db	0,32," $"
+DCURS5_S:	db	27,"Y",32+5,32,#1E," $"	;Special sequence for column 4
+
+
+;* Locate at the menu area
+
+GOMENU_S:	db	27,"Y",21+32,32,"$"
+
+
+;* Locate at the last line
+
+GO19_S:	db	27,"Y",19+32,32,"$"
+
+
+;* Locate at the top line
+
+GO0_S:	db	27,"Y",32,32,"$"
+
+
+;* Current buffer and current list
+
+CURBUF:	db	0
+CURLIST:	db	0
+FILELIST:	db	0	;List with filenames for each buffer
+
+
+;* NestorMan slot and segment
+
+NM_SLOT:	db	0
+NM_SEG:	db	0
+
+
+;* VRAM data for bold characters and cursor drawings (192-212)
+
+VRAMDATA:	db	#78,#30,#30,#30,#30,#30,#78,#0	;I
+	db	#7C,#C0,#C0,#F0,#C0,#C0,#7C,#0	;E
+	db	#78,#CC,#C0,#C0,#C0,#CC,#78,#0	;C
+	db	#78,#CC,#DC,#FC,#EC,#CC,#78,#0	;0
+	db	#0,#0,#0,#7C,#0,#0,#0,#0	;       ;-
+	db	#78,#CC,#CC,#7C,#C,#CC,#78,#0	;9
+	db	#C0,#C0,#C0,#C0,#C0,#CC,#FC,#0	;L
+	db	#78,#CC,#C0,#78,#C,#CC,#78,#0	;S
+	db	#CC,#CC,#CC,#FC,#CC,#CC,#CC,#0	;H
+	db	#78,#CC,#CC,#CC,#CC,#CC,#78,#0	;O
+	db	#78,#FC,#FC,#CC,#CC,#CC,#CC,#0	;M
+	db	#7C,#C0,#C0,#F8,#C0,#C0,#C0,#0	;F
+	db	#FC,#30,#30,#30,#30,#30,#30,#0	;T
+	db	#0,#0,#3C,#6C,#CC,#DC,#7C,#0	;a
+	db	#0,#30,#30,#FC,#30,#30,#0,#0	;+
+	db	#78,#CC,#CC,#CC,#FC,#D8,#7C,#0	;Q
+	db	#CC,#CC,#78,#30,#78,#CC,#CC,#0	;X
+	db	#CC,#CC,#CC,#CC,#D8,#F0,#60,#0	;V
+
+	db	%000000 00	;Cursor up
+	db	%000000 00
+	db	%000100 00
+	db	%001110 00
+	db	%011111 00
+	db	%111111 10
+	db	%000000 00
+	db	%000000 00
+
+	db	%000000 00	;Cursor down
+	db	%000000 00
+	db	%111111 10
+	db	%011111 00
+	db	%001110 00
+	db	%000100 00
+	db	%000000 00
+	db	%000000 00
+
+	db	%000000 00	;Horizontal line
+	db	%000000 00
+	db	%000000 00
+	db	%111111 11
+	db	%000000 00
+	db	%000000 00
+	db	%000000 00
+	db	%000000 00
+
+	db	%100000 00	;Line pointer
+	db	%110000 00
+	db	%111000 00
+	db	%111100 00
+	db	%111000 00
+	db	%110000 00
+	db	%100000 00
+	db	%000000 00
+
+
+;* Menu text
+
+MENUTEXT:	ds	80,212
+	db	"Line:    ",192,"nsert new  - ",193,"dit - ",208,47,194,47,209,": Cut/Copy/Paste -  Delete ",205,"ll -  ",207,"uit       "
+	db	"Buffer:  ",195,196,197,": select - ",198,"oad - ",199,"ave - ",210,47,211," - "
+	db	200,201,202,193,"/",199,200,192,203,204,"+",200,201,202,193,": go top/bottom       "
+	db	"v1.0  -  Current buffer: "
+CURBUF_S:	db	"  - Number of lines: "
+NLINES_S:	db	"      - Current line: "
+CURLINE_S:	db	"            "
+
+
+;* Data for each text buffer (6 * 10 bytes):
+;- 0: Number of associated internal list
+;- 1,2: Current line at the top of the screen
+;- 3: Current line relative to the one on the top of the screen
+;- 4,5: Total number of lines
+
+BUFDATA:	;ds      6*10
+
+
+;* Various temporary buffers
+
+LINBUF:	equ	BUFDATA+6*10	;ds 210
+VRAMBUF:	equ	LINBUF+210	;ds 19*80
+CLIPB:	equ	VRAMBUF+19*80	;ds 210
+EDBUF:	equ	CLIPB+210	;ds 210
+NEWBUF:	equ	EDBUF+210	;ds 210
+
+CODEND:	;
+
