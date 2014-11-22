@@ -1,4 +1,5 @@
-﻿Except where explicitly otherwise stated, the contents of Konamiman's MSX software repository (http://www.bitbucket.org/konamiman/msx) has the following licenses:
+﻿Except where explicitly otherwise stated, the contents of Konamiman's MSX software repository
+(http://www.bitbucket.org/konamiman/msx) has the following licenses:
 
 
 - For software: the MIT license:
@@ -24,7 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-- For documents: Creative Commons BY-SA (see http://creativecommons.org/licenses/by-sa/4.0 for full details):
+- For documents: Creative Commons BY-SA (see http://creativecommons.org/licenses/by-sa/4.0):
 
 You are free to:
 
@@ -34,8 +35,12 @@ You are free to:
 
 Under the following terms:
 
-Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+Attribution — You must give appropriate credit, provide a link to the license,
+   and indicate if changes were made. You may do so in any reasonable manner,
+   but not in any way that suggests the licensor endorses you or your use.
 
-ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+ShareAlike — If you remix, transform, or build upon the material, you must distribute
+   your contributions under the same license as the original.
 
-No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+No additional restrictions — You may not apply legal terms or technological measures
+   that legally restrict others from doing anything the license permits.
