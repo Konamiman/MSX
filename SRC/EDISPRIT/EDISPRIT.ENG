@@ -1,0 +1,232 @@
+EDISPRIT v1.1 by NESTOR SORIANO
+
+-- OVERVIEW --
+
+  Edisprit is a sprite editor written in BASIC using Turbo-BASIC compiler. It 
+has two  modules, editor  and disk  menu, which  are both loaded in memory in 
+this  version 1.1.  If DOS  2 is  available, this  is doing  by using RAMDISK 
+feature; in other case, a special memory-mapper control routine programmed by 
+myself is  used (I  don't know  why, but this routine is not full compatible 
+with DOS 2).
+
+  Original  purpose of  EDISPRIT is the design of 16x16 dots sprites, but 8x8 
+dots sprites  design is  also available.  You are  enabled to change color of 
+each  sprite's line,  rotate sprites 90 degrees, reflex & invert sprites, and 
+to mix  or to  swap two  sprites (using AND & OR logic operations). Also, you 
+can modify palette from the program without exit.
+
+  EDISPRIT  can be  controlled by  using cursors  or joystick,  but mouse  is 
+recommended (select the control device with SELECT key; default is mouse).
+
+-- FILES BUILDING EDISPRIT --
+
+  EDISPRIT.BAS, initialization program, must be ran to enter EDISPRIT.
+  EDITOR.BAS, editor program, saved in BASIC format (used by DOS 2).
+  EDITOR.BSB, editor program, saved in binary format (used by DOS 1).
+  DISK.BAS, disk menu saved in BASIC format.
+  DISK.BSB, disk menu saved in binary format.
+  ALLMEM.BIN, memory mapper management routine.
+  MESSAGES.BIN, editor messages and CM routine for character print in graphic 
+mode (necessary for Turbo-BASIC compatibility).
+  EDITOR.SC7,  work  screen,  including  sprite design  pattern, buttons  and 
+colours for palette changing feature.
+  ABOUT.SC7, graphic screen that appears by ABOUT option.
+  EDISPRIT.ENG, this text.
+  EDISPRIT.ESP, this text in spanish.
+
+  Other files you can found in NESTORDISK:
+
+  DAT-VRAM.BAS, concatenates three or nine EDISPRIT data files in a binary 
+file loadable by BLOAD,S.
+  DAT-VRM.BAS, same as DAT-VRAM but with messages in spanish.
+  NEME1-?.SPR, four  sprite files  that contains  the nearly  100 sprites  of 
+Nemesis.
+  ICONS.SP7, other sprites sample.
+  DAT-VRM.BAS, converts EDISPRIT format data files to binary files, which can 
+be loaded with BLOAD"name",S.
+  SAMPLE1.BAS & SAMPLE2.bas, sample programs using sprites.
+  SAMPLES.SP7, sprites used by the samples.
+  XBASIC.BIN, Kun BASIC compiler.
+
+-- WORK SCREEN OF EDISPRIT --
+
+  Is divided in four zones:
+
+  - The pattern (upper left corner of the screen), is the place when you must 
+edit  the  sprite  and  change  its  colors.  In fact,  this is  an ampliated 
+representation of 16x16 dots building the sprite.
+
+  - The sprites (upper right corner); here you can see all the sprites at its 
+real  size. Actual  sprite (the  one you  are editing in the pattern) appears 
+double boxed.
+
+  - Buttons  (lower screen's  zone), enables you to operate with the sprites, 
+and access to disk menu.
+ 
+  - Colours zone (lower right corner), where you can edit the palette.
+
+-- EDITING A SPRITE --
+
+  Editing a sprite is easy: just select the desired sprite clicking it in the 
+sprites  zone. Then  the sprite  will appear  in the  pattern. With  the left 
+button you set a point in the pattern, with the right button you erase it.
+
+  Changing colour  of a line is done by two procedures. You can click the "c" 
+indicator  according to the line, and then actual colour will be increased or 
+decreased (left  or right  button); also, you can click the colour number and 
+introuce it directly by keyboard. To cancel color change (if you have clicked 
+the color number and not yet introduced new number) press ESC key.
+
+  You  can  select  the  same  colour  for  the whole  sprite. Click  the "F" 
+allocated  under the "c"'s and enter a colour number:all sprite lines will be 
+changed to this color.
+ 
+-- BUTTONS --
+
+  Buttons enables  you to make diverse operations with the sprites. For use a 
+button, click it or press it according function key.
+
+  - DISK: You access to disk menu.
+
+  - CLEAR: Clears actual sprite.
+
+  - RESETCOL: Restores default MSX palette.
+
+  - COPY: Copy  other sprite  in actual  sprite. If  clicked, message  "Copy 
+Sprite from  ..." appears,  and then  you must select the source sprite. Only 
+pattern is copied, not line colours.
+
+  - SWAP: Swaps  other sprite  with actual sprite. If clicked, message "Swap 
+Sprite with  ..." appears,  and you must select other sprite. Only pattern is 
+swapped, not line colours.
+ 
+  - MERGE OR:  Mixes actual sprite with other. If clicked, message "Merge OR 
+with ..."  appears, and  you must  select source sprite. Mix is done using OR 
+logical  operation, that  is, second sprite is superimposed to actual sprite. 
+Line colours are not modified.
+
+  - MERGE AND: Mixes actual sprite with other. If clicked, message "Merge AND 
+with ..."  appears, and  you must select source sprite. Mix is done using AND 
+logical operation, that is, only common dots of two sprites are held.
+
+  - REFLEX: Makes a specular reflection of actual sprite.
+
+  - ROTATE: Rotates actual sprite 90 degrees clockwise.
+
+  - INVERT: Negativizes actual sprite, that is, clears pointed dots and sets 
+cleared dots.
+
+  - ABOUT: Shows EDISPRIT reference screen. If ABOUT.SC7 file isn't in actual 
+path, some  BEEP's will  sound; then program must be recompiled, and you must 
+wait  a few  seconds. Press  any button  once you have seen reference. Clear, 
+ResetCol, Copy,  Swap, Merge  OR, Merge AND operations and changing colour of 
+the  whole sprite  function will request you for confirmation. Message "Sure? 
+(Y/N)" will  appear in  the pattern.  You can  confirm the  operation by left 
+button,  "Y" key or ENTER key. Also, you can abort operation by right button, 
+"N" key or ESC key.
+
+-- PALETTE --
+
+  Selecting colour  to edit  is done by clicking its box, or clicking "Color" 
+box  (left button  or right button to increase or decrease color number). The 
+color to be edited appears boxed.
+
+  Once selected, in right side will appear the three RGB coordinates. You can 
+modify them  clicking directly the coordinate space, or clicking the "R", "G" 
+and  "B"  buttons  (left  button  to  increase  coordinate,  right  button to 
+decrease).
+ 
+-- CONTROLS --
+
+  As described below, EDISPRIT can be controlled by mouse (connected in first 
+port),  by  cursors  or by  joystick (connected  in any  port). Once  loaded, 
+control  is  done  by  mouse,  and  indication  "Mouse  (SEL)"  appears under 
+"ResetCol"  button. If  you click  here, or  if you press SELECT key, control 
+changes to  cursors or joystick, and message "Cur/Joy (SEL)" replaces "Mouse" 
+message.  Then, left  button functions  can be  done by  space key, and right 
+button functions can be done by "M" and "N" keys.
+
+-- SAVING SPRITES --
+
+  From disk menu you can save & load sprites and palette.
+
+  EDISPRIT enables  you to edit 30 sprites simultaneously. Those sprites will 
+be  saved in  a random  access file  with 48  bytes for sprite, 32 for sprite 
+definition and 16 for line colors. Thus, data file of EDISPRIT has 30*48=1040 
+bytes lenght.
+
+  Then, to get a sprite directly from data file, make the follow:
+
+  OPEN "name.ext" AS 1 LEN=48 : FIELD 1, 32 AS S$, 16 AS L$
+
+  To put sprite pattern A (from datafile) in sprite pattern B (in VRAM) make:
+
+  GET 1, A : SPRITE$ (B) = S$
+
+  To put  line colours  of pattern  C (from  datafile) in  sprite plane D (in 
+VRAM) make:
+
+  GET 1, C : COLOR SPRITE$ (D) = L$
+
+  Remember  that definition  of sprite  line colours  makes action  in sprite 
+planes (from  0 to  31) and NOT in VRAM sprite patterns (from 0 to 255 in 8x8 
+mode;  from 0  to 63  in 16x16  mode). Palette is also saved in random access 
+file, in  the sequence described following: Red of color 0, Green of color 0, 
+Blue  of color 0, Red of color 1, . . . . . ., Blue of color 14, Red of color 
+15, Green  of color  15, Blue  of color  15. Then,  to put RGB coordinates of 
+color E (from datafile) in color F (in VRAM) make:
+
+  OPEN "nombre.ext" AS 1 LEN=3 : FIELD 1, 1 AS R$, 1 AS G$, 1 AS B$
+  GET 1, E : R=ASC(R$) : G=ASC(G$) : B=ASC(B$)
+  COLOR = (F,R,G,B)
+
+  Fast  saving option  is also available: 30 sprites and palette are saved in 
+the same  file, and  you can  load it  by BLOAD"name.ext",S. This makes speed 
+gain  and code  saving, but  sprites are  saved directly from VRAM and can be 
+loaded only from SCREEN 7 mode.
+
+  Finally, remember  that while you are in disk menu, you can go to main menu 
+directly by pressing CTRL+STOP keys.
+
+  Program DAT-VRAM.BAS enables you to concatenate three 16x16 sprite files in 
+EDISPRIT format or nine 8x8 sprite files (to edit 8x8 sprites, use only upper 
+left  quadrant  of  pattern  in  the  editor)  to  a file  loadable by  BLOAD 
+"name.ext",S of course in the screen mode you desire.
+
+-- ENDING --
+
+  Well, first  of all  sorry for  my very  poor english (my english tutor was 
+Konami's METAL GEAR, it's true!), and I hope your mind is yet entire...
+
+  EDISPRIT  is public  domain software, so please make all copies as possible 
+and distribute  them all over the world! (well, at least make copies for your 
+friends ...)
+
+  ***** NI SE TE OCURRA VENDERLO, L.A.S.P., QUE TE CONOZCO *****
+
+  Do  you think you are capable of optimize EDISPRIT? Well, do it! But please 
+send me  a copy of the new version, and don't remove my name from credits (in 
+initialization  program,  exit  message  of  disk menu,  this file  and ABOUT 
+screen).  Tell  me  also  about  your ideas,  suggestions, bugs  detected, or 
+anything else.
+
+  HELP  !! I'm  searching info  about DOS  2 internal operation. What are new 
+bios calls? How to create SET environment items? What about resident programs 
+under MEMMAN?  And, overcoat, how to indicate to DOS that determinated memory 
+mapper  pages are  reserved and cannot be used? Please help me! Send me info, 
+and you  will receive my gratitude and NESTORDISK 2 before rest of people! (I 
+promise you!)
+
+  Well, this is my address:
+
+
+(Original postal address removed. Please contact konamiman@konamiman.com instead)
+
+
+  I hope this program will be useful for you.
+
+
+	      Pont D'Inca, September 1.994 (EDISPRIT 1.0 & Spanish text)
+
+	      Pont D'Inca, February 1.995  (EDISPRIT 1.1 & English text)
+ 
