@@ -1,0 +1,238 @@
+EDISPRIT v1.1 por NESTOR SORIANO
+ 
+-- LA HISTORIA --
+ 
+  Un d¡a,  estaba yo  un poco  aburrido en  mi casa, enfrente de mi MSX2+ sin 
+saber qu‚ hacer... cuando de repente, mi amiguete Juan Salvador (m s conocido 
+como  SaveR) me  dijo: "¨Por  qu‚ no  me haces un editor de sprites?" Y yo le 
+dije: "­Haalaa  un editor  de Sprites! ­Que burrada! Aunque... haciendo tal y 
+cual cosa, ser¡a factible... Vale, a por el."
+
+  Viendo  el SaveR que me estaba quedando bastante bonito, me dijo: "­Podr¡as 
+venderlo en  la pr¢xima  reuni¢n de usuarios [la de octubre del 94]!" Y yo me 
+dije: "Pues es verdad, lo mejorar‚ un poco ..." Y aproximadamente 20 dias m s 
+tarde, EDISPRIT estaba terminado.
+ 
+-- ¨QUE ES EDISPRIT? --
+ 
+  ­­ Es  el editor  de sprites  definitivo !!  Bueno, o  al menos  es un buen 
+editor de sprites (o como m¡nimo aceptable, ¨no?). Esta programado en BASIC y 
+usa el compilador Turbo-BASIC.
+ 
+  La  versi¢n 1.1  se carga ¡ntegramente en memoria. Para ello usa el RAMDISK 
+en caso de disponer de DOS 2; en caso contrario se usa una rutina especial de 
+control del  mapeador de  memoria, que  he programado yo mismo (desconozco la 
+causa, pero esta rutina no funciona bien con el DOS 2).
+
+  El programa est  pensado para dise¤ar sprites de 16x16 (se pueden dise¤ar 
+tambi‚n de  8x8, claro), con posibilidad de elegir el color de cada l¡nea del 
+sprite. Es posible rotar 90 grados, reflejar e invertir los sprites, as¡ como 
+copiar  un sprite  en otro,  mezclarlos (usando  OR o AND) e intercambiarlos. 
+Tambi‚n es posible regular la paleta desde dentro de EDISPRIT.
+ 
+  En un  principio s¢lo  era posible usar EDISPRIT con rat¢n, pero finalmente 
+le a¤ad¡ la opci¢n de usar cursores o joystick.
+ 
+-- FICHEROS QUE COMPONEN EDISPRIT --
+ 
+  EDISPRIT.BAS, programa  inicializador. Hay  que ejecutarlo  para entrar  en 
+EDISPRIT.
+  EDITOR.BAS, programa editor grabado en formato BASIC (usado por el DOS 2).
+  EDITOR.BSB, programa editor grabado en binario (usado por el DOS 1).
+  DISK.BAS, men£ de disco en formato BASIC.
+  DISK.BSB, men£ de disco en formato binario.
+  ALLMEM.BIN,  rutina CM para controlar el mapeador de memoria. 
+  MESSAGES.BIN, un par de rutinas en CM y los mensajes que usa el editor.
+  EDITOR.SC7,  pantalla  de trabajo,  contiene la  trama, los  botones y  los 
+colores.
+  ABOUT.SC7, pantalla gr fica que aparece mediante la opci¢n ABOUT.
+  EDISPRIT.ESP, el fichero que lees en estos momentos.
+  EDISPRIT.ENG, este texto traducido al ingl‚s.
+ 
+  Otros ficheros que encontrar s en el disco:
+ 
+  DAT-VRM.BAS, concatena tres o nueve ficheros de datos EDISPRIT en un 
+fichero binario cargable con BLOAD,S.
+  DAT-VRAM.BAS, igual que DAT-VRM pero con los mensajes en ingl‚s.
+  NEME1-?.SPR,  cuatro ficheros que contienen los aproximadamente 100 sprites 
+del Nemesis.
+  ICONS.SP7, otro  fichero de  ejemplo. DAT-VRM.BAS,  transforma ficheros  de 
+sprites de formato EDISPRIT a formato binario (BSAVE).
+  SAMPLE1.BAS
+  SAMPLE2.BAS
+  SAMPLES.SP7, ficheros de ejemplo de uso de sprites.
+  XBASIC.BIN, compilador de Turbo-BASIC.
+ 
+-- LA PANTALLA DE TRABAJO DE EDISPRIT --
+ 
+  Est  dividida en cuatro zonas:
+ 
+  - La  trama (esquina superior izquierda), es el lugar en el que editar s el 
+sprite  y cambiar s  su color.  Constituye una representaci¢n ampliada de los 
+16x16 pixels que componen el sprite.
+ 
+  -  Los sprites (superior derecha), aqu¡ puedes observar c¢mo est n quedando 
+los sprites,  y cambiar  el sprite  en curso  (el que  est s editando  en ese 
+momento). El sprite en curso aparece doblemente recuadrado.
+ 
+  -  Los botones (inferior), permite operar con los sprites, as¡ como acceder 
+al men£ de disco.
+ 
+  - La zona de colores (inferior derecha), aqu¡ cambiar s la paleta.
+ 
+-- EDITANDO UN SPRITE --
+ 
+  Editar  un sprite es sencillo. Selecciona el sprite a editar pulsando sobre 
+‚l en  la zona  de sprite,  vuelve a  la trama  y ah¡ lo tienes. Con el bot¢n 
+izquierdo  del rat¢n  pones un  punto, mientras  que con  el bot¢n derecho lo 
+borras.
+ 
+  Para  cambiar  el color  de una  l¡nea existen  dos procedimientos.  Puedes 
+situar el puntero sobre la "c" correspondiente a esa l¡nea, y subir o bajar el 
+n£mero de color con el bot¢n izquierdo y el derecho respectivamente; o pulsar 
+sobre el  n£mero e  introducirlo directamente desde el teclado. Para cancelar 
+el cambio de color una vez has pulsado sobre el n£mero, pulsa ESC.
+ 
+  Puedes  elegir un  mismo color  para todas las l¡neas del sprite. Para ello 
+pulsa sobre la "F" que hay bajo la ultima "c" e introduce el color.
+ 
+-- LOS BOTONES --
+ 
+  Los botones  permiten realizar diversas operaciones sobre los sprites. Para 
+usar   un  bot¢n,   pulsa  sobre   ‚l  o  bien  pulsa  su  tecla  de  funci¢n 
+correspondiente.
+ 
+  - DISK : Accedes al men£ de disco.
+ 
+  - CLEAR : Borra el sprite actual.
+ 
+  - RESETCOL : Reestablece la paleta por defecto.
+ 
+  - COPY : Copia otro sprite en el sprite actual. Una vez pulsado, aparece el 
+mensaje  "Copy Sprite from ..." y entonces debes seleccionar otro sprite, que 
+ser  copiado  en el  que tengas seleccionado en ese momento. S¢lo se copia la 
+trama del sprite, no los colores de l¡nea.
+ 
+  - SWAP  : Intercambia  el sprite  actual con  otro. Al pulsar aparece "Swap 
+Sprite  with ..."  y deberemos seleccionar el sprite que intercambiaremos con 
+el actual. S¢lo se intercambian las tramas.
+ 
+  - MERGE OR : Mezcla otro sprite con el actual. Aparece el mensaje "Merge OR 
+with ..."  y entonces  debes seleccionar  el sprite fuente. Los colores no se 
+ven modificados.
+ 
+  - MERGE  AND : Conserva s¢lo los pixels que el sprite actual tenga en com£n 
+con un segundo sprite, que seleccionaremos tras recibir el mensaje "Merge AND 
+with ..." Los colores quedan inalterados.
+ 
+  - REFLEX : Realiza una reflexi¢n especular en sentido horizontal del sprite 
+actual.
+ 
+  - ROTATE : Rota el sprite actual 90 grados en sentido horario.
+ 
+  - INVERT  : Realiza el negativo del sprite actual: transforma los puntos en 
+espacios y viceversa.
+ 
+  - ABOUT  : Presenta  una referencia sobre EDISPRIT. Si el fichero ABOUT.SC7 
+no  se encuentra  en la ruta actual suena una sucesion de BEEPs y el programa 
+ha de  volver a compilarse, por tanto puede tardar unos segundos. Pulsa alg£n 
+bot¢n del rat¢n para volver al editor una vez has visto la referencia.
+ 
+  Las funciones  Clear, ResetCol,  Copy, Swap, Merge OR y Merge AND, as¡ como 
+la  opci¢n  de  cambiar  el  color  de  todas  las  l¡neas  a  la vez,  piden 
+confirmaci¢n mediante el mensaje "Sure? (Y/N)". Puedes confirmar la operaci¢n 
+pulsando  el bot¢n  izquierdo, "Y"  o ENTER;  o bien  abortarla con  el bot¢n 
+derecho, "N" o ESC.
+ 
+-- LA PALETA --
+ 
+  Para  seleccionar el  color a  editar puedes  pulsar directamente  sobre su 
+cuadro,  o  bien  pulsar  sobre  el  bot¢n  "Color",  y entonces  aumentar  o 
+disminuir  (bot¢n izquierdo/derecho) el n£mero del color seleccionado.
+ 
+  Una vez seleccionado el color, aparecer  a la derecha una indicaci¢n de las 
+componentes  RGB del  mismo. Puedes variarlas pulsando  directamente sobre el 
+espacio para  componentes, o  pulsando sobre los botones "R","G" y "B" (bot¢n 
+izquierdo aumenta la componente; bot¢n derecho la disminuye).
+ 
+-- CONTROLES --
+ 
+  Al  cargar EDISPRIT  el control  por defecto se realiza siempre mediante el 
+rat¢n controlado  en el  primer puerto,  y bajo  el bot¢n ResetCol aparece la 
+indicaci¢n "rat¢n (SEL)". Pulsando sobre esta indicaci¢n, o mediante la tecla 
+SELECT,  cambiar s a "Cur/Joy (SEL)", y controlar s el editor con un joystick 
+conectado en  cualquier puerto o con los cursores. Entonces las funciones del 
+bot¢n izquierdo las puedes realizar con el primer bot¢n del joystick o con la 
+barra  espaciadora, y las del bot¢n derecho con el segundo bot¢n del joystick 
+o con las teclas "M" y "N".
+ 
+-- GUARDANDO LOS SPRITES --
+ 
+  Desde el  men£ de disco pudes controlar la grabaci¢n y carga de los sprites 
+y la paleta.
+ 
+  EDISPRIT  permite  editar  30  sprites simultaneamente.  Estos sprites  son 
+guardados en  un fichero de acceso directo que tiene el siguiente formato: 48 
+bytes  por campo,  32 para la trama del sprite y 16 para los colores. as¡, un 
+fichero de datos de EDISPRIT ocupa 30*48 = 1.440 bytes.
+ 
+  Por tanto, para tomar directamente un sprite de un ficherio de datos, debes 
+hacer lo siguiente:
+ 
+  OPEN "nombre.ext" AS#1 LEN=1 : FIELD#1, 32 AS S$, 16 AS L$
+ 
+  Para copiar la trama A en el sprite B debes hacer:
+ 
+  GET#1,A : SPRITE$(B)=S$
+ 
+  Y para copiar los colores de la trama C en el plano D:
+ 
+  GET#1,C : COLOR SPRITE$(D)=L$
+ 
+  Recuerda que  la definici¢n de los colores de cada l¡nea afecta al plano de 
+sprite, no a la definici¢n del mismo en VRAM.
+ 
+  La paleta se guarda tambi‚n como fichero de acceso directo, de la siguiente 
+manera: R  de color  0, G de color 0, B de color 0, ... , R de color 15, G de 
+color  15, B de color 15. Para copiar las componentes del color E en el color 
+F haz:
+ 
+  OPEN "nombre.ext" AS#1 LEN=3 : FIELD#1, 1 AS R$, 1 AS G$, 1 AS B$
+  GET#1,E : R=ASC(R$) : G=ASC(G$) : B=ASC(B$)
+  COLOR=(F,R,G,B)
+ 
+  Existe tambi‚n  la opci¢n de "grabaci¢n r pida": los 30 sprites y la paleta 
+se graban de tal manera que basta un simple BSAVE para cargarlos. Esta es una 
+forma  r pida de  guardar los  datos, pero  menos flexible: los sprites y sus 
+colores se  situan en VRAM tal como estaban en el editor, s¢lo se pueden usar 
+esos 30 sprites y s¢lo se puede cargar desde SCREEN 7.
+ 
+  Por £ltimo, recuerda que mientras estes en el men£ de disco puedes regresar 
+en cualquier momento al men£ principal pulsando CTRL+STOP.
+ 
+  El programa DAT-VRM.BAS concatena tres ficheros de sprites de 16x16 o nueve 
+de  8x8 (para editar sprites de 8x8 debes utilizar s¢lo el cuadrante superior 
+izquierdo  de   la  trama)   en  un  solo  fichero  cargable  mediante  BLOAD 
+"nombre.ext",S.
+
+-- CONCLUSION --
+ 
+  Finalmente he  decidido no  vender (no intentar vender) EDISPRIT. Como dijo 
+(creo que) Juan Salas, los buenos programas han de ser de dominio publico.
+ 
+  Si  te crees  capaz de  mejorara EDISPRIT, ­hazlo! Pero no olvides mandarme 
+una copia  de la  nueva versi¢n,  cont ndome de  paso qu‚  te ha  parecido el 
+programa,  los  fallos  garrafales  que  le  has  encontrado, etc,  etc... Si 
+simplemente  tienes alguna  idea, o  alg£n proyecto, o si te aburres y tienes 
+ganas de tocarme las narices, escr¡beme tambi‚n. He aqu¡ mi direcci¢n:
+ 
+
+(Direcci¢n postal original quitada. Escribe a konamiman@konamiman.com)
+ 
+
+  Espero sinceramente que este programa le sea £til a alguien alg£n dia...
+ 
+ 
+		       Pont D'Inca, primeros d¡as de Septiembre de 1.994
+ 
+					   Versi¢n 1.1: Febrero de 1.995
