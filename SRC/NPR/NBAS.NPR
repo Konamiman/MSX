@@ -1,0 +1,199 @@
+'.oO
+'.oO Sample of NestorPreTer and NestorBASIC joint use
+'.oO
+'.oO By Konami Man, 11-1999
+'.oO
+
+'**********
+'*        *
+'* MACROS *
+'*        *
+'**********
+
+'* NOTE - Here, @MACRO is used for functions and @DEFINE for constants.
+'         This is done just for readability purposes, remember that
+'         both commands are exactly the same.
+
+'--- Some useful constants
+
+@define TRUE	-1
+@define FALSE	0
+@define YES @TRUE
+@define NO  @FALSE
+@define REQ_SEGS 7	'Put here the minimum number of available segments
+			'required in your program
+@define NUM_VARS 1	'Put here the number of variables you will use,
+			'they will be all placed in array D
+
+@define NUM_SEGS d(0)	'Number of available segments
+@define KEY k$		'For key scanning
+
+'--- Some NestorBASIC variables
+
+@define SEG	P(0)	'For one-data memory functions and fill functions
+@define ADR	P(1)
+@define DATA	P(2)
+
+@define SEG_S	P(0)	'For (V)RAM to (V)RAM block transfer functions
+@define ADR_S	P(1)
+@define SEG_D	P(2)
+@define ADR_D	P(3)
+@define LEN_BLK P(4)
+@define INC_S	P(5)
+@define INC_D	P(6)
+
+@define LEN_FILL	P(3)	'For block fill functions
+
+'--- NestorBASIC general functions ---
+
+@macro	NB_UNINST	e=usr(0)  'NestorBASIC uninstall
+@macro	NB_INFO e=usr(1)  'Obtain NestorBASIC info
+
+@macro	FINISH	p(0)=@YES: @NB_UNINST: end	'Uninstall freeing
+						'BASIC memory
+
+'-- NestorBASIC mapped memory access functions ---
+
+@macro	RDSEG	e=usr(2)  'Read a byte from a segment
+@macro	RDSEGI	e=usr(3)  'Read a byte from a segment with address incr.
+@macro	RDINT	e=usr(4)  'Read an integer (2 bytes) from a segment
+@macro	RDINTI	e=usr(5)  'Read an integer from a segment with ad. inc.
+
+@macro	WRSEG	e=usr(6)  'Write a byte in a segment
+@macro	WRSEGI	e=usr(7)  'Write a byte in a segment with address incr.
+@macro	WRINT	e=usr(8)  'Write an integer (2 bytes) ina a segment
+@macro	WRINTI	e=usr(9)  'Write an integer in a segment with ad. inc.
+
+@macro	LDIRSS	e=usr(10) 'Copy memory block between segments
+@macro	FILLS	e=usr(11) 'Fill a segment block with a byte
+@macro	FILLSI	e=usr(12) 'FILLS with address increment
+
+
+'********************
+'*                  *
+'* NestorBASIC load *
+'*                  *
+'********************
+
+'*** First loads NestorBASIC
+
+~	maxfiles=0:			'This saves some BASIC memory
+	keyoff: screen 0: width 80:	'Some screen initialization
+	?"--- Loading NestorBASIC...": ?:
+	bload"nbasic.bin",r:
+	if p(0) >4 then
+		~LOADOK 	'No error if p(0) is at least 5
+	else
+		?"ERROR: ";
+
+'*** If error, now show error message according to p(0) value
+
+~	if p(0)=0 then
+		?"No mapped memory or only 64K of mapped memory!":
+		end
+
+~	if p(0)=1 then
+		?"Disk error when loading NestorBASIC!":
+		end
+
+~	if p(0)=2 then
+		?"No free memory segments!":
+		end
+
+~	if p(0)=3 then
+		?"NestorBASIC was already installed.":
+		@NB_INFO:
+		goto ~ALR_LOAD
+
+~	if p(0)=4 then
+		?"Unknown error.":
+		end
+
+'*** Jump here if NestorBASIC was loaded successfully
+
+~LOADOK:	?"NestorBASIC loaded successfully!":
+		?"Segments found:"; p(0): ?
+
+'*** Jump here if NestorBASIC was already loaded
+
+~ALR_LOAD
+
+'*** Check if we have enough available memory (REQ_SEGS), else ends
+
+~	defint d: dim d(@NUM_VARS):	'Creates data array
+	if p(0)< @REQ_SEGS then
+		?"ERROR: Not enough free memory!":
+		?"At least"; @REQ_SEGS *16; "K are required.":
+		@FINISH
+	else
+		@NUM_SEGS=p(0)
+
+
+'*************************
+'*                       *
+'* PUT HERE YOUR PROGRAM *
+'*                       *
+'*************************
+
+'The following is just a simple sample (a siample?) X-)
+
+'Copies a memory block into another, asking user for block source, 
+destination and length.
+
+'(By the way, note that previous line and this line are long lines ended with 
+a SPACE+CR mark, so it is all the same remark.)
+
+'* Ask for parameters...
+
+~MAIN:	?"Now I'll copy a memory block, but I need some info..."
+
+~ASK_SSEG:	input "Source segment"; @SEG_S:
+	if @SEG_S >= @NUM_SEGS then
+		?"Oops! We have not so many segments!!":
+		goto ~ASK_SSEG
+
+~ASK_SADR:	input "Source address";@ADR_S:
+	if @ADR_S< 0 or @ADR_S> 16383 then
+		?"Nope. Please specify address in the range 0-16383!":
+		goto ~ASK_SADR
+
+~ASK_DSEG:	input "Destination segment"; @SEG_D:
+	if @SEG_D >= @NUM_SEGS then
+		?"Oops! We have not so many segments!!":
+		goto ~ASK_DSEG
+
+~ASK_DADR:	input "Destination address"; @ADR_D:
+	if @ADR_D< 0 or @ADR_D> 16383 then
+		?"Nope. Please specify address in the range 0-16383!":
+		goto ~ASK_DADR
+
+~ASK_LEN:	input "And finally... block length"; @LEN_BLK:
+	if @LEN_BLK< 1 or @LEN_BLK> 16384 then
+		?"Hey hey hey, I can't copy a block bigger than 16K!":
+		goto ~ASK_LEN
+
+'* Now we have all parameters, let's copy then!
+
+~	@INC_S= @NO: @INC_D= @NO:	'Do not increment addresses
+	@LDIRSS 	'Performs call
+
+'* Should we continue?
+
+~ASK_CONTI:	?: ?"Done. Try again (Y/N)? ";
+~GET_KEY:	@KEY= inkey$:
+		if @KEY="" then ~GET_KEY
+~		if chr$(asc(@KEY) and 255-32) = "Y" then
+			?: ?"Let's go!!": ?:
+			goto ~MAIN
+
+'* No continue? Then uninstall NestorBASIC and end.
+
+~	@FINISH
+
+@EndBASIC
+
+This was just a little sample. It is up to you to define other macros for 
+accessing the NestorBASIC functions you will need to use, and to make really 
+useful programs. (^^!)
+
+
