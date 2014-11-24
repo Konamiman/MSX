@@ -1,0 +1,3 @@
+﻿Nextor is an operating system for MSX based on the original source code of MSX-DOS 2. The source code for Nextor itself is not published since it is based in the original MSX-DOS 2.31 source code and I dont know what is the current legal status of this code nor who should I ask about that (any clue about this will be highly welcome), this folder contains the source code of the auxiliary tools that I have developed.
+
+There is a ton more of resources (documentation and binaries) at [Konamiman's MSX page](http://www.konamiman.com#nextor).
