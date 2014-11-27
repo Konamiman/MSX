@@ -1,0 +1,1138 @@
+<?xml version='1.0'?>
+<!DOCTYPE rfc SYSTEM 'rfc2629.dtd'>
+
+<?rfc header='MSX'?>
+<?rfc private='MSX'?>
+<?rfc toc='yes'?>
+
+<rfc>
+<front>
+<title abbrev="C library for INL">INLIB: SDCC library for InterNestor Lite</title>
+<author initials="N." surname="Soriano" fullname="Nestor Soriano Vilchez">
+<organization abbrev="AAMSX">Asociacion de Amigos del MSX </organization>
+<address><email>konamiman@konamiman.com</email>
+<uri>http://www.konamiman.com</uri></address>
+</author>
+<date day="1" month="December" year="2004" />
+
+</front>
+
+<middle>
+
+
+<!-- Introduction -->
+
+<section title="Introduction">
+
+<section title="What is INLIB">
+
+<t>INLIB is a library of functions that allow using the InterNestor Lite (INL) routines from C programs (INL version 1.0 or newer is supported). It is intended for use with the SDCC compiler.</t>
+
+<t>Note that there are functions only for accessing the INL features that are common to all the implementations of INL. An escape mechanism is provided for calling a routine placed at an arbitrary address of the INL code segment from inline assembler code; use it if you need to call INL implementation-specific routines.</t>
+
+</section>
+
+
+<section title="Included files">
+
+<t>The following files are included with INLIB. Note that INLIB is composed by only the INL.LIB and INL.H files, the rest of the files are just sample applications.</t><vspace blankLines="1"/>
+
+<list style="symbols">
+
+<t>INL.H: The header file to be #include'd in the source code of your applications.</t><vspace blankLines="1"/>
+
+<t>INL.LIB: The library itself, to be linked with your application code at compile time.</t><vspace blankLines="1"/>
+
+<t>INLIB.TXT: This document.</t><vspace blankLines="1"/>
+
+<t>C-PING.C/.COM: Sample application that uses the ICMP echo functions.</t><vspace blankLines="1"/>
+
+<t>C-DNS.C/.COM: Sample application that uses the UDP functions.</t><vspace blankLines="1"/>
+
+<t>C-TCPCON.C/.COM: Sample application that uses the TCP functions.</t><vspace blankLines="1"/>
+
+<t>C-RPING.C/.COM: Sample application that uses the functions for raw packets management.</t><vspace blankLines="1"/>
+
+<t>C-B64.C/.COM: Sample application that uses the functions for Base64 encoding and decoding.</t><vspace blankLines="1"/>
+
+<t>PRINTF.O: Enhanced printf function, it is the same as the one that can be found at the \sdcc\lib\src\z80 directory, except that this one can print one byte (unsigned char) numbers by using the %b modifier. You need to replace your printf.o with this one if you want to compile the samples.</t>
+
+</list>
+
+</section>
+
+
+<vspace blankLines="100"/>
+
+<section title="How to use INLIB">
+
+<t>To use the INLIB functions in your application you must follow these steps:</t><vspace blankLines="1"/>
+
+<list style="numbers">
+
+<t>Place an #include "inl.h" directive at the beginning of the source code of your application.</t><vspace blankLines="1"/>
+
+<t>Place a call to the INLInit function at the starting point of your application. It is mandatory to execute this function once, see the functions description for more details.</t><vspace blankLines="1"/>
+
+<t>Include the appropriate calls to the INLIB functions in your code.</t><vspace blankLines="1"/>
+
+<t>When compiling your application, link it with INL.LIB. That is, pass the file name INL.LIB as an argument to the command line when invoking SDCC.</t>
+
+</list>
+
+<t>Note: for compiling the samples you need to link with the startup file crt0_msxdos_advanced, which can be downloaded from Avelino Herrera's MSX page, <eref target="http://msx.gabiot.com/index_en.html"/>. This startup file allows to use main functions of type "int main(char** argv, int argc)" and can be useful for your own applications as well.</t>
+
+</section>
+
+</section>
+
+
+<!-- Data types reference -->
+
+<section title="Data types and structures reference">
+
+<t>This section explains the data types and structures used by the INLIB functions, they are defined in the INL.H file.</t><vspace blankLines="1"/>
+
+<list style="symbols">
+
+<t>uint: Synonim for unsigned int.</t><vspace blankLines="1"/>
+
+<t>ulong: Synonim for unsigned long.</t><vspace blankLines="1"/>
+
+<t>byte: Synonim for unsigned char.</t><vspace blankLines="1"/>
+
+<t>ip_address: Synonim for unsigned long. Addresses are stored in memory with their natural byte order; since MSX stores variables in little-endian order, this implies that the bytes appear to be reversed in the variable. That is, address AA.BB.CC.DD is represented as 0xDDCCBBAA.</t><vspace blankLines="1"/>
+
+
+<t>B64Info: Structure used for Base64 encoding/decoding functions. It has these members:</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="void* Src:">Address of the block to be encoded or decoded.</t><vspace blankLines="1"/>
+
+<t hangText="void* Dest:">Destination address for the generated encoded or decoded block.</t><vspace blankLines="1"/>
+
+<t hangText="uint Size:">Size of the block to be encoded or decoded (0 to 512).</t><vspace blankLines="1"/>
+
+<t hangText="byte Final:">1 if the block to be encoded or decoded is the final block for this encoding or decoding process, 0 otherwise.</t><vspace blankLines="1"/>
+
+<t hangText="long Cummulated:">Total size of the generated blocks in this encoding or decoding process.</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>EchoInfo: Structure used for ICMP echo functions. It has these members (they refer to an echo request to be sent or to an echo reply received, depending on the function used):</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="ip_address PeerIP:">Echo request destination IP/Echo reply origination IP.</t><vspace blankLines="1"/>
+
+<t hangText="byte TTL:">TTL (Time To Live) field of the echo packet.</t><vspace blankLines="1"/>
+
+<t hangText="uint ICMPId:">ICMP identifier of the echo packet.</t><vspace blankLines="1"/>
+
+<t hangText="uint ICMPSeq:">ICMP sequence number of the echo packet.</t><vspace blankLines="1"/>
+
+<t hangText="uint DataLen:">Data part length of the echo packet.</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>UDPInfo: Structure used for UDP datagrams related functions. It has these members (they refer to an UDP datagram to be sent or to an UDP datagram received, depending on the function used):</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="ip_address PeerIP:">Datagram originator or destination IP.</t><vspace blankLines="1"/>
+
+<t hangText="uint DestPort:">Destination port field of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="uint SrcPort:">Source port field of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="void* Data:">Pointer to the data part of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="uint DataLen:">Length of the data part of the datagram.</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>TCPOpenInfo: Structure containing the information needed to open a TCP connection. It has these members:</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="ip_address PeerIP:">Address of the host to connect to.</t><vspace blankLines="1"/>
+
+<t hangText="uint DestPort:">Destination TCP port for connection.</t><vspace blankLines="1"/>
+
+<t hangText="uint SrcPort:">Source TCP port for connection.</t><vspace blankLines="1"/>
+
+<t hangText="byte Passive:">0 for active connection open, 1 for passive connection open.</t><vspace blankLines="1"/>
+
+<t hangText="uint Timer:">Value of the user timeout in seconds (0 for the default value, 0xFFFF for infinite).</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>TCPStateInfo: Structure that represents the current status of a TCP connection. It has these members:</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="byte State:">Current TCP automaton state. Its value is one of the TCPS_* constants defined in INL.H.</t><vspace blankLines="1"/>
+
+<t hangText="uint IncomingUsed:">Amount of incoming data ready to be retrieved.</t><vspace blankLines="1"/>
+
+<t hangText="uint OutgoingFree:">Free space on the outgoing data buffer.</t><vspace blankLines="1"/>
+
+<t hangText="uint ReTXUsed:">Amount of data in the retransmission queue.</t><vspace blankLines="1"/>
+
+<t hangText="void* TCBAddress:">Address of the connection TCB in the INL data segment.</t><vspace blankLines="1"/>
+
+<t hangText="byte CloseCause:">When the connection is closed (State member is TCPS_CLOSED), this member indicates the cause of the connection close as one of the TCPCC_* constants defined in INL.H.</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>IPInfo: Structure used by the SendIP function (send a raw datagram with automatic generation of the IP header). It has these members:</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="ip_address PeerIP:">Destination IP for the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="byte Protocol:">Value for the protocol field of the datargam.</t><vspace blankLines="1"/>
+
+<t hangText="byte TTL:">Value for the TTL (Time To Live) field of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="byte ToS:">Value for the ToS (Type of Service) field of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="void* Data:">Pointer to the data part of the datagram.</t><vspace blankLines="1"/>.
+
+<t hangText="uint DataLen:">Size of the data part of the datagram.</t><vspace blankLines="1"/>
+
+</list>
+
+
+<t>RawRcvInfo: Structure used by the RcvRaw function (retrieve a captured raw packet). It has these members:</t><vspace blankLines="1"/>
+
+<list style="hanging">
+
+<t hangText="uint IPHeaderLen:">Length of the IP header of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="uint DataLen:">Length of the data part of the datargam.</t><vspace blankLines="1"/>
+
+<t hangText="uint TotalLen:">Total length of the datargam.</t><vspace blankLines="1"/>
+
+<t hangText="byte ToS:">Value for the ToS (Type of Service) field of the datagram.</t><vspace blankLines="1"/>
+
+<t hangText="void* Datagram:">Pointer where the datagram is stored (must be set up by the application before calling RcvRaw).</t><vspace blankLines="1"/>.
+
+<t hangText="void* DataPart:">Pointer to the data part of the datagram.</t><vspace blankLines="1"/>
+
+</list>
+
+</list>
+
+</section>
+
+
+<!-- Functions reference -->
+
+<section title="Functions reference">
+
+<t>This section describes the functions provided by INLIB. Note that what the input and output parameters are, and how the functions relate to the INL routines, is the only information provided. For a detailed description about how INL operates in general and how the INL routines work in particular, please refer to the INL manual.</t>
+
+<t>All the referred data structures and constants are defined in INL.H.</t>
+
+
+<!-- INL management -->
+
+<section title="INL management functions">
+
+<t>These functions are for managing INL itself. Except for NetworkState, none of them do network access.</t>
+
+<t>* INL initialization</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte INLInit()</t><vspace blankLines="1"/>
+
+<t>Input: none</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 1 if INL is installed, 0 otherwise</t><vspace blankLines="1"/>
+
+<t>Related INL routine: none</t>
+
+</list>
+
+<t>This function initializes a memory area used by all the INLIB functions, and tells whether INL is installed or not. This function must be called once at the start of the application. Do NOT call any other INLIB function before calling INLInit, or when INLInit tells that INL is not installed.</t>
+
+
+<t>* INL version information</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: long INLVersion()</t><vspace blankLines="1"/>
+
+<t>Input: none</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: INL version encoded as 0xPPSSRRII (Primary, Secondary, Revision, Implementation)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: VERS_PAUSE</t>
+
+</list>
+
+
+<t>* INL state management</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte INLState(byte action)</t><vspace blankLines="1"/>
+
+<t>Input: one of:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>INLSTAT_QUERY: Query current state</t><vspace blankLines="1"/>
+
+<t>INLSTAT_PAUSE: Pause INL</t><vspace blankLines="1"/>
+
+<t>INLSTAT_ACTIVE: Activate INL</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: INL state after the function execution, either INLSTAT_PAUSE or INLSTAT_ACTIVE.</t><vspace blankLines="1"/>
+
+<t>Related INL routine: VERS_PAUSE</t>
+
+</list>
+
+
+<t>* Network state information</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte NetworkState()</t><vspace blankLines="1"/>
+
+<t>Input: none</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: one of:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>NETSTAT_UNAVAILABLE: Network is not available</t><vspace blankLines="1"/>
+
+<t>NETSTAT_OPENING: Network is initializing</t><vspace blankLines="1"/>
+
+<t>NETSTAT_READY: Network is available</t><vspace blankLines="1"/>
+
+<t>NETSTAT_CLOSING: Network is closing</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: NETWORK_STATE</t>
+
+</list>
+
+
+<t>* Wait for a timer interrupt</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte WaitInt()</t><vspace blankLines="1"/>
+
+<t>Input: none</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 1 if the interrupt was awaited for, 0 if it was not necessary to wait</t><vspace blankLines="1"/>
+
+<t>Related INL routine: WAIT_INT</t>
+
+</list>
+
+
+<t>* INL data segment read</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: uint INLGetData(void* address)</t><vspace blankLines="1"/>
+
+<t>Input: the address to be read on "address"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: the two-byte data read from the specified address of the INL data segment</t><vspace blankLines="1"/>
+
+<t>Related INL routine: GET_VAR</t>
+
+</list>
+
+
+<t>* INL data segment write (one byte)</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: void INLSetByte(void* address, byte data)</t><vspace blankLines="1"/>
+
+<t>Input: the address to be written on "address", the data to write on "data"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: none</t><vspace blankLines="1"/>
+
+<t>Related INL routine: SET_VAR</t>
+
+</list>
+
+
+<t>* INL data segment write (two bytes)</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: void INLSetWord(void* address, uint data)</t><vspace blankLines="1"/>
+
+<t>Input: the address to be written on "address", the data to write on "data"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: none</t><vspace blankLines="1"/>
+
+<t>Related INL routine: SET_VAR</t>
+
+</list>
+
+
+<t>* INL data segment block transfer</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: void INLCopyData(void* source, void* destination, uint length, byte direction)</t><vspace blankLines="1"/>
+
+<t>Input: the source address for the transfer on "source", the destination address for the transfer on "destination", the transfer length on "length", the transfer direcion on "direction" (see remarks)</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: none</t><vspace blankLines="1"/>
+
+<t>Related INL routine: COPY_DATA</t>
+
+</list>
+
+<t>The transfer direction must be either INLC_INL_TO_TPA (transfer from INL data segment to TPA) or INLC_TPA_TO_INL (transfer from TPA to INL data segment).</t>
+
+</section>
+
+
+<!-- Data manipulation -->
+
+<section title="Data manipulation functions">
+
+<t>These functions are for pure data manipulation. None of them access the network.</t>
+
+
+<t>* Host to network byte order conversion </t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: uint hton(uint value), ulong htonl(ulong value)</t><vspace blankLines="1"/>
+
+<t>Input: value to be converted on "value"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: the passed value, with the byte order reversed (that is, 0xAABB converted to 0xBBAA or 0xAABBCCDD converted to 0xDDCCBBAA)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: none</t>
+
+</list>
+
+<t>Note: INL.H defines ntoh and ntohl as alias for these functions.</t>
+
+
+
+<t>* IP address to string conversion</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: char* IPToString(ip_address ip,char* buffer)</t><vspace blankLines="1"/>
+
+<t>Input: IP address to convert in "ip", address of a 16-byte buffer where to store the generated string on "buffer"</t><vspace blankLines="1"/>
+
+<t>Output: a string representing the passed IP address on "buffer"</t><vspace blankLines="1"/>
+
+<t>Return: the same value passed on "buffer"</t><vspace blankLines="1"/>
+
+<t>Related INL routine: IP_STRING</t>
+
+</list>
+
+
+<t>* MD5 digest calculation</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte CalcMD5(void* source, void* dest, uint length)</t><vspace blankLines="1"/>
+
+<t>Input: address of the block of data to be digested on "source", address of a 16-byte buffer where to store the digest on "dest", block length (0 to 1024) on "length"</t><vspace blankLines="1"/>
+
+<t>Output: the MD5 digest of the block pointed by "source" stored on "dest"</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, 1 on error (the passed block length was greater than 1024)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: CALC_MD5</t>
+
+</list>
+
+
+<t>* Checksum calculation</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: uint CalcChecksum(void* source, uint length)</t><vspace blankLines="1"/>
+
+<t>Input: block of data to be checksummed on "source", block length (1 to 1024) on "length"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: the standard ones-complement checksum of the block pointed by "source". If a block length equal to 0 or greater than 1024 was specified, the return value is undefined.</t><vspace blankLines="1"/>
+
+<t>Related INL routine: CALC_CHKSUM</t>
+
+</list>
+
+
+<t>* Base64 engine initialization</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: void B64Init(byte linelength)</t><vspace blankLines="1"/>
+
+<t>Input: length of one Base64 encoded line on "linelength", 0 for infinite (used when encoding only)</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: none</t><vspace blankLines="1"/>
+
+<t>Related INL routine: B64_INIT</t>
+
+</list>
+
+
+<t>* Base64 block encoding</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte B64Encode(B64Info* info)</t><vspace blankLines="1"/>
+
+<t>Input: B64Info structure with the parameters for the encoding process on "info"</t><vspace blankLines="1"/>
+
+<t>Output: "info" appropriately updated (see remarks)</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, B64E_INV_BLOCK_SIZE error if info->Size was greater than 512</t><vspace blankLines="1"/>
+
+<t>Related INL routine: B64_ENCODE</t>
+
+</list>
+
+<t>After the function exection, the "info" structure members will have been updated as follows:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>"Size" will contain the size of the generated block</t><vspace blankLines="1"/>
+
+<t>"Src" will have been increased by the input block size</t><vspace blankLines="1"/>
+
+<t>"Dest" will have been increased by the generated block size</t><vspace blankLines="1"/>
+
+<t>"Cummulated" will contain the cummulated size of all the blocks that have been generated since the last execution of B64Init</t>
+
+</list>
+
+
+<t>* Base64 block decoding</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte B64Decode(B64Info* info)</t>
+
+</list>
+
+<t>This function behaves the same way as B64Encode, except that now the process performed is Base64 decoding and it can return two additional error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>B64E_INV_CHAR: an invalid Base64 character was found when decoding</t><vspace blankLines="1"/>
+
+<t>B64E_INV_TOTAL_SIZE: the total cummulated size of the input blocks is invalid (can happen only when decoding a final block)</t>
+
+</list>
+
+</section>
+
+
+<!-- Name resolution -->
+
+<section title="Name resolution functions">
+
+<t>These functions are for host name resolution via DNS server access.</t>
+
+
+<t>* DNS query for name resolution</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte DNSQuery(char* host, byte flags)</t><vspace blankLines="1"/>
+
+<t>Input: the host name to be resolved on "host", an OR-combination of zero or more of the following values on "flags":</t><vspace blankLines="1"/>
+
+<list>
+
+<t>DNSF_ABORT_QUERY_ONLY: Only abort the query currently in progress</t><vspace blankLines="1"/>
+
+<t>DNSF_ADDRESS_IS_IP: Parse the specified host name as an IP address</t><vspace blankLines="1"/>
+
+<t>DNSF_NOT_ABORT_EXISTING: Do not automatically abort an existing query in progress</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: one of:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>DNSQ_SUCCESS: ok, the query is in progress</t><vspace blankLines="1"/>
+
+<t>DNSQ_ERR_NO_NETWORK: error, the network is not available</t><vspace blankLines="1"/>
+
+<t>DNSQ_ERR_QUERY_IN_PROGRESS: error, DNSF_NOT_ABORT_EXISTING flag was specified but a query is in progress</t><vspace blankLines="1"/>
+
+<t>DNSQ_ERR_INVALID_IP: error, DNSF_ADDRESS_IS_IP flag was specified but the passed string is not a valid IP address</t><vspace blankLines="1"/>
+
+<t>DNSQ_ERR_NO_SERVERS: error, no DNS servers are configured</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: DNS_Q</t>
+
+</list>
+
+
+<t>* Name resolution process status</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: uint DNSState()</t><vspace blankLines="1"/>
+
+<t>Input: none</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: the primary status code on the high byte, the secondary status code on the low byte. If return & 0xFF00 is made, the result is one of the following codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>DNSS_NO_STATE: no query is in progress and no result is available for return</t><vspace blankLines="1"/>
+
+<t>DNSS_IN_PROGRESS: a query is in progress</t><vspace blankLines="1"/>
+
+<t>DNSS_COMPLETED: the query completed successfully, you can retrieve the result with the DNSResult function</t><vspace blankLines="1"/>
+
+<t>DNSS_ERROR: the query terminated with error</t><vspace blankLines="1"/>
+
+</list>
+
+<t>When the query terminates with error (DNSS_ERROR as the primary code), then the secondary code (return & 0xFF) is one of the DNSS_ERR_* constants. See the description of the DNS_S routine on the INL manual for the meaning of each error code.</t><vspace blankLines="1"/>
+
+<t>Related INL routine: DNS_S</t>
+
+</list>
+
+
+<t>* Name resolution result retrieval</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: ip_address DNSResult(byte clear)</t><vspace blankLines="1"/>
+
+<t>Input: "clear" set to 1 to clear the query result after the routine execution, set to 0 to keep the result available</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: the IP address resulting from the name resolution process initiated with a call to DNSQuery</t><vspace blankLines="1"/>
+
+<t>Related INL routine: DNS_S</t>
+
+</list>
+
+<t>Note: the IP address returned by this routine is meaningful only if there is a result available; that is, if (DNSState() & 0xFF00) == DNSS_COMPLETED.</t>
+
+</section>
+
+
+
+<!-- PING functions -->
+
+<section title="ICMP echo (PING) functions">
+
+<t>These functions are for sending and receiving ICMP echo requests and replies (PINGs).</t>
+
+
+<t>* Send echo request</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte SendPING(EchoInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: "info" structure appropriately filled with the parameters for sending the packet</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, 1 on error (network not available)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: SEND_ECHO</t>
+
+</list>
+
+
+<t>* Retrieve the oldest received echo reply</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte RcvPING(EchoInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: uninitialized EchoInfo structure on "info"</t><vspace blankLines="1"/>
+
+<t>Output: "info" appropriately filled with information about the retrieved packet</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, 1 on error (no echo replies available for retrieval)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: RCV_ECHO</t>
+
+</list>
+
+</section>
+
+
+<!-- UDP functions -->
+
+<section title="UDP functions">
+
+<t>These functions are for sending and receiving UDP datagrams.</t>
+
+
+<t>* Send UDP datagram</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte SendUDP(UDPInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: "info" structure appropriately filled with the parameters for sending the datagram</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, 1 on error (network not available)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: UDP_SEND</t>
+
+</list>
+
+
+<t>* Retrieve the oldest received UDP datagram</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte RcvUDP(UDPInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: UDPInfo structure whose "Datagram" member contains the address where the datagram data part will be stored (0 to discard the datagram data part)</t><vspace blankLines="1"/>
+
+<t>Output: datagram data part copied to info->Datagram (except if info->Datagram was 0), and the other members of "info" filled with information about the datagram (even if info->Datagram was 0)</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, 1 on error (no datagrams available for retrieval)</t><vspace blankLines="1"/>
+
+<t>Related INL routine: UDP_RCV</t>
+
+</list>
+
+</section>
+
+
+<!-- TCP functions -->
+
+<section title="TCP functions">
+
+<t>These functions are for opening, closing, managing, sending data to, and receiving data from TCP connections.</t>
+
+
+<t>* Open a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: TCPHandle TCPOpen(TCPOpenInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: TCPOpenInfo structure filled with the parameters for opening the connection</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: a TCP connection handle on success, or an error code otherwise. Error codes are the same as the ones returned by the INL routine TCP_OPEN, but with an excess of 128. Possible error codes are:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCPO_ERR_BASE: use this value to distinguish whether the returned value is a TCP handle or an error code; error codes are always greater than TCPO_ERR_BASE</t><vspace blankLines="1"/>
+
+<t>TCPO_ERR_TOO_MANY_CONNS: too many TCP connections are open already</t><vspace blankLines="1"/>
+
+<t>TCPO_ERR_NO_NETWORK: network not available</t><vspace blankLines="1"/>
+
+<t>TCPO_ERR_CONN_EXISTS: connection exists, try another local port</t><vspace blankLines="1"/>
+
+<t>TCPO_ERR_INV_IP_FOR_ACTIVE: invalid IP address (0.0.0.0) specified for active connection</t><vspace blankLines="1"/>
+
+<t>TCPO_ERR_INV_TIMER: invalid value of the user timeout value (must be 1 to 1080, or 0xFFFF)</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_OPEN</t>
+
+</list>
+
+
+<t>* Close a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPClose(TCPHandle handle)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection to be closed</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CONN_CLOSED: the specified connection is closed</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_CLOSE</t>
+
+</list>
+
+
+<t>* Abort a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPAbort(TCPHandle handle)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection to be aborted</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CONN_CLOSED: the specified connection is closed</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_ABORT</t>
+
+</list>
+
+
+<t>* Send data to a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPSend(TCPHandle handle, void* data, uint length, byte push)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection on "handle", the address of the data on "data", the amount of data to send on "length". "push" equal to 1 to send the data PUSHed, 0 otherwise</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CONN_CLOSED: the specified connection is closed</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CANT_SEND: the connection is in a state that doesn't allow sending data</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_BUFFER_FULL: there is not enough room on the connection's output buffer to store the specified amount of data</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_SEND</t>
+
+</list>
+
+
+<t>* Retrieve incoming data from a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPRcv(TCPHandle handle, void* data, uint* length)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection on "handle", the address where to store the data on "data", the amount of data to retrieve on "length"</t><vspace blankLines="1"/>
+
+<t>Output: the amount of data actually retrieved on "length"</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CONN_CLOSED: the specified connection is closed</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_RCV</t>
+
+</list>
+
+
+<t>* Obtain the status of a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPStatus(TCPHandle handle, TCPStateInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection on "handle", an uninitialized TCPStateInfo structure on "info"</t><vspace blankLines="1"/>
+
+<t>Output: "info" filled with information about the connection</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_STATUS</t>
+
+</list>
+
+<t>Note: see the INL manual for an explanation of the possible values for the "CloseCause" member of the TCPStateInfo structure (these are defined as TCPCC_* constants in INL.H).</t>
+
+
+<t>* Flush the output buffer of a TCP connection</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte TCPFlush(TCPHandle handle)</t><vspace blankLines="1"/>
+
+<t>Input: the handle of the TCP connection whosw output buffer is to be flushed</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: 0 on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>TCP_ERR_INVALID_HANDLE: invalid connection handle</t><vspace blankLines="1"/>
+
+<t>TCP_ERR_CONN_CLOSED: the specified connection is closed</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: TCP_FLUSH</t>
+
+</list>
+
+</section>
+
+
+<!-- Raw packet functions -->
+
+<section title="Raw packets functions">
+
+<t>These functions are for sending and capturing raw packets on the network.</t>
+
+
+<t>* Send a raw IP datagram (with automatic IP header generation)</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte SendIP(IPInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: IPInfo structure filled with the parameters for sending the datagram</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: RAWS_SUCCESS on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>RAWS_NO_NETWORK: network not available</t><vspace blankLines="1"/>
+
+<t>RAWS_INVALID_SIZE: invalid data part size (must be 0 to 556)</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: RAW_SEND</t>
+
+</list>
+
+<t>Note: the following constants are defined for the "Protocol" field of the IPInfo structure: IPPROTO_ICMP, IPPROTO_IP, IPPROTO_TCP, IPPROTO_UDP. You can use these constants or any other IP protocol code.</t>
+
+
+<t>* Send a raw packet (without automatic IP header generation)</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte SendRaw(void* packet, uint length)</t><vspace blankLines="1"/>
+
+<t>Input: the address of the packet in "packet", the total packet length in "length"</t><vspace blankLines="1"/>
+
+<t>Output: none</t><vspace blankLines="1"/>
+
+<t>Return: RAWS_SUCCESS on success, or one of these error codes:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>RAWS_NO_NETWORK: network not available</t><vspace blankLines="1"/>
+
+<t>RAWS_INVALID_SIZE: invalid packet size (must be 0 to 576)</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: RAW_SEND</t>
+
+</list>
+
+
+<t>* Control the capture of a raw packet</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte ControlRaw(byte action, uint* size, byte* proto)</t><vspace blankLines="1"/>
+
+<t>Input: depends on the desired action (parameters not mentioned must be uninitialized variables):</t><vspace blankLines="1"/>
+
+<list>
+
+<t>For requesting the current capture status: action=RAWC_QUERY_STAT</t><vspace blankLines="1"/>
+
+<t>For initiating a capture process: action=RAWC_REQUEST_CAP, &proto=required IP protocol for the capture</t><vspace blankLines="1"/>
+
+<t>For cancelling a capture process: action=RAWC_CANCEL_CAP</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Output: &size=size of the captured datagram (only if RAWC_CAPTURED is returned), &proto=required IP protocol for the capture (only if RAWC_CAPTURED or RAWC_CAPTURE_PENDING is returned)</t><vspace blankLines="1"/>
+
+<t>Return: an status code or an error code as follows:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>RAWC_NO_CAPTURE: no capture has been requested</t><vspace blankLines="1"/>
+
+<t>RAWC_CAPTURE_PENDING: a capture has been requested but no packet has been captured</t><vspace blankLines="1"/>
+
+<t>RAWC_CAPTUREND: a packet has been captured, it can be retrieved with RcvRaw</t><vspace blankLines="1"/>
+
+<t>RAWC_ERR_BASE: use this value to distinguish whether the returned value is an status code or an error code; error codes are always greater than RAWC_ERR_BASE</t><vspace blankLines="1"/>
+
+<t>RAWC_ERR_NO_NETWORK: error, network lost when a packet capture was pending</t><vspace blankLines="1"/>
+
+<t>RAWC_ERR_INV_ACTION: error, invalid action requested</t><vspace blankLines="1"/>
+
+</list>
+
+<t>Related INL routine: RAW_CONTROL</t>
+
+</list>
+
+<t>Note: for the "proto" parameter, the same IPPROTO_* constants defined for SendIP can be used, plus the following two:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>IPPROTO_ALL: capture the first arriving packet, regardless of its protocol</t><vspace blankLines="1"/>
+
+<t>IPPROTO_ALL_NON_INL: capture the first packet that is not TCP, UDP or ICMP echo request or reply</t>
+
+</list>
+
+
+<t>* Retrieve a captured raw packet</t><vspace blankLines="1"/>
+
+<list>
+
+<t>Declaration: byte RcvRaw(RawRcvInfo* info)</t><vspace blankLines="1"/>
+
+<t>Input: RawRcvInfo structure whose "Datagram" member must contain the address where the packet will be stored</t><vspace blankLines="1"/>
+
+<t>Output: the packet copied to info->Datagram, other fields of "info" filled with information about the captured packet</t><vspace blankLines="1"/>
+
+<t>Return: RAWR_SUCCESS on success, RAWR_NO_PACKETS if no captured packet is available</t><vspace blankLines="1"/>
+
+<t>Related INL routine: RAW_RCV</t><vspace blankLines="1"/>
+
+</list>
+
+
+</section>
+
+</section>
+
+
+<!-- Direct call to INL routines -->
+
+<section title="Direct call to INL routines">
+
+<t>In addition to the collection of functions listed in previous section, INLIB provides a mechanism for calling arbitrary INL routines from inline assembler code. This may be useful for calling implementation-dependent routines, or simply to improve the performance of the program.</t>
+
+<t>To call an INL routine from inline assembler code, use the following sequence of assembler instructions:</t><vspace blankLines="1"/>
+
+<list>
+
+<t>call _CALL_INL</t>
+<t>.dw  #address</t>
+
+</list>
+
+<t>All input and output register values are preserved (except the alternate registers).</t>
+
+<t>For example, a quick way to empty the UDP receive buffer (an action that should be done by all the UDP based applications at startup) is as follows:</t>
+
+<figure><artwork>
+void EmptyUDPBuffer() _naked
+{
+        _asm
+        push    ix
+EMPUDP: ld      hl,0         ;This discards the datagram's data part
+        call    _CALL_INL
+        .dw     #0x405A      ;Address of UDP_RCV
+        jr      nc,EMPUDP    ;Will return Cy=1 when buffer is empty
+        pop     ix
+        ret
+        _endasm;
+}
+</artwork></figure>
+
+</section>
+
+</middle>
+
+<back/> <!-- For author's address generation -->
+
+</rfc>
+
+
