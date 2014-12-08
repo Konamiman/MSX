@@ -1,11 +1,12 @@
 ;NestorMan - resident memory manager
+
 ;Go to http://konamiman.com#nestorman for the documentation.
 
 ;=======================================
 
 	;--- NetorMan - Gestor residente de memoria dinamica
-	;    Por Konami Man, 4-2003
-	;    Version 1.3
+	;    Por Konami Man, 2-2002
+	;    Version 1.22
 
 	;Cambios respecto a 1.11:
 	;- La funcion 1 devuelve Cy=1 si NestorMan ya se estaba
@@ -31,22 +32,11 @@
 	;- Corregido un fallo grave en MALLOC (REQ2REAL) y MFREE
 	;- Corregidos varios "call FUNxx" a "call _FUNxx"
 
-	;Cambios respecto a 1.22:
-	;- Cambiar el metodo de reserva de memoria (clusterizacion --> lista)
-	;- Funcion para devolver el numero de segmento conectado en pagina 2
-	;- Funcion para redimensionar un bloque de memoria
-	;- Funcion para rellenar un bloque reservado con un byte
-
-	;Cambios respecto a 1.22 (PENDIENTE):
-	;- Funcion para redimensionar un elemento de lista
-	;- Funcion para intercambiar dos elementos de lista
-	;- Funciones para insertar/extraer un flujo de bytes usando elementos de lista
-	;- Funcion para reallocatar un fichero .REL (y ejecutar codigo?)
-
 	.label	20
 
 VERPRIM:	equ	1
-VERSEC:	equ	#0300
+VERSEC:	equ	#0202
+SYSMAT:	equ	123	;Bytes MAT siempre ocupados en seg. NMAN
 
 DOSENTRY:	equ	5	;5 o #F37D
 
@@ -147,11 +137,6 @@ _CLOSE:	equ	#45
 _READ:	equ	#48
 _WRITE:	equ	#49
 _SEEK:	equ	#4A
-_FORK:	equ	#60
-_JOIN:	equ	#61
-_DEFAB:	equ	#63
-_DEFER:	equ	#64
-_ERROR:	equ	#65
 
 ENASLT:	equ	#0024
 EXTBIO:	equ	#FFCA
@@ -172,7 +157,6 @@ EXPTBL:	equ	#FCC1
 	dummy
 	dummy
 	dummy
-	;dummy
 
 
 ;--- Comprobamos presencia del DOS 2
@@ -187,7 +171,7 @@ NODOS2:	ld	de,NOD2STR
 	ld	c,STROUT
 	call	5
 	ret
-NOD2STR:	db	13,10,"NestorMan #1.3 requires DOS 2!",13,10,"$"
+NOD2STR:	db	13,10,"NestorMan #1.22 requires DOS 2!",13,10,"$"
 OKDOS2:	;
 
 
@@ -224,7 +208,7 @@ OKDOS2:	;
 	call	5
 	jp	FIN
 NOTPAS:	db	13,10,"ERROR: too small TPA (end of TPA must be at least #C100).",13,10
-	db	"NestorMan #1.3 not installed.",13,10,"$"
+	db	"NestorMan #1.22 not installed.",13,10,"$"
 
 FIN:	ld	b,0
 	ld	c,TERM
@@ -248,7 +232,7 @@ OKTPA:	;
 	jp	FIN
 
 NOFSTR:	db	13,10,"ERROR: no free segments on any mapper.",13,10
-	db	"NestorMan #1.3 not installed.",13,10,"$"
+	db	"NestorMan #1.22 not installed.",13,10,"$"
 
 OKRESEG:	ld	(RESEG000F),a
 	ld	(RESEG000E),a
@@ -345,16 +329,6 @@ OKRESEG:	ld	(RESEG000F),a
 	add	hl,bc
 	ld	(CALLP3+1),hl
 
-	ld	hl,OLDSLOT000F
-	ld	bc,INIRES000F
-	or	a
-	sbc	hl,bc
-	ld	bc,(HIGHMEM)
-	add	hl,bc
-	ld	(OLDSLOT_DIR),hl
-
-	ld	hl,(HIGHMEM)
-	ld	(SAVE_HM),hl
 
 	;--- INITMEM:  Inicializa el tinglado:
 	;              - Limpia la parte de datos del segmento
@@ -410,7 +384,7 @@ INITMEM:	ld	hl,_ALL_SEG
 
 	ei
 
-	ld	hl,NESTENV	;Establecemos variable NESMAN como 1.3
+	ld	hl,NESTENV	;Establecemos variable NESMAN como 1.22
 	ld	de,NESTVAL
 	ld	c,SENV
 	call	5
@@ -421,12 +395,12 @@ INITMEM:	ld	hl,_ALL_SEG
 	ld	hl,#0081
 	jp	CALSYS
 
-INSSTR:	db	13,10,"NestorMan #1.3 - The resident dynamic memory manager",13,10
-	db	"By Konami Man, 4-2003",13,10
+INSSTR:	db	13,10,"NestorMan #1.22 - The resident dynamic memory manager",13,10
+	db	"By Konami Man, 2-2002",13,10
 	db	"Installed. Have fun! (^^)/",13,10,"$"
 
 NESTENV:	db	"NESMAN",0
-NESTVAL:	db	"1.3"
+NESTVAL:	db	"1.22"
 NULVAL:	db	0
 
 ;--- Desinstalacion si el parametro es "U"
@@ -444,7 +418,7 @@ NODES:	ld	de,YAINSTR	;Si encontramos un 0: no hay parametros
 	call	5
 	jp	FIN
 
-YAINSTR:	db	13,10,"NestorMan #1.3 already installed.",13,10
+YAINSTR:	db	13,10,"NestorMan #1.22 already installed.",13,10
 	db	"NESMAN U to uninstall.",13,10,"$"
 
 CHKU:	and	%11011111	;Si encontramos algo tiene que ser "U"
@@ -511,7 +485,7 @@ OKHMEM:	push	ix,bc
 	ld	hl,(POS2COM)
 	jp	CALSYS
 
-DESSTR:	db	13,10,"NestorMan #1.3 uninstalled.",13,10,"$"
+DESSTR:	db	13,10,"NestorMan #1.22 uninstalled.",13,10,"$"
 
 
 ;--- Subrutina de reubicacion de un codigo
@@ -639,16 +613,14 @@ SysTxT:	defb	03Ah,0CAh
 SysCom:	db	34,")"
 	defb	0,01Ah
 
-_CLEAN4:	ld	hl,PARTRE1!-#4000+1024-2	;Marca bloque de codigo
-	ld	a,h	;de NestorMan como ocupado
-	ld	(#4000),a
-	ld	a,l
-	ld	(#4001),a
-	ld	hl,#4000-(PARTRE1!-#4000+1024-2)-4 or #8000
-	ld	a,h
-	ld	(PARTRE1!+1024),a
-	ld	a,l
-	ld	(PARTRE1!+1024+1),a
+_CLEAN4:	ld	hl,#4000	;Limpia la zona de NESMAN en pag. 1
+	ld	de,#4001	;(solo MAT)
+	ld	bc,SYSMAT
+	ld	(hl),255
+	ldir
+	ld	bc,256-SYSMAT-1
+	ld	(hl),0
+	ldir
 	ret
 
 
@@ -729,18 +701,15 @@ OKBI2@sym:	ld	hl,(NEWHM@sym)
 FUNCION@sym:	ld	a,-1
 	ld	(EXECU@sym),a
 	pop	af	;Otra funcion
-FUNCION2@sym:	push	af,bc,de,hl,ix,iy
+	push	af,bc,de,hl,ix,iy
 	call	GETSLOT1@sym	;Guardamos el slot conectado en pag. 2
 	ld	(OLDSLOT@sym),a
 	ld	b,a
 	ld	a,(RESLOT@sym)
 	call	PUTSLOT1@sym	;Conectamos el slot si no es el que
-	;ld      a,2
 	call	GET_P1@sym
 	ld	(OLDSEG@sym),a
 	ld	a,(RESEG@sym)
-	;ld      (#F2C8),a
-	;out     (#FD),a
 	call	PUT_P1@sym
 	ld	a,#C9	;RET para que la rutina no modifique
 	ld	(RES_EXECU),a	;el flag EXECU al terminar
@@ -754,8 +723,6 @@ FUNCION2@sym:	push	af,bc,de,hl,ix,iy
 	ld	a,(OLDSLOT@sym)
 	call	PUTSLOT1@sym
 	ld	a,(OLDSEG@sym)
-	;ld      (#F2C8),a
-	;out     (#FD),a
 	call	PUT_P1@sym
 	pop	iy,ix,hl,de,bc
 	xor	a
@@ -773,7 +740,7 @@ CAL_SEG@sym:	jp	#0000
 NEWHM@sym:	dw	0
 OLDHM@sym:	dw	0
 OLDSLOT@sym:	db	0
-OLDSEG@sym:	db	0	;PONER ESTA JUSTO DESPUES DE OLDSLOT
+OLDSEG@sym:	db	0
 EXECU@sym:	db	0	;-1 si ya se esta ejecutando NESMAN
 INETSLOT@sym:	db	0	;PONER ESTA JUSTO DESP DE INETSLOT
 INETSEG@sym:	db	0
@@ -954,6 +921,8 @@ PUTSLOT2@sym:	cp	b
 	call	ENASLT
 	ei
 	ret
+
+	;ds      250
 ;NEWSP@sym:        ;
 
 ENDRES@sym:	;                        ;Fin de la parte residente en pagina 3
@@ -976,7 +945,7 @@ PARTRE1:	org	#4100
 ;---  PUNTO DE EJECUCION Y TABLA DE SALTO  ---
 ;---------------------------------------------
 
-MAXFUN:	equ	35
+MAXFUN:	equ	32
 
 FUNBASE:	;
 	jp	FUN0
@@ -1012,9 +981,6 @@ FUNBASE:	;
 	jp	FUN30
 	jp	FUN31
 	jp	FUN32
-	jp	FUN33
-	jp	FUN34
-	jp	FUN35
 
 ENTRYP:	ex	af,af
 	ld	a,MAXFUN
@@ -1123,15 +1089,14 @@ CHKCLEAN:	nop		;"nop" para funcion 5, "ret" para funciones 0 y 4
 	push	bc
 	call	PUT_P2
 
-	ld	a,(#8000)
-	ld	h,a
-	ld	a,(#8001)
-	ld	l,a
-	ld	de,#BFFE
-	call	COMP
-	scf
-	jr	nz,CHKCLEND
-	ccf
+	ld	hl,#8004
+	ld	b,256-4
+	ld	c,0
+CHKCLE:	ld	a,(hl)
+	inc	hl
+	or	c
+	ld	c,a
+	djnz	CHKCLE
 
 	;push    af
 	;ld      a,(SAVESLOT)
@@ -1141,9 +1106,13 @@ CHKCLEAN:	nop		;"nop" para funcion 5, "ret" para funciones 0 y 4
 	;ld      a,(SAVESEG)
 	;call    PUT_P2
 	;pop     af
-CHKCLEND:	call	LOADP2
+	call	LOADP2
 
 	pop	bc,de,hl
+	or	a
+	ld	a,d
+	ret	z
+	scf
 	ret
 
 SAVESLOT:	db	0
@@ -1293,10 +1262,10 @@ _FUN3:	ld	e,a
 	;             Cy = 1 si hay error (no queda memoria libre)
 
 FUN4:	call	SET_EXECU
-	call	_FUN4
+	call	MALLOC	;_FUN4
 	jp	RES_EXECU
 
-_FUN4:	jp	MALLOC
+;_FUN4:       jp      MALLOC
 
 
 	;--- Funcion 5: Reserva un bloque en un segmento determinado
@@ -1311,43 +1280,51 @@ FUN5:	call	SET_EXECU
 	jp	RES_EXECU
 
 _FUN5:	ld	b,a
-	ld	(FUN5SEG),a
 
-	ld	a,h
-	or	l	;Error si se requiere tamaqo 0
+	dec	hl	;Error si el tamanyo requerido
+	ld	a,h	;es >16384-256 (#3F00)
+	and	%11000000
 	scf
-	ret	z
+	ret	nz
+	inc	hl
+	call	REQ2REAL
 
-	ld	de,#3FFF	;Error si el tamanyo requerido
-	call	COMP	;es >16382
-	ret	c
-	ld	(TAMREQ),hl
-
-	call	SAVEP2	;Conecta el segmento en cuestion
 	ld	a,b
+	call	SAVEP2
 	call	PUT_S2
-	jr	c,FUN5END
+	ret	c
 
-	ld	hl,(TAMREQ)
+	ld	hl,(TAMREAL)
+	push	bc
 	call	MAXMIN	;Tamanyo encontrado en HL, dir. en DE
-	ld	(FUN5DIR),de
-	jr	c,FUN5END
+	pop	bc
+	ld	a,b
+	call	c,LOADP2
+	ret	c
+	ld	(DIRFND),de
+	push	bc
 
-	ex	de,hl	;HL=Direccion
-	ld	bc,(TAMREQ)
-	call	MARK_RSV	;Marca bloque reservado
+OKF14:	ex	de,hl
+	ld	de,(TAMREQ)
+	dec	de
+	dec	de
+	ld	(hl),e
+	inc	hl
+	ld	(hl),d
+	inc	hl
+	ld	a,#C0
+	ld	de,(TAMREAL)
+	call	ADJMAT	;Pone los bits adecuados de MAT a 1
+
+	call	LOADP2
+	ld	hl,(DIRFND)
+	inc	hl
+	inc	hl
+	pop	bc
+	ld	a,b
 	or	a
 
-FUN5END:	call	LOADP2
-	ld	hl,(FUN5DIR)
-	inc	hl
-	inc	hl
-	ld	a,(FUN5SEG)
-
 	ret
-
-FUN5SEG:	db	0
-FUN5DIR:	dw	0
 
 
 	;--- Funcion 6: Libera un bloque de memoria
@@ -1356,10 +1333,10 @@ FUN5DIR:	dw	0
 	;    Salida:  Cy = 1 si el segmento no existe, o es el 0 o el 3
 
 FUN6:	call	SET_EXECU
-	call	_FUN6
+	call	MFREE	;_FUN6
 	jp	RES_EXECU
 
-_FUN6:	jp	MFREE
+;FUN6:       jp      MFREE
 
 
 	;--- Funcion 7: Reserva un segmento nuevo
@@ -2115,7 +2092,7 @@ _FUN24:	ld	d,a
 
 
 	;--- Funcion 25: Obtencion y/o eliminacion de un elemento a TPA
-	;    Entrada:  A-IX = Localizad r (si es interna, solo A)
+	;    Entrada:  A-IX = Localizador (si es interna, solo A)
 	;              B = Que elemento obtener y/o eliminar
 	;                  0 = El actual
 	;                  1 = El primero
@@ -2176,12 +2153,12 @@ F253:	ld	(F25_P),a	;Guarda el puntero obtenido
 	dec	hl
 	dec	hl
 	call	_FUN12	;ERA "call _FUN12" en v. 1.21
-	ld	d,b
+	ld	e,b
 	push	de
 	inc	hl
 	call	_FUN12
 	pop	de
-	ld	e,b
+	ld	d,b
 	dec	de	;Decrementa el tamanyo de los punteros
 	dec	de
 	dec	de
@@ -2511,214 +2488,6 @@ _FUN32:	call	FUN1
 	ret
 
 
-	;--- Funcion 33: Devuelve el numero de segmento logico conectado en pag. 2
-	;    Entrada: -
-	;    Salida:  A = Numero de segmento
-
-FUN33:	call	SET_EXECU
-	call	GET_S2
-	jp	RES_EXECU
-
-
-	;--- Funcion 34: Cambia el tamanyo de un bloque reservado
-	;    Entrada: H = Segmento del bloque
-	;	IX= Direccion del bloque
-	;	IY= Nuevo tamanyo
-	;  	A = Banderas, a 1 significan:
-	;       0: BC es relativo al tamanyo actual del bloque (inc o dec)
-	;		1: No crear un bloque nuevo si no se puede redimensionar
-	;                 2: No copiar los datos anteriores si hay que crear un bloque nuevo
-	;		3: Si hay que crear un bloque nuevo, crearlo en el mismo segmento
-	;		que el antiguo
-	;    Salida:  BC = Nuevo tamanyo real (convertido si BC era relativo)
-	;             IX = Nueva direccion del bloque (o preservada)
-	;	H  = Nuevo segmento del bloque (o preservado)
-	;	Cy = 0 si OK, entonces
-	;                 A=0: No se ha creado un bloque nuevo
-	;		A=1: Se ha creado un bloque nuevo
-	;	Cy = 1 si error, que es:
-	;                 A=1: El segmento no existe
-	;                 A=2: El bloque no esta reservado
-	;		A=3: No se puede redimensionar, no se crea bloque nuevo
-	;    		(sslo si A1=1 a la entrada)
-	;                 A=4: Se ha intentado crear un bloque nuevo pero no hay
-	;		suficiente memoria
-	;		A=5: El tamanyo requerido es 0
-
-FUN34:	call	SET_EXECU
-	call	_FUN34
-	jp	RES_EXECU
-
-	;--- Inicializacisn
-
-_FUN34:	ld	(F34_DIR_OLD),ix
-	ld	(F34_DIR_NEW),ix
-	ld	(F34_FLAGS),a
-	ld	(F34_SIZE_NEW),iy
-	ld	a,h
-	ld	(F34_SEG_OLD),a
-	ld	(F34_SEG_NEW),a
-
-	push	ix
-	call	SAVEP2
-	call	PUT_S2
-	pop	ix
-	ld	a,1
-	jp	c,F34_END	;Existe el segmento?
-	ld	d,(ix-2)
-	ld	e,(ix-1)
-	ld	(F34_SIZE_OLD),de
-
-	ld	hl,(F34_DIR_OLD)
-	dec	hl
-	dec	hl
-	call	MAX_BLSIZE
-	ld	a,2
-	jp	c,F34_END	;El bloque esta realmente reservado?
-
-	ld	a,(F34_FLAGS)
-	bit	0,a
-	jr	z,FUN34_2
-	ld	hl,(F34_SIZE_NEW)	;El tamanyo indicado es relativo?
-	ld	de,(F34_SIZE_OLD)	;En ese caso lo cambiamos a absoluto
-	add	hl,de
-	ld	(F34_SIZE_NEW),hl
-	ld	a,h
-	or	l
-	ld	a,5
-	scf
-	jr	z,F34_END
-FUN34_2:	;
-
-	push	bc	;BC = Tamanyo maximo del bloque
-	pop	hl	;Se puede redimensionar el bloque existente?
-	ld	de,(F34_SIZE_NEW)
-	inc	hl
-	call	COMP
-	jr	nc,F34_3	;Salta si nuevo>maximo --> nuevo>=maximo+1 -->maximo+1<nuevo
-
-	;--- El bloque se puede redimensionar: lo idemamos
-
-	ld	hl,(F34_DIR_OLD)	;nuevo<=maximo: Redimensionamos el bloque existente
-	dec	hl
-	dec	hl
-	push	hl
-	call	MARK_FREE
-	pop	hl
-	ld	bc,(F34_SIZE_NEW)
-	call	MARK_RSV
-	xor	a	;Terminamos con A=0 y Cy=0
-	jr	F34_END
-
-	;--- No se puede redimensionar: creamos uno nuevo
-
-F34_3:	ld	a,(F34_FLAGS)
-	bit	1,a	;Primero comprobamos si en vez de redimensionar
-	ld	a,3	;hay que terminar con error
-	scf
-	jr	nz,F34_END
-
-	ld	hl,F34_4	;Creamos nuevo bloque, usando la funcisn adecuada
-	push	hl	;segzn el flag 3 pasado a la entrada
-	ld	hl,(F34_SIZE_NEW)
-	ld	a,(F34_FLAGS)
-	bit	3,a
-	ld	a,(F34_SEG_OLD)
-	jp	nz,_FUN5
-	jp	_FUN4
-F34_4:	ld	(F34_SEG_NEW),a
-	ld	(F34_DIR_NEW),hl
-	ld	a,4
-	jr	c,F34_END
-
-	;--- Ahora copiamos los datos del bloque nuevo al antiguo,
-	;    y borramos el antiguo
-
-	ld	a,(F34_FLAGS)
-	bit	2,a	;Primero comprobamos si realmente
-	jp	nz,F34_5	;hay que copiar los datos
-
-	ld	a,(F34_SEG_NEW)
-	ld	b,a	;Copiamos los datos
-	ld	a,(F34_SEG_OLD)
-	ld	ix,(F34_DIR_OLD)
-	ld	iy,(F34_DIR_NEW)
-	ld	hl,(F34_SIZE_OLD)
-	call	_FUN14
-
-F34_5:	ld	a,(F34_SEG_OLD)	;Borramos el bloque antiguo
-	ld	hl,(F34_DIR_OLD)
-	call	_FUN6
-
-	ld	a,1	;Fin con A=1, Cy=0
-	or	a
-
-	;--- Fin
-
-F34_END:	call	LOADP2
-	ld	bc,(F34_SIZE_NEW)
-	push	af
-	ld	a,(F34_SEG_NEW)
-	ld	h,a
-	pop	af
-	ld	ix,(F34_DIR_NEW)
-	ret
-
-F34_FLAGS:	db	0
-F34_SEG_OLD:	db	0
-F34_SEG_NEW:	db	0
-F34_DIR_OLD:	dw	0
-F34_DIR_NEW:	dw	0
-F34_SIZE_OLD:	dw	0
-F34_SIZE_NEW:	dw	0
-
-
-	;--- Funcion 35: Rellena un bloque reservado con un byte
-	;    Entrada: A-HL = Direccion del bloque
-	;	B = Byte a rellenar con (!?)
-	;    Salida:  Cy=1 si error, entonces:
-	;               A=1: No existe ese segmento
-	;	A=2: El bloque no esta reservado
-
-FUN35:	call	SET_EXECU
-	call	_FUN35
-	jp	RES_EXECU
-
-_FUN35:	ld	d,b	;D = Dato
-	call	SAVEP2
-	call	PUT_S2
-	;pop	bc,hl
-	ld	a,1
-	jr	c,LOADP2
-
-	push	hl
-	pop	ix
-	ld	b,(ix-2)
-	ld	c,(ix-1)
-	bit	7,b	;BC = Tamanyo
-	ld	a,2
-	scf
-	jp	nz,LOADP2	;Error si no esta reservado
-
-	dec	bc
-	ld	a,b
-	or	c
-	ld	a,d
-	jr	nz,F35_2
-
-	ld	(hl),a	;El bloque es de un solo byte
-	xor	a
-	jp	LOADP2
-
-F35_2:	push	hl	;El bloque es de al menos dos bytes
-	pop	de
-	inc	de
-	ld	(hl),a
-	ldir
-	xor	a
-	jp	LOADP2
-
-
 ;------------------------
 ;---  RUTINAS VARIAS  ---
 ;------------------------
@@ -2942,20 +2711,24 @@ GET_P3:	jp	#F22D
 ;Pone los cuatro primeros bytes de MAT a #FF,
 ;y el resto a 0 (solo MAT)
 
-CLEAN:	ld	hl,#FEBF	;(16384-2) or #8000, guardado en big endian
-	ld	(#8000),hl
+CLEAN:	ld	hl,#8000
+	ld	de,#8001
+	ld	bc,4
+	ld	(hl),255
+	ldir
+	ld	bc,256-4-1
+	ld	(hl),0
+	ldir
 	ret
 
-CLEAN4:	ld	hl,PARTRE1!-#4000+1024-2	;Idem del segmento de NESMAN en pag. 1
-	ld	a,h
-	ld	(#4000),a
-	ld	a,l
-	ld	(#4001),a
-	ld	hl,#4000-(PARTRE1!-#4000+1024-2)-4 or #8000
-	ld	a,h
-	ld	(PARTRE1!+1024),a
-	ld	a,l
-	ld	(PARTRE1!+1024+1),a
+CLEAN4:	ld	hl,#4000	;Idem del segmento de NESMAN en pag. 1
+	ld	de,#4001	;(solo MAT)
+	ld	bc,SYSMAT
+	ld	(hl),255
+	ldir
+	ld	bc,256-SYSMAT-1
+	ld	(hl),0
+	ldir
 	ret
 
 
@@ -2972,48 +2745,12 @@ CLEAN4:	ld	hl,PARTRE1!-#4000+1024-2	;Idem del segmento de NESMAN en pag. 1
 ;    Regist:  AF, BC, DE, HL
 
 
-MAXMIN:	ld	(MAXMIN_REQ),hl
-	ld	hl,#7FFF
-	ld	(MAXMIN_TAMFND),hl
-
-	scf
-MAXMIN_LOOP:	call	NEXT_BLOCK
-	jr	c,MAXMIN_END
-	or	a
-	jr	nz,MAXMIN_LOOP
-
-	push	hl
-	pop	ix
-	push	bc
-	pop	hl
-	ld	de,(MAXMIN_REQ)	;Es mayor o igual al requerido?
-	call	COMP
-	jr	nc,MAXMIN_LOOP
-
-	ld	de,(MAXMIN_TAMFND)	;Es menor que el menor encotnrado?
-	call	COMP
-	ccf
-	jr	nc,MAXMIN_LOOP
-
-	ld	(MAXMIN_TAMFND),hl
-	push	ix
-	pop	hl
-	ld	(MAXMIN_DIRFND),hl
-	or	a
-	jr	MAXMIN_LOOP
-
-MAXMIN_END:	ld	de,(MAXMIN_DIRFND)
-	ld	hl,(MAXMIN_TAMFND)
-	ld	a,h
-	cp	#7F
-	scf
-	ret	z
-	ccf
-	ret
-
-MAXMIN_REQ:	dw	0
-MAXMIN_DIRFND:	dw	0
-MAXMIN_TAMFND:	dw	0
+MAXMIN:	ld	a,#30	;#30 = Codigo de "jr nc"
+	ld	(JRNC),a
+	xor	a	;#00 = Codigo de "nop"
+	ld	(RETNC),a
+	ld	de,#7FFF
+	jr	MAXMID
 
 
 ;--- MIDLIB:  Mide la memoria total libre de un segmento,
@@ -3024,341 +2761,185 @@ MAXMIN_TAMFND:	dw	0
 ;             Cy = 1 si no hay ningun bloque libre
 ;    Registros: AF, BC, DE, HL
 
-MIDLIB:	ld	ix,0	;Va acumulando la memoria libre
+MIDLIB:	ld	a,#18	;#30 = Codigo de "jr"
+	ld	(JRNC),a
+	ld	a,#C9
+	ld	(RETNC),a	;#C9 = Codigo de "ret"
 	ld	hl,0
-	ld	(MAX_FND),hl
-	scf
-MIDLIB_LOOP:	push	ix
-	call	NEXT_BLOCK
-	pop	ix
-	jr	c,MIDLIB_END
+	ld	(LIBTOTAL),hl
+	ld	hl,1
+	ld	de,1
 
-	or	a
-	jr	nz,MIDLIB_LOOP	;El OR A ha hecho Cy=0
-	add	ix,bc		;IX = Tamanyo acumulado
+	;--- Codigo comun a MAXMIN y MIDLIB
 
-	push	bc
-	pop	hl
-	ld	de,(MAX_FND)	;DE=Tamaqo mayor bloque encontrado
-	call	COMP	;HL<DE --> NC
-	jr	nc,MIDLIB_LOOP
-	ld	(MAX_FND),hl
-	or	a
-	jr	MIDLIB_LOOP
+MAXMID:	ld	(BUSCAR),hl
+	ld	a,4	;Empieza por el cuarto byte MAT,
+	ld	(BYTE),a	;que apunta a #100
+	xor	a
+	ld	(BIT),a
+	ld	hl,#7FFF
+	ex	de,hl
+	ld	(MIN_FND),hl
 
-MIDLIB_END:	push	ix
-	pop	hl
-	ld	de,(MAX_FND)
-	ld	a,d
-	or	e
-	ret	nz
-	scf
-	ret
+	;Busca un bloque libre
 
-;DEPOR8:	sla	e
-;	rl	d
-;	sla	e
-;	rl	d
-;	sla	e
-;	rl	d
-;	ret
-
-MAX_FND:	dw	0	;Tamanyo del mejor bloque encontrado
-
-
-;--- NEXT_BLOCK: Obtiene la ubicacisn y tamaqo del prsximo bloque
-;    Entrada: Cy=0: obtener proximo, Cy=1: Obtener primero
-;    Salida:  Cy=1 si no quedan mas bloques
-;             HL = Direccion del bloque
-;             BC = Tamanyo del bloque
-;             A  = 0 para bloque libre, 1 para ocupado
-
-NEXT_BLOCK:	jr	nc,NXBL_NEXT
-
-	;Primero
-
-	ld	hl,#8000
-	ld	(LAST_BL_ADD),hl
-	ld	a,(#8000)
-	and	%00111111
-	ld	b,a
-	ld	a,(#8001)
+BUSLIB:	ld	a,(BIT)	;C=Contador de bits de un byte
 	ld	c,a
-	ld	(LAST_BL_SIZE),bc
-	jp	GET_BL_STAT
-
-	;Siguiente
-
-NXBL_NEXT:	ld	ix,(LAST_BL_ADD)
-	ld	b,(ix)
-	ld	c,(ix+1)
-	inc	bc	;Se salta el propio puntero
-	inc	bc
-	res	7,b
-	res	6,b
-	add	ix,bc	;IX = Direccion siguiente bloque
-
-NXBL_NEXT2:	ld	a,ixh	;Error si la direccion es >#BFFF
-	and	%11000000
-	cp	%11000000
-	scf
-	ret	z
-
-	ld	a,(ix)	;Si el primer byte es #FF, es un byte suelto, lo saltamos
-	cp	#FF
-	jr	nz,NEXT_BLK_OK
-	inc	ix
-	jr	NXBL_NEXT2
-
-NEXT_BLK_OK:	ld	(LAST_BL_ADD),ix	;Almacenamos y devolvemos dir, tam y estado
-	ld	b,(ix)
-	ld	c,(ix+1)
-	res	7,b
-	res	6,b
-	ld	(LAST_BL_SIZE),bc
-	push	ix
-	pop	hl
-	;jp	GET_BL_STAT
-
-GET_BL_STAT:
-	;ld	hl,(LAST_BL_ADD)
-	ld	a,(hl)
-	bit	7,a
-	ld	a,0
-	jr	nz,GET_BL_STAT2
-	cpl
-GET_BL_STAT2:	ld	(LAST_BL_STAT),a
+	ld	a,(BYTE)	;L=Contador de bytes
 	or	a
-	ret
+	jp	z,BL_FIN
+	ld	l,a
+	ld	h,#80	;HL=Direccion de ese byte MAT
 
-LAST_BL_ADD:	dw	0
-LAST_BL_SIZE:	dw	0
-LAST_BL_STAT:	db	0
+	ld	b,(hl)
+	xor	a
+BUC_BL0:	cp	c	;Rota B para leer el primer bit
+	jr	z,BUC_BL10	;(hace que el primer bit este en la
+	srl	b		;posicion 0)
+	inc	a
+	jr	BUC_BL0
 
+BUC_BL1:	srl	b	;Este bucle va pasando bits
+	jr	nc,FREE_FND	;mientras sean 1
+	inc	c
+BUC_BL10:	bit	3,c
+	jr	z,BUC_BL1	;Siguiente bit
 
-;--- MAX_BLSIZE: Devuelve el maximo tamanyo posible
-;    de un bloque reservado.
-;    Entrada: HL = Dir del bloque
-;    Salida:  BC = Tamanyo maximo del bloque
-;	Cy = 1 si el bloque esta libre
-
-MAX_BLSIZE:	ld	a,(hl)
-	bit	7,a
-	scf
-	ret	nz
-	ld	b,a
 	inc	hl
-	ld	a,(hl)
-	ld	c,a	;BC = Tamanyo actual
-	inc	hl
+	bit	0,h
+	jr	nz,BL_FIN	;Fin si se llega a #8100 (fin de MAT)
+	ld	c,0
+	ld	b,(hl)
+	jr	BUC_BL1	;Siguiente byte si se ha llegado al bit 8
 
-	add	hl,bc	;Es el ultimo bloque?
-	ld	a,h
-	and	#C0
-	cp	#C0
-	ret	z
+	;Bloque libre encontrado: comprueba tamanyoo
 
-	ld	a,(hl)	;Despues hay #FF o #FFFF?
-	cp	#FF
-	jr	nz,MAX_BLSZ2
-	inc	bc
-	inc	hl
-	ld	a,(hl)
-	cp	#FF
-	jr	nz,MAX_BLSZ3
-	inc	bc
-MAX_BLSZ3:	or	a
-	ret
-
-MAX_BLSZ2:	or	a
-	bit	7,(hl)
-	ret	z	;Otro bloque ocupado?
-	ld	a,(hl)
-	inc	hl
-	ld	l,(hl)
-	ld	h,a
-	res	7,h
-	res	6,h
-	add	hl,bc
-	push	hl
-	pop	bc
-	or	a
-	ret
-
-
-;--- MARK_RSV:
-;    Marca un bloque libre como reservado,
-;    y crea un bloque libre con el espacio sobrante tras el.
-;    Si ya esta reservado no hace nada y no devuelve error.         
-;    Entrada: HL = Direccion del bloque
-;             BC = Tamanyo del bloque a reservar
-;                  (<= que el tamaqo del bloque libre)
-;    Salida:  Cy = 1 si error (BC>tamaqo del bloque)
-
-MARK_RSV:	set	7,h
-	res	6,h
-	;ld      (MKRSV_TAM),bc
-	or	a
-	ld	a,(hl)
-	bit	7,a
-	ret	z	;No hace nada si ya esta reservado o es #FF
-	cp	#FF
-	scf
-	ret	z
-
-	;--- Comprueba que BC sea <= que el tamaqo del bloque
-
-	push	hl
-	pop	ix	;IX = Direccion del bloque
-	push	bc
-	pop	de	;DE = Tamanyo requerido
-	;ld      a,(ix)
-	and	%00111111
-	ld	h,a
-	ld	l,(ix+1)	;HL = Tamanyo disponible
-	call	COMP
-	ccf
-	ret	c	;Error si disponible<requerido
-
-	;--- Marca el bloque como reservado y calcula
-	;    el tamanyo sobrante
-
-	ld	(ix),d
-	ld	(ix+1),e
-	or	a
-	sbc	hl,de	;HL = Tamanyo sobrante
-	ld	a,h
-	or		l
-	ret	z	;Caso trivial de disponible=requerido: no hace falta nada mas
-
-	;--- Calcula la direccisn de inicio del bloque libre subsiguiente
-
-	;ld      bc,(MKRSV_TAM)
-	inc	bc
-	inc	bc	;Suma 2 para saltarse el puntero
-	add	ix,bc
-
-	;--- Si el espacio sobrante es 1, pone #FF
-
-	dec	hl
-	ld	a,h
-	or	l
-	jr	nz,MKRSV_NO1
-
-	ld	(ix),#FF
-	;or      a
-	ret
-
-	;--- Si el espacio sobrante es 2, pone #FFFF
-
-MKRSV_NO1:
-	dec	hl
-	ld	a,h
-	or	l
-	jr	nz,MKRSV_NO2
-
-	ld	(ix),#FF
-	ld	(ix+1),#FF
-	;or      a
-	ret
-
-	;--- Espacio sobrante >2: lo establece
-
-MKRSV_NO2:
-	set	7,h	;Habrma que restar 2 por el espacio ocupado
-	ld	(ix),h	;por el puntero, pero ya hemos hecho
-	ld	(ix+1),l	;dos DEC HL antes
-	or	a
-	ret
-
-;MKRSV_TAM:        dw      0
-
-
-;--- MARK_FREE:
-;    Libera un bloque reservado.
-;    Si ya esta libre no hace nada.
-;    Entrada: HL = Direccion del bloque.
-
-MARK_FREE:
-	bit	7,(hl)	;No hace nada si ya esta libre
-	ret	nz	;o es #FF
-
-	;--- Si a continuacion del bloque habia otro bloque libre,
-	;    hay que concatenarlos para obtener un solo bloque grande
-
-	push	hl
-	pop	ix
-	ld	b,(ix)
-	ld	c,(ix+1)
-	set	7,(hl)	;Marca el bloque como libre
-	add	ix,bc
-	inc	ix
-	inc	ix	;IX = Dir. siguiente bloque
-
-	ld	a,ixh	;No hace nada si no hay sig. bloque
-	and	%11000000	;(dir>#BFFF)
-	cp	%11000000
-	ret	z
-
-	ld	a,(ix)
-	bit	7,a
-	ret	z	;Es bloque reservado: no hace nada mas
-
-	ex	de,hl	;DE = Dir bloque original (a ampliar)
-	cp	#FF
-	jr	nz,MKFRE_NOFF
-	ld	hl,1	;Si despues hay #FF, es un bloque libre de 1 byte
-	ld	a,(ix+1)
-	cp	#FF
-	jr	nz,MKFRE_SIFF
-	inc	hl	;Si hay #FFFF, es de 2 bytes
-	jr	MKFRE_SIFF
-
-MKFRE_NOFF:	inc	bc	;Para incluir el espacio usado
-	inc	bc	;por el puntero
-	ld	h,(ix)
-	res	7,h
-	ld	l,(ix+1)	;HL = Tamaqo bloque libre posterior
-MKFRE_SIFF:	add	hl,bc	;HL = Nuevo tamaqo
-	ld	a,h
-	or	128
-	ld	(de),a
-	inc	de
+FREE_FND:	ld	a,c
+	ld	(BIT2),a
 	ld	a,l
-	ld	(de),a
+	ld	(BYTE2),a
+	ld	de,1	;DE=Longitud del bloque en sectores
+	jr	BUC_BL20
+
+BUC_BL2:	srl	b	;Va pasando bits mientras sean 0,
+	jr	c,OK_FREE	;y mientras incrementa DE
+	inc	de
+BUC_BL20:	inc	c
+	bit	3,c
+	jr	z,BUC_BL2	;Siguiente bit
+
+	inc	hl
+	bit	0,h
+	jr	nz,OK_FREE
+	ld	c,0
+	ld	b,(hl)
+	jr	BUC_BL2	;Siguiente byte si se llega al bit 8
+
+OK_FREE:	ld	a,c
+	ld	(BIT),a
+	ld	a,l
+	ld	(BYTE),a
+
+	call	DEPOR8	;Multiplica DE por 8
+
+	ld	hl,(BUSCAR)	;Si el bloque encontrado es de
+	call	COMP	;tamanyo menor al requerido, lo descartamos
+	jr	z,OKF2	;y pasamos a buscar el siguiente bloque libre
+	jr	c,BUSLIB	;(requerido=1 en MIDLIB)
+OKF2:	;
+
+	;Si el bloque encontrado es de tamanyo >= al requerido,
+	;comprueba si es menor que el ultimo bloque encontrado,
+	;si es asi sustituye el anterior por el nuevo (MAXMIN)
+
+	;Si el bloque encontrado es mayor que el mayor encontrado antes,
+	;el bloque nuevo pasa a ser el mayor encontrado.
+	;Ademas suma el tamanyo del bloque encontrado al total (MIDLIB)
+
+	scf
+JRNC:	jr	nc,ESMIDLIB	;"jr nc" par MAXMIN, "jr" para MIDLIB
+
+	ld	hl,(MIN_FND)	;Para MAXMIN
+	call	COMP
+	jr	z,BUSLIB
+	jr	nc,BUSLIB	;Busca siguiente bloque libre
+	ld	(MIN_FND),de
+	jr	MAXMID0
+
+ESMIDLIB:	ld	hl,(LIBTOTAL)	;Para MIDLIB
+	add	hl,de
+	ld	(LIBTOTAL),hl
+	ld	hl,(MIN_FND)
+	call	COMP
+	jp	c,MAXMID0
+	ld	(MIN_FND),de
+
+MAXMID0:	ld	a,(BIT2)
+	ld	(BITFND),a
+	ld	a,(BYTE2)
+	ld	(BYTEFND),a
+	jp	BUSLIB	;Busca siguiente bloque libre
+
+	;Fin de MAT encontrado: devuelve HL, DE y Cy adecuados
+
+BL_FIN:	ld	hl,(MIN_FND)
+	ld	de,#7FFF	;Si DE sigue teniendo el valor inicial
+	call	COMP	;#7FFF, es que no se ha encontrado
+	scf		;ningun bloque libre >= al requerido (MAXMIN)
+	ret	z
+	ld	de,1
+	call	COMP	;Idem con DE=1 (MIDLIB)
+	scf
+	dec	de
+	dec	hl
+	ret	z
+	inc	de
+	inc	hl
+
+	ex	de,hl
+	ld	hl,(LIBTOTAL)
+	or	a
+RETNC:	ret		;                ;"ret" para MIDLIB, "nop" para MAXMIN
+	ex	de,hl
+
+	ld	a,(BYTEFND)	;Dir = (BYTE * 64) + BIT * 8=
+	ld	e,a	;    = ((BYTE * 8) + BIT) * 8
+	ld	d,0
+
+	call	DEPOR8	;Multiplica BYTE por 8
+
+	ld	a,(BITFND)	;Suma BIT
+	ld	c,a
+	ld	b,0
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+
+	call	DEPOR8	;Vuelve a multiplicar por 8
+	set	7,d
+
+	or	a
 	ret
 
+	;Esta subrutina multiplica DE por 8
 
-;--- REMARK_RSV:
-;    Redimensiona un bloque ya reservado.
-;    Ello sslo es posible si tras el bloque hay espacio
-;    suficiente para el nuevo tamanyo.
-;    No hace nada, ni devuelve error, si el bloque no esta reservado.
-;    Entrada: HL = Dir del bloque
-;             BC = Nuevo tamanyo
-;    Salida:  Cy = 1 si error (no hay espacio suficiente tras el bloque)
+DEPOR8:	sla	e
+	rl	d
+	sla	e
+	rl	d
+	sla	e
+	rl	d
+	ret
 
-REMARK_RSV:	push	hl
-	pop	ix
-	or	a
-	bit	7,(hl)
-	ret	nz	;No hace nada si no esta reservado
-
-	ld	d,(ix)
-	ld	e,(ix+1)
-	push	de	;Tamanyo maximo para el nuevo bloque
-	add	hl,de
-	inc	de
-	inc	de
-	ld	a,(de)
-	ld	h,a
-	inc	de
-	ld	a,(de)
-	ld	l,h	;HL = Descriptor del bloque posterior
-
-	bit	7,h
-	;jr      z,RMK_RSV2       ;Bloque posterior ocupado
-
+BUSCAR:	dw	0	;Tamanyo requerido
+MIN_FND:	dw	0	;Tamanyo del mejor bloque encontrado
+BYTE:	db	0	;Byte MAT que esta siendo examinado
+BIT:	db	0	;Bit que esta siendo examinado
+BYTE2:	db	0	;Byte MAT del ultimo bloque libre encontrado
+BIT2:	db	0	;Bit de inicio del ultimo b. libre encontrado
+BYTEFND:	db	0	;Byte MAT del mejor bloque encontrado   
+BITFND:	db	0	;Bit de inicio del mejor bloque encontrado
+LIBTOTAL:	dw	0	;Total de memoria libre encontrada
 
 
 ;--- MALLOC:  Reserva un bloque de memoria
@@ -3368,13 +2949,23 @@ REMARK_RSV:	push	hl
 ;             Cy = 1 si hay error (no queda memoria libre)
 ;    Regist:  AF, BC, DE, HL
 
-MALLOC:	ld	de,#3FFF
-	call	COMP	;Error si el tamaqo requerido es >16382
-	ret	c
+MALLOC:	ld	a,h
+	or	l
+	scf
+	ret	z
+	inc	hl
 	ld	a,h
 	or	l
-	ret	c	;Error si se requiere tamaqo 0
-	ld	(TAMREQ),hl
+	scf
+	ret	z
+	inc	h	;Error si el tamanyor requerido
+	ld	a,h	;es >16384-256 (#3F00)
+	and	%11000000
+	scf
+	ret	nz
+	dec	h
+	dec	hl
+	call	REQ2REAL
 
 	;Inicializa algunas variables
 
@@ -3424,14 +3015,21 @@ FND_MALL:	ld	a,(SEGFND)
 
 	call	PUT_S2	;Conecta segmento encontrado a pag. 2
 
-	ld	bc,(TAMREQ)
+	ld	de,(TAMREAL)
 	ld	hl,(DIRFND)
-	push	hl
-	call	MARK_RSV
-	pop	hl
-	ld	a,(SEGFND)
-	ld	b,a
+
+	ld	a,#C0
+	call	ADJMAT	;Pone los bits adecuados de MAT a 1
+
+	ld	a,(SEGFND)	;Pone el tamanyo del bloque
+	ld	b,a	;al principio del mismo
+	ld	de,(TAMREQ)
+	dec	de
+	dec	de
+	ld	hl,(DIRFND)
+	ld	(hl),e
 	inc	hl
+	ld	(hl),d
 	inc	hl
 	;pop     af
 	;call    PUT_S2           ;Restaura segmento original y termina
@@ -3469,9 +3067,9 @@ _NEW_SEG:	ld	a,(NUMSEGS)
 
 	;                        ;Ahora actua como si hubiera encontrado
 	;ld      (SEGFND),a       ;un bloque libre en el segmento
-	ld	hl,#8000	;que acabamos de reservar
+	ld	hl,#8100	;que acabamos de reservar
 	ld	(DIRFND),hl
-	ld	hl,#3FFE
+	ld	hl,#3F00
 	ld	(TAMFND),hl
 	jp	FND_MALL
 
@@ -3494,6 +3092,7 @@ SEGFND:	db	0	;Segmento del mejor bloque encontrado
 TAMFND:	dw	0	;Tamanyo del mejor bloque encontrado
 CURSLOT:	db	0	;Segmento que esta siendo examinado
 DIRFND:	dw	0	;Direccion del mejor bloque encontrado
+TAMREAL:	dw	0	;Tamanyo declarado convertido a real
 SAVEA:	db	0
 
 
@@ -3564,6 +3163,25 @@ BUSENTAB:	ld	a,(hl)	;Busca entrada vacia en la tabla
 	ret
 
 
+	;REQ2REAL transforma un tamanyo requerido HL en uno real.
+	;Establece TAMREQ y TAMREAL.
+
+REQ2REAL:	inc	hl
+	inc	hl
+	ld	(TAMREQ),hl
+	ld	a,l
+	and	%111
+	jr	z,OKTREAL
+	ld	a,l
+	and	%11111000
+	add	8
+	ld	l,a
+	jr	nc,OKTREAL	;*** ANYADIDO EN 1.22
+	inc	h	;***
+OKTREAL:	ld	(TAMREAL),hl
+	ret
+
+
 ;--- MFREE: Libera un bloque de memoria
 ;    Entrada: A  = Segmento del bloque
 ;             HL = Direccion del bloque
@@ -3583,16 +3201,97 @@ MFREE:	;ld      e,b
 	ret	z
 	call	SAVEP2
 	call	PUT_S2
-	jr	c,MFREEND
+	ret	c
 	set	7,h
 	res	6,h
-	dec	hl
-	dec	hl
 
-	call	MARK_FREE
+	res	1,l
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)	;DE = Tamanyo declarado
+	inc	de	;!!!!!!!
+	inc	de	;!!!!!!!
+	ld	a,e
+	and	%111	;Convierte a tamanyo real
+	jr	z,OKTRE2
+	ld	a,e
+	and	%11111000
+	add	8
+	ld	e,a	;Ahora DE = Tamanyo real
+	jr	nc,OKTRE2	;*** ANYADIDO EN 1.22
+	inc	d	;***
+OKTRE2:	res	0,l	;HL = Direccion real (multiplo de 8)
+
+	ld	a,#80	;Pone bits de MAT a 0
+	call	ADJMAT
+
+	call	LOADP2
 	or	a
+	ret
 
-MFREEND:	call	LOADP2
+
+;--- ADJMAT:  Pone a 1 o a 0 los bits MAT correspondientes
+;             a un bloque de memoria
+;    Entrada: HL = Direccion (ha de ser multiplo de 8)
+;             DE = Tamanyo real del bloque
+;             A  = #80 para poner a 0 (entonces SETMAT_2 sera RES 0,B)
+;                  #C0 para poner a 1 (entonces SETMAT_2 sera SET 0,B)
+;    Salida:  -
+;    Regist:  AF, BC, DE, HL
+
+ADJMAT:	ld	(SETMAT_2+1),a
+
+	xor	a
+	div_hl		;HL = HL / 8
+	div_hl
+	div_hl
+
+	div_hl		;HL = HL / 8 y resto a A
+	rr	a
+	div_hl
+	rr	a
+	div_hl
+	rr	a	;Ahora HL = Byte MAT y A = Bit
+	ld	h,#80
+	rlca
+	rlca
+	rlca
+
+	div_de		;DE = DE / 8 = Num. de bits a poner a 1
+	div_de
+	div_de
+
+	push	af
+	ld	b,(hl)
+SETMAT_1:	or	a	;Rota B hasta que el primer bit a modificar
+	jr	z,OKMAT_1	;esta en la posicion 0
+	rrc	b
+	dec	a
+	jr	SETMAT_1
+OKMAT_1:	pop	af
+
+SETMAT_2:	db	#CB,0	;Va poniendo a 1/0
+	rrc	b	;todos los bits necesarios
+	dec	de
+	call	DE_ES_0
+	jr	z,SETMAT_F
+	inc	a
+	cp	8
+	jr	nz,SETMAT_2
+
+	ld	(hl),b	;Siguiente byte
+	inc	hl
+	ld	b,(hl)
+	xor	a
+	jr	SETMAT_2
+
+SETMAT_F:	inc	a	;Ajusta el ultimo byte
+	cp	8
+	jr	z,SETMAT_F2
+	rrc	b
+	jr	SETMAT_F
+SETMAT_F2:	ld	(hl),b
+
 	ret
 
 
@@ -5163,13 +4862,7 @@ LOAD_DOS_VARS:	push	af,hl
 
 DOSVARS:	ds	5
 
-
-	;--- Datos varios
-
-OLDSLOT_DIR:	dw	0
-SAVE_HM:	dw	0
-
-SEGSLOTS:	equ	#4002	;ds	32	;Pila de slot+seg para SAVEP2/LOADP2
+SEGSLOTS:	ds	32	;Pila de slot+seg para SAVEP2/LOADP2
 DISKBUF:	;
 PARTRE1!:	;
 
