@@ -1,0 +1,77 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Linkatron de ficheros .O a .COM con soporte de subdirectorios
+rem *** Por Konami Man, 2-2001
+rem *** Uso: o2x [unidad:][ruta\]fichero[.ext] [opciones extra para LINK]
+rem *** Si no se especifica extension, se asume .O
+rem *** Usa las variables HICPATH, HICDEFL y CECHO (ver C2X.BTM)
+
+if not .%currentbtm%==. goto ~continua
+set defext=o
+set chkexist=on
+set currentbtm=%0
+comun.btm %&
+
+~continua
+set currentbtm=
+
+rem ***
+rem *** ESTABLECE LINEA DE LIBRERIAS
+rem ***
+
+set libsline=
+set tmplibs=%hicdefl%
+set cloop=
+
+iff %@len[.%hicdefl%]%==1
+	set libsline=
+	set cloop=fin
+endiff
+if .%cloop%==.fin goto ~OkLib
+
+~DoLibsLoop
+set coma=%@instr[%tmplibs%,;]%
+iff %coma%==0
+	set libsline=%libsline% lib%tmplibs%.lib
+	set cloop=fin
+endiff
+if .%cloop%==.fin goto ~OkLib
+set fndlib=%@left[%tmplibs%,%coma%]%
+set fndlib=%@left[%fndlib%,-1]%
+set libsline=%libsline% lib%fndlib%.lib
+set tmplibs=%@mid[%tmplibs%,%coma%]%
+goto ~DoLibsLoop
+
+~OkLib
+set cloop=
+set tmplibs=
+set fndlib=
+set coma=
+
+rem ***
+rem *** LINKACIONA
+rem ***
+
+if not %@len[.%cecho%]% == 1 set echo = %cecho%
+if exist %sname%.com del %sname%.com
+copy %spath%%snamext% %hicp%
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+set lkline=CRT.O %snamext% %libsline% LIBC.LIB
+LINK -Z -Ptext=0,data,bss -C100H -O%sname%.COM %lkline%
+del %snamext%
+cd %oldpath%
+popd
+iff %ddrive% == %cdrive%
+	move %cpath%%sname%.com >> $EXEC.BAT
+else
+	copy %cpath%%sname%.com >> $EXEC.BAT
+	del %cpath%%sname%.com >> $EXEC.BAT
+endiff
+set lkline=
+comun.btm
+
+

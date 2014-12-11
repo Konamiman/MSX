@@ -1,0 +1,85 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Compilatron de ficheros .C a .COM con soporte de subdirectorios
+rem *** Por Konami Man, 2-2001
+rem *** Uso: c2x [unidad:][ruta\]fichero[.ext] [opciones extra para C.COM]
+rem *** Si no se especifica extension, se asume .C
+rem *** Variables usadas:
+rem *** HICPATH: Ruta del directorio que contiene el compilador (*.COM),
+rem *** 	 las librerias (*.LIB), las cabeceras (*.H) y los *.BTM
+rem *** 	 Ejemplo: A:\HIC\
+rem *** HICDEFL: (opcional) Librerias a usar siempre, separadas por ";"
+rem *** 	 Ejemplo: gfx;snd para usar LIBGFX.LIB y LIBSND.LIB
+rem *** CECHO:	 ON para ver cada paso del proceso, OFF para ocultarlo.
+rem *** 	 Es opcional; si CECHO no existe, se vera o no segun ECHO
+
+if not .%currentbtm%==. goto ~continua
+set defext=c
+set chkexist=on
+set currentbtm=%0
+comun.btm %&
+
+~continua
+set currentbtm=
+
+rem ***
+rem *** ESTABLECE LINEA DE LIBRERIAS
+rem ***
+
+set libsline=
+set tmplibs=%hicdefl%
+set cloop=
+
+iff %@len[.%hicdefl%]%==1
+	set libsline=
+	set cloop=fin
+endiff
+if .%cloop%==.fin goto ~OkLib
+
+~DoLibsLoop
+set coma=%@instr[%tmplibs%,;]%
+iff %coma%==0
+	set libsline=%libsline% -L%tmplibs%
+	set cloop=fin
+endiff
+if .%cloop%==.fin goto ~OkLib
+set fndlib=%@left[%tmplibs%,%coma%]%
+set fndlib=%@left[%fndlib%,-1]%
+set libsline=%libsline% -L%fndlib%
+set tmplibs=%@mid[%tmplibs%,%coma%]%
+goto ~DoLibsLoop
+
+~OkLib
+set cloop=
+set tmplibs=
+set fndlib=
+set coma=
+
+rem ***
+rem *** COMPILATROCIONA
+rem ***
+
+if not %@len[.%cecho%]% == 1 set echo = %cecho%
+if exist %sname%.com del %sname%.com
+copy %spath%%snamext% %hicp%
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+if exist %sname%.o* del %sname%.o*
+c.com %snamext% -o -q %2& %libsline%
+echo del %snamext% >> $EXEC.BAT
+echo del *.t >> $EXEC.BAT
+echo cd %oldpath% >> $EXEC.BAT
+echo popd >> $EXEC.BAT
+iff %ddrive% == %cdrive%
+	echo move %cpath%%sname%.com >> $EXEC.BAT
+else
+	echo copy %cpath%%sname%.com >> $EXEC.BAT
+	echo del %cpath%%sname%.com >> $EXEC.BAT
+endiff
+echo comun.btm>> $EXEC.BAT
+$EXEC.BAT
+
+

@@ -1,0 +1,4632 @@
+NDOS 1.0 - Por Konami Man, 2-2001
+---------------------------------
+
+
+1. ¨QUE ES ESTO?
+
+NDOS es una librer¡a de funciones C que permiten usar de forma c¢moda todas 
+las funciones del MSX-DOS 2 (entrada/salida por teclado y pantalla, acceso a 
+ficheros y directorios, manejo de variables de entorno, acceso directo a 
+sectores, definici¢n de rutinas de tratamiento de errores de disco, etc.) Las 
+funciones de NDOS llaman a su vez a las de la librer¡a NASM para efectuar las 
+llamadas al sistema operativo, por tanto siempre se han de enlazar ambas 
+librer¡as conjuntamente al compilar programas que hagan uso de las funciones 
+de NDOS.
+
+La distribuci¢n completa de NDOS incluye los siguientes ficheros:
+
+* LIBNDOS.LIB: Fichero de librer¡a que contiene el c¢digo objeto de todas las 
+funciones de NDOS.
+
+* NDOS.H: Fichero con la cabecera de todas las funciones, en el que tambi‚n 
+se definen las estructuras de datos necesarias para algunas funciones y 
+algunas constantes £ltiles.
+
+* DOSCODES.H: En este fichero se definen los nombres de todas las funciones 
+del DOS 2, igual que en el documento "MSX DOS 2 Function Codes 
+Specification". Tambi‚n se definen los nombres de todos los posibles errores 
+igual que en el documento "MSX DOS 2 Program Interface Specification", pero 
+se han cambiado los "." por "_" dado que el compilador no acepta nombres que 
+contengan puntos. Por esta raz¢n se han definido algunos errores con un 
+nombre distinto al original, pues ‚ste coincid¡a con el nombre de alguna 
+funci¢n. Los errores con nombre cambiado son:
+
+_SEEKE, el original es .SEEK (error 0F3h)
+_FOPENE, el original es .FOPEN (error 0CAh)
+
+Este fichero es id‚ntico al incluido en la distribuci¢n de NASM.
+
+* NDOS.TXT: Este documento.
+
+* NDOSE.TXT: Versi¢n en ingl‚s de este documento.
+
+* Ficheros *.C y *.AS: Los c¢digos fuente de todas las funciones de NDOS.
+
+En este manual se da por sentado que se conocen conceptos del sistema 
+operativo como los descriptores de fichero ("file handles"), FIBs, variables 
+de entorno, etc. Todos estos conceptos est n explicados en el manual del DOS, 
+documentos "MSX-DOS 2 Program Interface Specification" y "MSX-DOS 2 Function 
+Codes Specification".
+
+Asimismo, en la descripci¢n de las funciones de NDOS no se explican detalles 
+concretos relativos uso de las llamadas del DOS implicadas, como por ejemplo 
+los posibles c¢digos de error que puede generar cada una de ellas o las 
+peculiaridades del uso de descriptores de fichero que en realidad se refieren 
+a dispositivos. Para este tipo de informaci¢n hay que consultar tambi‚n los 
+documentos indicados.
+
+Las funciones de NDOS est n pensadas para ser usadas bajo DOS 2. Puede que 
+algunas funcionen bajo DOS 1 pero no se garantiza nada.
+
+
+
+2. ESTRUCTURAS
+
+En el fichero NDOS.H se definen algunas estructuras de datos que son 
+necesarios para usar algunas funciones. Son los siguientes:
+
+* FLAGS
+
+typedef struct {
+	b0: 1;
+	b1: 1;
+	b2: 1;
+	b3: 1;
+	b4: 1;
+	b5: 1;
+	b6: 1;
+	b7: 1;
+} flags;
+
+El tipo flags se usa en las funciones que requieren par metros de entrada y/o 
+devuelven resultados de tipo bandera, es decir, m£ltiples valores de un bit 
+codificados en un byte. Se puede comvertir una variable de tipo flags a una 
+de tipo int o viceversa mediante un simple cast.
+
+
+* DISKPARAM
+
+typedef struct {
+	uchar phdrive;
+	uint  secsize;
+	uchar secpclus;
+	uint  secrsv;
+	uchar fatcopies;
+	uint  rootentr;
+	uint  sectotal;
+	uchar mediaid;
+	uchar secpfat;
+	uint  firstroot;
+	uint  firstdata;
+	uint  maxclus;
+	uchar dirty;
+	ulong volid;
+	uint  clustotal;
+	uint  clusfree;
+	uint  dpbpnt;
+	char  unused[2];
+} diskparam;
+
+Esta estructura se usa en la funci¢n GETDPAR para obtener los par metros de 
+un disco. El significado de cada campo de la estructura es:
+
+phdrive: N£mero de unidad f¡sica (1=A:, etc)
+secsize: Tama¤o de sector (siempre 512 normalmente)
+secpclus: Sectores por cluster
+secrsv: Sectores reservados
+fatcopies: N£mero de copias de la FAT
+rootentr: N£mero de entradas en el directorio ra¡z
+sectotal: N£mero total de sectores l¢gicos
+mediaid: Byte descriptor del dispositivo
+secpfat: N£mero de sectores por FAT
+firstroot: Primer sector del directorio ra¡z
+firstdata: Primer sector de la zona de datos
+maxclus: N£mero m ximo de cluster
+dirty:	Si es distinto de cero indica que hay ficheros borrados que pueden
+	recuperarse con UNDEL
+volid: Etiqueta de vol£men (-1 si no hay)
+clustotal: N£mero total de clusters
+clusfree: Numero de clusters libres
+dpbpnt: Puntero al DPB (Drive Parameters Block) del fichero
+unused: Reservado, no usar
+
+
+* FIB
+
+Esta estructura representa un bloque de memoria de tipo FIB (File Info 
+Block), usado normalmente para buscar ficheros (funci¢n FFIND) aunque tambi‚n 
+puede usarse en otras funciones que admiten nombres de fichero o FIBs 
+indistintamente.
+
+typedef struct {
+	char  alwaysff;
+	char  fname[13];
+	char  attrib;
+	uint  time;
+	uint  date;
+	uint  startclus;
+	ulong fsize;
+	uchar drive;
+	char  internal[38];
+} fib;
+
+El significado de cada campo es:
+
+alwaysff: Contiene siempre el valor 0xFF, indicando as¡ que se trata de un
+	  FIB y no de un nombre de fichero
+fname: Nombre de fichero en formato legible (fichero.ext)
+attrib: Byte de atributos del fichero
+time: Hora de la £ltima modificaci¢n del fichero
+date: Fecha de la £ltima modificaci¢n del fichero
+startclus: Cluster inicial del fichero
+fsize: Tama¤o del fichero
+drive: Unidad l¢gica (1=A:, etc)
+internal: Informaci¢n interna del sistema, no modificar
+
+
+* DATE y TIME: Estructuras que representan una fecha y una hora 
+respectivamente, usadas en las funciones de obtenci¢n/establecimiento de la 
+fecha del sistema o de un fichero.
+
+typedef struct {
+	int year;
+	int month;
+	int day;
+	int wday;
+} date;
+
+typedef struct {
+	int hour;
+	int minute;
+	int second;
+} time;
+
+El significado de cada campo es:
+
+year: A¤o (1980 a 2079)
+month: Mes (1=Enero a 12=Diciembre)
+day: Dia del mes (1 a 31)
+wday: D¡a de la semana (0=Domingo a 6=S bado)
+hour: Hora (0 a 23)
+minute: Minuto (0 a 59)
+second: Segundo (0 a 59)
+
+Algunas funciones, como FFIND, requieren o devuelven la fecha y la hora 
+codificadas en un valor de tipo int. Para convertir de un int a una 
+estructura de tipo date o time, o viceversa, se pueden usar las funciones 
+ITOT, TTOI, ITOD y DTOI.
+
+
+* PARSEDATA
+
+Estructura usada en las funciones PARSEP y PARSEF para interpretar una ruta 
+de disco y un nombre de fichero, respectivamente.
+
+typedef struct {
+	char* termchar;
+	char* lastitem;
+	int logdrive;
+	flags f;
+} parsedata;
+
+El significado de cada campo es:
+
+termchar: Puntero al car cter de terminaci¢n de la cadena
+lastitem: Puntero al £ltimo elemento de la cadena
+logdrive: Unidad l¢gica (1=A:, etc)
+f: Diversas banderas:
+f.b0=1 si no s¢lo se ha especificado unidad
+f.b1=1 si se ha especificado directorio
+f.b2=1 si se ha especificado unidad
+f.b3=1 si se ha especificado nombre de fichero
+f.b4=1 si se ha especificado extensi¢n
+f.b5=1 si el £ltimo elemento es ambiguo (usa comodines)
+f.b6=1 si el £ltimo elemento es "." o ".."
+f.b7=1 si el £ltimo elemento es ".."
+
+
+
+3. CONSTANTES
+
+En el fichero NDOS.H tambi‚n se definen algunas constantes que pueden ser 
+usadas como par metros para las funciones o para interpretar los resultados. 
+Son las siguientes:
+
+
+* Descriptores de fichero de sistema
+
+En todas las funciones que admiten un descriptor de fichero ("file handle") 
+como par metro se puede especificar un descriptor de sistema, que hace 
+referencia a un dispositivo en lugar de a un fichero:
+
+STDIN (0): Salida por pantalla
+STDOUT (1): Entrada por teclado
+STDERR (2): Salida de mensajes de error, normalmente es id‚ntico a STDOUT
+AUX (3): Dispositivo auxiliar, por defecto no hace nada
+PRN (4): Impresora
+
+
+* Modos de apertura de un fichero
+
+Se usan en las funciones de apertura y creaci¢n de ficheros:
+
+F_NOWRITE: No se podr  escribir en el fichero
+F_NOREAD: No se podr  leer del fichero
+F_NOINH: El fichero no ser  heredado por los procesos hijo creados con FORK
+
+Se pueden combinar dos o m s con el operador "|". Por ejemplo, especificando
+F_NOINH|F_NOWRITE como modo de apertura, el fichero se abrir  como s¢lo 
+lectura y no heredable.
+
+
+* Atributos de los ficheros
+
+Se usan en las funciones de establecimiento y consulta de los atributos de un 
+fichero:
+
+A_RDO: S¢lo lectura
+A_HID: Oculto
+A_SYS: Sistema
+A_VOL: No es un fichero sino una etiqueta de volumen
+A_DIR: Directorio
+A_ARC: Archivo
+A_DEV: No es un fichero sino un dispositivo
+A_NEW: Usado en la funci¢n para crear un fichero, si est  a 1 y ya existe un 
+fichero con el mismo nombre, no ser  borrado y se generar  un error
+
+Se pueden combinar dos o m s con el operador "|". Por ejemplo, especificando 
+A_HID|A_DIR como atributos de b£squeda en FFIND, se buscar n ficheros ocultos 
+y subdirectorios adem s de ficheros normales.
+
+
+* Modos de obtenci¢n de un caracter
+
+Se usan en la funci¢n NGETC para obtener un caracter del teclado.
+
+NOWAIT: Si no se especifica, la funci¢n esperar  hasta que el usuario pulse 
+una tecla; si se especifica y el usuario no est  pulsando ninguna tecla, la 
+funci¢n devolver  0 inmediatamente.
+NOECHO: Si se especifica, el car cter correspondiente a la tecla pulsado no 
+se mostrar  en pantalla.
+
+Se pueden combinar con el operador "|".
+
+
+* Otras constantes definidas en NDOS.H
+
+uchar, equivalente a unsigned char
+uint, equivalente a unsigned int
+ulong, equivalente a unsigned long
+fhanle, equivalente a int
+ESC, equivalente a 27 (c¢digo de escape)
+
+CR_LF: esto no es una costante, sino un puntero de tipo char que apunta a una 
+cadena "\n\r". CR_LF se usa en las macros NEWLINE y FNEWLINE en lugar de una 
+cadena "\n\r" directa, para evitar que el compilador defina esa cadena cada 
+vez que encuentra una llamada a estas macros.
+
+
+
+4. FORMATO DE LA DESCRIPCION DE LAS FUNCIONES
+
+A continuaci¢n se da una descripci¢n detallada de todas las funciones de 
+NDOS. Las descripciones tienen el siguiente formato:
+
+
+		[(N)] NOMBRE [*]
+
+salida nombre(entrada,...,entrada)
+
+Descripci¢n de la funci¢n.
+
+Funciones del DOS utilizadas [*]
+
+-----
+(...)
+Programa o subfunci¢n de ejemplo (excepto para funciones muy simples)
+o referencia al ejemplo de otra funci¢n
+(...)
+-----
+
+Algunas funciones de NDOS tienen el mismo nombre que otras funciones de la 
+librer¡a est ndar del C (por ejemplo OPEN, GETC o PRINTF) pero su uso es 
+ligeramente distinto. Para evitar conflictos, estas funciones est n definidas 
+con una "N" como primer car ctaer: NOPEN, NGETC, NPRINTF; en la descripci¢n 
+de este tipo de funciones, el nombre est  precedido por "(N)".
+
+Sin embargo, es posible forzar al compilador a que reconozca los nombres de 
+funci¢n sin la N inicial como pertenecientes a NDOS. Esto se consigue 
+definiendo la cosntante NSTDIO, bien con la directiva "#define NSTDIO" (que 
+ha de estar situada ANTES de "#include NDOS.H") o bien incluyendo -DNSTDIO en 
+la l¡nea de comandos del compilador. El efecto es la definici¢n de una macro 
+para cada funci¢n cuyo nombre empiece por N, sin la N inicial (por ejemplo se 
+hace "#define open nopen").
+
+Algunas funciones no tienen c¢digo objeto asociado, sino que son simplemente 
+macros definidas en NDOS.H que llaman a su vez a otras funciones. Por 
+ejemplo, la funci¢n PUTC, que imprime un car cter en pantalla, es en realidad 
+una macro que llama a FPUTC (escritura de un car cter en un fichero) 
+especificando STDOUT como descriptor de fichero. En la descripci¢n de estas 
+funciones el nombre viene seguido de un asterisco.
+
+Tras la descripci¢n de cada funci¢n se listan las llamadas DOS realizadas. Un 
+asterisco junto a una de estas llamadas indica que puede ser usada de forma 
+segura desde una rutina de tratamiento de error de disco (definida con la 
+funci¢n ATERROR de NDOS, llamada 64h del DOS); as¡ pues si todas las llamadas 
+usadas por una funci¢n tienen asterisco, la propia funci¢n puede ser usada 
+de forma segura desde una rutina de tratamiento de error de disco.
+
+Las funciones est n ordenadas alfab‚ticamente, sin tener en cuenta la N 
+inicial de las funciones que la tienen. A continuaci¢n se listan todas las 
+funciones a modo de referencia r pida, y en la siguiente secci¢n se da una 
+descripci¢n detallada de cada una:
+
+ABSEC: Lee o escribe sectores de disco
+ASSIGN: Asigna unidades l¢gicas a unidades f¡sicas
+(N)ATERROR: Define una funci¢n a llamar en caso de error de disco
+(N)ATEXIT: Define una funci¢n a llamar cuando el programa va a terminar
+BEEP*: Hace sonar un "beep"
+BS*: Borra el car cter situado a la izquierda del cursor
+BTOA*: Convierte un n£mero a una cadena en base binaria
+BUFFERS: Establece o consulta el n£mero de b£feres de sector del sistema
+(N)CHDIR: Cambia el directorio actual
+CHKCHAR: Ayuda a manipular cadenas que contienen car cteres gr ficos
+(N)CLERR*: Anula la condici¢n de error causada por una funci¢n anterior
+(N)CLOSE: Cierra un fichero abierto
+CLS*: Borra la pantalla
+CREATE: Crea un fichero
+CURBLK*: Selecciona el cursor normal
+CURDOWN*: Mueve el cursor una posici¢n hacia abajo
+CURLEFT*: Mueve el cursor una posici¢n hacia la izquierda
+CUROFF*: Establece el cursor como "oculto"
+CURON*: Establece el cursor como "visible"
+CURRIGHT*: Mueve el cursor una posici¢n hacia la derecha
+CURUND*: Selecciona el cursor peque¤o
+CURUP*: Mueve el cursor una posici¢n hacia arriba
+DELLINE*: Borra la l¡nea en la que est  el cursor
+DELTOENDL*: Borra desde el cursor hasta el final de la l¡nea
+DELTOENDS*: Borra desde el cursor hasta el final de la pantalla
+DOSVER: Devuelve la versi¢n de MSX-DOS
+DTOI: Codifica una estructura de tipo "date" en un entero
+DUPFH: Duplica un descriptor de fichero
+EOF: Indica si el puntero de un fichero abierto est  m s all  del final
+ENSUREFH: Traslada de los b£feres internos del sistema al disco los datos
+	  que hayan sido escritos en un fichero
+(N)EXIT: Termina la ejecuci¢n del programa
+EXPLAIN: Obtiene un mensaje de error para un c¢digo de error dado
+FDELETE: Borra un fichero
+FILEDT: Consulta/establece fecha/hora de un fichero abierto/sin abrir
+FFIND: Busca ficheros en el disco
+(N)FGETC: Lee un car cter de un fichero abierto
+FILEATT: Obtiene o modifica los atributos de un fichero, abierto o no
+FINDENV: Busca el nombre y valor de una variable de entorno
+FLUSH: Limpia b£feres de disco inservibles
+FNEWLINE*: Imprime un salto de l¡nea en un fichero
+FORK: Prepara el entorno para ejecutar un proceso hijo
+FORWARD*: Coloca el puntero de un fichero al final del mismo
+FPRINT: Imprime una cadena en un fichero
+(N)FPRINTF: Impresi¢n formateada en un fichero
+(N)FPUTC: Escribe un car cter en un fichero abierto
+(N)FTELL*: Devuelve la posici¢n actual del puntero de un fichero abierto
+GDATE: Obtiene la fecha del sistema
+GETARG: Obtiene un par metro de la l¡nea de comandos
+(N)GETC: Obtiene un car cter del teclado
+(N)GETCWD: Devuelve el directorio actual
+GETDPAR: Obtiene los par metros de un disco
+GETDRV: Devuelve la unidad de disco por defecto
+GETDTA: Obtiene la direcci¢n  rea de transf. de disco para funciones DOS 1
+(N)GETENV: Obtiene el valor de una variable de entorno
+GETERR: Devuelve el c¢digo del £ltimo error del DOS generado
+GETFATT*: Obtiene los atributos de un fichero sin abrir
+GETFDATE*: Obtiene la fecha de un fichero sin abrir
+GETFTIME*: Obtiene la hora de un fichero sin abrir
+GETHATT*: Obtiene los atributos de un fichero abierto
+GETHDATE*: Obtiene la fecha de un fichero abierto
+GETHTIME*: Obtiene la hora de un fichero abierto
+GETLOGV: Indica las unidades de disco existentes
+GTIME: Obtiene la hora del sistema
+HOME* Sit£a el cursor al principio de la pantalla
+INPUT: Obtiene una cadena desde el teclado
+INSLINE*: Inserta una l¡nea nueva encima del cursor
+IOCTRL: Realiza operaciones de control sobre un descriptor de fichero
+ITOA*: Convierte un n£mero a una cadena en base decimal
+ITOD: Decodifica una estructura de tipo "date" codificada en un entero
+ITOT: Decodifica una estructura de tipo "time" codificada en un entero
+JOIN: Indica que va a retomar el control el proceso padre
+LOCATE*: Posiciona el cursor en las coordenadas dadas
+(N)MKDIR: Crea un directorio
+MOVE: Traslada un fichero
+MPRINT: Imprime m£ltiples cadenas en pantalla
+MPUTC: Imprime m£ltiples car cteres en pantalla
+NEWLINE*: Imprime un salto de l¡nea en pantalla
+NTOA: Convierte un n£mero a una cadena en cualquier base
+NUMARGS: Obtiene el n£mero de par metros en la l¡nea de comandos
+(N)OPEN: Abre un fichero
+PARSEF: Examina y devuelve informaci¢n sobre un nombre de fichero
+PARSEP: Examina y devuelve informaci¢n sobre una ruta de fichero
+PAUSEKEY*: Espera a que el usuario pulse una tecla (ver tambi‚n WAITKEY)
+PRINT*: Imprime una cadena en pantalla
+(N)PRINTF: Impresi¢n formateada en pantalla
+PRINTLN*: Imprime una cadena acabada en salto de l¡nea en pantalla
+(N)PUTC*: Imprime un car cter en pantalla
+RAMDISK: Crea o destruye el RAMdisk, o comprueba su tama¤o
+RDSEC*: Lee sectores de disco
+(N)READ: Lee datos de un fichero
+REDIR: Comprueba o modifica el estado de la redirecci¢n
+(N)RENAME: Renombra un fichero
+(N)REWIND*: Coloca el puntero de un fichero abierto al principio del mismo
+(N)RMDIR: Borra un directorio
+SDATE: Establece la fecha del sistema
+SEEK: Modifica el puntero de un fichero abierto
+SETDRV: Selecciona unidad de disco por defecto
+SETDTA: Establece el  rea de transferencia de disco para funciones DOS 1
+(N)SETENV: Establece el valor de una variable de entorno
+SETFATT*: Establece los atributos de un archivo sin abrir
+SETFDATE*: Establece la fecha de un fichero sin abrir
+SETFTIME*: Establece la hora de un fichero sin abrir
+SETHATT*: Establece los atributos de un archivo abierto
+SETHDATE*: Establece la fecha de un fichero abierto
+SETHTIME*: Establece la hora de un fichero abierto
+(N)SPRINTF: Impresi¢n formateada en memoria
+STIME: Establece la hora del sistema
+SUPRLINE*: Elimina la l¡nea en la que est  el cursor
+TESTFH: Comprueba si un descriptor de fichero corresponde a un fichero dado
+TTOI: Codifica una estructura de tipo "time" en un entero
+VERIFY: Activa, desactiva o comprueba la verificaci¢n autom tica del
+	sector de arranque en los accesos a ficheros
+WAITKEY: Espera a que el usuario pulse una tecla (ver tambi‚n PAUSEKEY)
+WPATH: Devuelve la ruta completa del £ltimo fichero encontrado con FFIND
+(N)WRITE: Escribe datos en un fichero
+WRSEC: Escribe sectores de disco
+XTOA*: Convierte un n£mero a una cadena en base hexadecimal
+
+
+
+5. DESCRIPCION DE LAS FUNCIONES
+
+
+
+		ABSEC
+
+int absec(int drive, int sector, int number, char* address, int op)
+
+Lee (si "op" es 0) o escribe (si "op" es distinto de 0) "number" sectores de 
+la unidad "drive" (0 es A:, etc), empezando por el sector "sector". Si se 
+especifica una direcci¢n de memoria en "address", ‚sta es establecida como 
+ rea de transferencia (DTA) con la funci¢n SETDTA, y es hacia o desde esta 
+direcci¢n donde se realiza la lectura o escritura de sectores. Si "address" 
+es NULL, se usa el DTA establecido previamente por otra llamada a ABSEC o a 
+SETDTA (por defecto, al comenzar el programa o tras ejecutar la llamada del 
+DOS "Disk reset" -0Dh-, el DTA se sit£a en la direcci¢n 0x0080).
+
+En vez de ABSEC, normalmente ser  preferible usar RDSEC y WRSEC, que leen y 
+escriben sectores respectivamente; funcionan de forma id‚ntica a ABSEC, 
+excepto que carecen del par metro "op".
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Set disk transfer address (_SETDTA, 1Ah)
+Absolute sector read (_RDABS, 2Fh)
+Absolute sector write (_WRABS, 30h)
+
+Ejemplo: el siguiente fragmento de c¢digo establece como 0xF0 el byte 
+identificador de dispositivo de la unidad H: (el byte identificador de un 
+disco se encuentra en la posici¢n 21 de su sector 0). S¢lo indicamos la 
+direcci¢n de transferencia al leer el sector; al escribirlo indicamos NULL 
+como direcci¢n de transferencia, por tanto se asume "la direcci¢n establecida 
+anteriormente". Tambi‚n se podr¡a haber ejecutado previamente setdta(bufer), 
+y especificar NULL como direcci¢n tanto al leer como al escribir el sector.
+
+-----
+char secbuf[512];
+int e;
+
+absec(7, 0, 1, secbuf, 0);	/* O bien: rdsec(7, 0, 1, secbuf) */
+secbuf[21]=0xF0;
+absec(7, 0, 1, NULL, 1);	/* O bien: wrsec(7, 0, 1, NULL) */
+-----
+
+
+
+		ASSIGN
+
+int assign(int logdrv, int phydrv)
+
+Asigna/desasigna unidades l¢gicas a unidades f¡sicas, o consulta las 
+asignaciones actuales. Funciona de la siguiente forma:
+
+- Si phydrv=1..8 y logdrv=1..8, asigna la unidad l¢gica "logdrv" a la unidad 
+f¡sica "phydrv".
+- Si phydrv=0 y logdrv!=0, cancela la asignaci¢n de la unidad l¢gica 
+"logdrv".
+- Si phydrv=0 y logdrv=0, cancela todas las asignaciones.
+- Si phydrv=0xFF y logdrv=1..8, devuelve la unidad f¡sica asignada a la 
+unidad l¢gica "logdrv".
+
+En todos los casos, las unidades se representan como 1 para A:, 2 para B:, 
+etc.
+
+El valor devuelto puede ser 0 (no hay error), un n£mero entre 1 y 8 
+(indicando el resultado de una consulta de unidad f¡sica, tambi‚n sin error) 
+o un valor mayor que 8 (indicando un c¢digo de error).
+
+Hay que tener en cuenta que la unidad pasada a una rutina de error de usuario 
+es siempre una unidad f¡sica (ver funci¢n ATERROR).
+
+- Llamadas del DOS usadas:
+Logical drive assignment (_ASSIGN, 6Ah) *
+
+Ejemplo: el siguiente programa muestra todas las asignaciones de unidades 
+actuales. En un bucle para "logdrv" de 1 a 8, llama a ASSIGN con phydrv=0xFF, 
+y muestra el resultado si no es un error y si realmente hay asignaci¢n (si la 
+unidad l¢gica no es igual a la f¡sica).
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+#define letra(d) (d-1+'A')
+
+int log,phy;
+
+main()
+{
+	println("Asignaciones actuales:");
+	for(log=1; log<=8; log++)
+	{
+		phy=assign(log, 0xFF);
+		if(phy<=8 && log!=phy)
+		{
+			mputc(letra(log), '=', letra(phy), NULL);
+			newline();
+		}
+	}
+	exit(0);
+}
+-----
+
+
+
+		(N) ATERROR
+
+void naterror(int* function)
+
+Define una funci¢n de error de disco de usuario. En otras palabras: indica al 
+sistema operativo que cada vez que haya un error de disco debe llamar a la 
+funci¢n cuyo nombre es el indicado en "function". Si se especifica NULL en 
+vez de "function", se anular  la definici¢n previa: los errores de disco 
+provocar n entonces la respuesta por defecto del sistema operativo, es decir, 
+se mostrar  en pantalla el mensaje de error seguido de "Abort, Retry, 
+Ignore?" y se esperar  una respuesta por parte del usuario.
+
+Es obligatorio que la funci¢n de error especificada est‚ definida de la 
+siguiente forma (excepto, por supuesto, el propio nombre de la funci¢n):
+
+int err_de_disco(int error, int drive, flags f, unsigned int sector)
+
+Los par metros de entrada, que son proporcionados por el sistema operativo, 
+contienen diversa informaci¢n sobre el error que ha producido la llamada a la 
+funci¢n:
+
+- error: c¢digo del error. Se puede obtener una cadena con el mensaje de 
+error mediante la funci¢n EXPLAIN.
+- drive: unidad en la que se ha producido el error; 1 es A:, etc.
+- f: informaci¢n diversa:
+  f.b0==1 si se estaba escribiendo en la unidad, 0 si se estaba leyendo
+  f.b1==1 si no se recomienda ignorar
+  f.b2==1 si se recomienda cancelar autom ticamente
+  f.b3==1 si "sector" contiene un n£mero de sector v lido
+- sector: sector en el que se ha producido el error (s¢lo si f.b3==1)
+
+El valor devuelto por la funci¢n ha de ser un n£mero entre 0 y 2, que 
+determinar  la respuesta por parte del sistema operativo:
+
+0: Ejecutar la rutina de error por defecto del sistema
+1: Cancelar
+2: Reintentar
+3: Ignorar
+
+Si se devuelve "cancelar" el programa terminar  inmediatamente. Para evitar 
+esto se puede definir una funci¢n de finalizaci¢n de usuario con ATEXIT; 
+dicha funci¢n ser  llamada cada vez que el programa est‚ a punto de 
+finalizar. Ver la descripci¢n de ATEXIT para m s detalles.
+
+Desde una funci¢n de error de disco se pueden llamar a otras funciones que 
+hagan uso de llamadas del DOS, pero hay que tener cuidado de no provocar 
+recursi¢n. En la descripci¢n de las funciones de NDOS se incluye un listado 
+de las llamadas del DOS utilizadas por las mismas; un asterisco junto a una 
+llamada indica que ‚sta puede realizarse de forma segura desde una funci¢n de 
+error de disco de usuario. Si todas las llamadas implicadas en una funci¢n 
+son seguras, la propia funci¢n es segura.
+
+- Llamadas del DOS usadas:
+Define disk error handler routine (_DEFERR, 64h)
+
+Ejemplo: la siguiente funci¢n de error act£a de forma similar a la rutina de 
+error por defecto del sistema. Muestra el error, la unidad, el sector si lo 
+hay y las recomendaciones sobre cancelar/ignorar si las hay, tras lo cual 
+pide al usuario que decida la acci¢n a realizar. Se debe definir con la 
+ejecuci¢n de "naterror(mi_error);".
+
+-----
+#define NSTDIO
+#define itobuf(num) itoa(num,buferr)
+#define xtobuf(num) xtoa(num,buferr)
+
+int mi_error(int error, int drive, flags f, unsigned int sector)
+{
+	char buferr[80];	/* B£fer gen‚rico para generar cadenas */
+
+	/* Muestra unidad del error e indica lectura o escritura */
+
+	buferr[0] = (char)drive+'A'-1;
+	buferr[1] = ':';
+	buferr[2] = 0;
+	mprint("\n\rERROR de disco al ", (f.b0)?"escribir":"leer",
+	       " en la unidad ", buferr, CR_LF, NULL);
+
+	/* Muestra c¢digo y mensaje del error */
+
+	mprint("C¢digo del error: &H", xtobuf(error), CR_LF, NULL);
+	explain(error,buferr);
+	mprint("Texto del error: ", buferr, CR_LF, NULL);
+
+	/* Muestra sector si f.b3==1 */
+
+	if (f.b3) mprint("Sector: ", itobuf(sector), "\n\n\r", NULL);
+
+	/* Muestra recomendaciones si las hay */
+
+	if (f.b1) println("No se recomienda ignorar.");
+	if (f.b2) println("Se recomienda cancelar.");
+
+	/* Espera decisi¢n del usuario y termina seg£n ‚sta */
+
+	print("\n\r(C)ancelar, (R)eintentar, (I)gnorar? ");
+	for(;;) 	/* Repite mientras no se pulse C, R o I */
+	{
+		c=getc(0);
+		switch(c|32)
+		{
+			case'c':
+			return 1;
+
+			case'r':
+			return 2;
+
+			case'i':
+			return 3;
+		}
+		bs();
+	}
+}
+-----
+
+
+
+		(N) ATEXIT
+
+void natexit(int* function)
+
+Define una funci¢n de salida de usuario. En otras palabras: indica al sistema 
+operativo que cuando el programa vaya a terminar (ya sea por la ejecuci¢n de 
+la funci¢n EXIT o por la elecci¢n de la opci¢n "cancelar" en un error de 
+disco), antes debe llamar a la funci¢n cuyo nombre es el indicado en 
+"function". Si se especifica NULL en vez de "function", se anular  la 
+definici¢n previa; el programa terminar  entonces sin m s cuando se ejecute 
+EXIT o se elija "cancelar" tras un error de disco.
+
+Es obligatorio que la funci¢n de error especificada est‚ definida de la 
+siguiente forma (excepto, por supuesto, el propio nombre de la funci¢n):
+
+int salida(int* prim, int* sec)
+
+"prim" contendr  el c¢digo de error de salida, que ser  el que se haya 
+especificado como par metro al llamar a EXIT, o bien el c¢digo del error de 
+disco que ha causado la operaci¢n cancelada. Si este c¢digo es _ABORT, _INERR 
+u _OUTERR ("Operaci¢n cancelada por el usuario", "Error en la entrada 
+est ndar" o "Error en la salida est ndar", respectivamente), "sec" contendr , 
+adem s, un c¢digo de error secundario que especifica el error concreto. Tanto 
+"prim" como "sec" son pasados por referencia, por tanto pueden ser 
+modificados por la funci¢n.
+
+El valor devuelto por la funci¢n de salida indicar  la acci¢n a realizar tras 
+la ejecuci¢n de la misma. Si es un valor distinto de cero, el programa 
+efectivamente terminar , y los c¢digos de error primario y secundario ser n 
+pasados al programa que tome el control en ese momento (normalmente ser  el 
+int‚rprete de comandos, que simplemente mostrar  en pantalla el mensaje de 
+error correspondiente al c¢digo devuelto en "prim"). Pero si es cero, el 
+programa no terminar , sino que su ejecuci¢n continuar  a partir de la 
+funci¢n siguiente a la que produjo el error de disco cancelado. Entonces 
+puede consultarse el c¢digo de error "prim" mediante la funci¢n GETERR (o 
+mediante el valor devuelto directamente por la funci¢n causante del error, si 
+es que ‚sta devuelve un c¢digo de error y no otro resultado).
+
+La forma m s simple de usar ATEXIT es en combinaci¢n con ATERROR para 
+transformar todos los errores de disco en errores normales (es decir, 
+aquellos que son devueltos directamente por la funci¢n que lo causa o bien 
+pueden consultarse con GETERR). La manera de hacer esto es definir ATERROR de 
+forma que siempre devuelva 1 (cancelar), y ATEXIT de forma que copie el error 
+secundario en el primario y devuelva 0. Es decir:
+
+-----
+main()
+{
+	...
+	aterror(MyError);
+	atexit(MyExit);
+	...
+	aterror(NULL);
+	atexit(NULL);
+	exit(0);
+}
+
+int MyError(int error, int drive, flags f, unsigned int sector)
+{
+	return 1;	/* Siempre cancela */
+}
+
+int MyExit(int* prim, int* sec)
+{
+	if(*prim==_ABORT || *prim==_INERR || *prim==_OUTERR)
+		*prim = *sec;
+	return 0;	/* Siempre vuelve al programa */
+}
+-----
+
+Cuando el programa vaya a terminar realmente hay que anular las definiciones 
+de rutinas de error y de salida con atexit(NULL) y aterror(NULL), tras lo 
+cual ya se puede usar la funci¢n EXIT normalmente.
+
+- Llamadas del DOS usadas:
+Define abort exit routine (_DEFAB, 63h)
+
+Ejemplo: supongamos que queremos hacer un programa similar al ejemplo de la 
+funci¢n GETDPAR, pero que muestre los par metros de todas las unidades de 
+disco, que examinar  en un bucle. Un programa de este tipo tendr¡a un 
+problema grave: al encontrar una unidad de diskette u otro dispositivo 
+extra¡ble sin ning£n diskette dentro, generar¡a un error de disco ("Disk 
+offline"). La £nica opci¢n ser¡a seleccionar "cancelar" y el programa 
+terminar¡a, sin posibilidad de mostrar la informaci¢n del resto de las 
+unidades.
+
+La soluci¢n es definir una rutina de error de disco en combinaci¢n con una 
+rutina de salida de la forma explicada antes, de forma que el error de disco 
+se transforma en un error normal y el programa podr¡a mostrar un mensaje 
+"Error: la unidad X: no est  disponible" o similar, y continuar con el bucle 
+para mostrar la informaci¢n relativa al resto de las unidades.
+
+
+
+		BEEP *
+
+void beep()
+
+Hace sonar un "beep". Equivale a nputc(0x07).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		BS *
+
+void bs()
+
+Borra el car cter situado a la izquierda del cursor y mueve ‚ste una posici¢n 
+a la izquierda. Equivale a nputc(0x7F).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		BTOA *
+
+char* btoa(ulong num, char* bufer)
+
+Genera en "bufer" una cadena con la representaci¢n en base binaria del n£mero 
+entero sin signo "num". S¢lo se generan los d¡gitos necesarios, sin ceros ni 
+espacios a la izquierda; si se requiere otro formato para la cadena hay que 
+usar directamente NTOA. btoa(num, buf) equivale a ntoa(num,1,1,0,2,bufer).
+
+El valor devuelto es "bufer", por tanto se puede incrustar una llamada a 
+NTOA en una llamada a por ejemplo MPRINT. Ver ejemplo y notas a este respecto 
+para la funci¢n NTOA.
+
+- Llamadas del DOS usadas:
+Ninguna.
+
+Ejemplo: la siguiente ejecuci¢n de MPRINT muestra un n£mero y su 
+representaci¢n binaria. Observa que usamos dos b£feres distintos para la 
+representaci¢n decimal y para la binaria (ver notas en la descripci¢n de 
+NTOA).
+
+-----
+long numero=1234;
+char num_dec[5];
+char num_bin[17];
+
+mprint("La representacion binaria del n£mero ", itoa(numero,num_dec),
+       " es: &B", btoa(numero,num_bin), CR_LF, NULL);
+-----
+
+
+
+		BUFFERS
+
+int buffers(int number)
+
+Establece en "number" el n£mero de b£feres de sector que usar  el sistema. El 
+n£mero m¡nimo es 2; si se especifica 0 simplemente se consultar  el n£mero de 
+b£feres establecidos actualmente, sin realizar ninguna modificaci¢n.
+
+El valor devuelto es el n£mero de b£feres establecidos, que ser  menor que 
+64. Un valor mayor o igual que 64 indicar  un c¢digo de error.
+
+Un mayor n£mero de b£feres de disco implicar  una mayor velocidad en las 
+operaciones de acceso a disco, pero tambi‚n una mayor ocupaci¢n de la memoria 
+interna del DOS. El m ximo n£mero de b£feres estar  en torno a 20.
+
+- Llamadas del DOS usadas:
+Allocate sector buffers (69h)
+
+Ejemplo: el siguiente fragmento de c¢digo incrementa en 5 el n£mero de 
+b£feres establecido actualmente.
+
+-----
+buffers(buffers(0)+5);
+-----
+
+
+
+		(N) CHDIR
+
+int nchdir(char* dir)
+
+Establece el directorio actual como "dir". Si "dir" contiene una 
+especificaci¢n de unidad se cambia el directorio de dicha unidad, en caso 
+contrario se cambia el de la unidad por defecto.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Change current directory (_CHDIR, 5Ah)
+
+Ejemplo: la primera de las siguientes ejecuciones de CHDIR establece \TEMP 
+como el directorio actual de la unidad C:, sin modificar el de la unidad por 
+defecto (excepto si es tambi‚n la C:). La segunda establece el directorio 
+PRUEBAS, buscado en el directorio padre del actual, en la unidad por defecto.
+
+-----
+nchdir("C:\TEMP");
+nchdir("..\PRUEBAS");
+-----
+
+
+
+		CHKCHAR
+
+char chkchar(char* car, flags* f)
+
+Esta funci¢n sirve b sicamente para convertir f cilmente a may£sculas una 
+cadena que contenga car cteres de 16 bits; tambi‚n ayuda a manipular nombres 
+de fichero y etiquetas de vol£men, ya que avisa cuando encuentra car cteres 
+ilegales (que no pueden formar parte de un nombre de fichero o de una 
+etiqueta de vol£men).
+
+CHKCHAR manipula un s¢lo car cter a la vez, pasado por referencia en "char" y 
+devuelto tambi‚n como resultado de la funci¢n. Las banderas de "f" controlan 
+el proceso de la siguiente manera:
+
+- f.b0 ha de ponerse a 0 para que el car cter pasado "car" sea devuelto 
+convertido a may£sculas. Si no queremos que "car" sea modificado, f.b0 ha de 
+ponerse a 1.
+- f.b1 ser  puesto a 1 por CHKCHAR si el car cter pasado era el primer byte 
+de un car cter de 16 bits.
+- f.b2 ser  puesto a 1 por CHKCHAR si el car cter pasado era el segundo byte 
+de un car cter de 16 bits.
+- f.b3 ha de ponerse a uno si los car cteres que estamos examinando 
+corresponden a una etiqueta de vol£men, no a un nombre de fichero.
+- f.b4 ser  puesto a 1 por CHKCHAR si el car cter pasado "car" no puede 
+formar parte de un fichero (si f.b3==0) o de una etiqueta de vol£men (si 
+f.b3==1).
+
+CHKCHAR est  pensado para ser usado de la siguiente forma:
+- Antes comenzar el proceso, estableceremos f.b0 y f.b3 a nuestra 
+conveniencia, y pondremos f.b1 y f.b2 a 0.
+- Pasaremos todos los car cteres de la cadena a manipular, uno por uno, a 
+CHKCHAR en un bucle, hasta que encontremos que f.b4 est  a 1 o mientras 
+queden car cteres en la cadena; las banderas f.b1 y f.b2 ser n usadas 
+internamente por CHKCHAR.
+
+Hay que tener en cuenta que "car" es pasado por referencia, por tanto si se 
+llama a CHKCHAR con f.b0=0, la cadena original se ver  modificada.
+
+- Llamadas del DOS usadas:
+Check character (_CHKCHR, 5Dh) *
+
+Ejemplo: el siguiente programa admite un nombre de fichero como par metro, 
+que puede contener car cters de 16 bits; lo muestra convertido a may£sculas, 
+e indica si es o no un nombre de fichero v lido.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+char bufer[128];
+int i;
+flags f;
+
+main()
+{
+	if(!numargs())
+	{
+		println("Uso: chkchar nombre_de_fichero");
+		exit(0);
+	}
+
+	getarg(1,bufer);
+	f.b0=0; 	/* Convertir a may£sculas */
+	f.b1=0;
+	f.b2=0;
+	f.b3=0; 	/* Es nombre de fichero */
+
+	/* Convierte car cteres hasta encontrar uno inv lido */
+
+	do
+	{
+		chkchar(&bufer[i++], &f);
+	} while(!f.b4);
+
+	/* Si el car cter inv lido era 0 (marca de fin de cadena), */
+	/* el nombre es v lido. Si era otro, el nombre es inv lido. */
+
+	mprint(bufer, bufer[i-1]?" NO ":" ",
+	       "es un nombre de fichero v lido.", CR_LF, NULL);
+	exit(0);
+}
+-----
+
+
+
+		(N) CLOSE
+
+int nclose(fhandle fh)
+
+Cierra el fichero abierto cuyo descriptor asociado es "fh", estableciendo su 
+fecha y hora como las actuales del sistema, y activando su atributo de
+"archivo".
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Close file handle (_CLOSE, 45h)
+
+Ejemplo: ver el ejemplo de la funci¢n OPEN.
+
+
+
+		(N) CLRERR *
+
+void nclrerr()
+
+Anula la condici¢n de error generada por la anterior llamada al DOS 
+realizada, causando que cualquier ejecuci¢n posterior de GETERR devuelva 0 
+(ausencia de error). En realidad lo £nico que hace CLRERR es llamar a DOSVER, 
+que nunca genera error, e ignorar el resultado.
+
+- Funciones del DOS usadas:
+Get MSX-DOS version number (6Fh) *
+
+
+
+		CLS *
+
+void cls()
+
+Borra la pantalla y sit£a el cursor al principio de la pantalla. Equivale a 
+nputc(0x0C).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CREATE
+
+int create(char* name, int mode, int attributes)
+
+Crea un fichero de nombre "name", con los atributos especificados en 
+"attributes" y lo deja abierto seg£n el modo especificado en "mode", 
+devolviendo un descriptor de fichero asociado al mismo.
+
+"mode" tiene el mismo significado que para la funci¢n OPEN. "attributes" 
+puede ser 0, o uno o m s de los siguientes, combinados mediante el operador 
+"|":
+
+A_RDO: S¢lo lectura
+A_HID: Oculto
+A_SYS: Sistema
+A_DIR: Crear un subdirectorio en vez de un fichero. Para crear un 
+subdirectorio es preferible usar la funci¢n MKDIR.
+A_NEW: Si se especifica este atributo y ya existe un fichero con el mismo 
+nombre, no ser  borrado y se generar  un error. Si no se especifica, el 
+fichero existente se borrar  y se crear  de nuevo.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Create file handle (_CREATE, 44h)
+
+Ejemplo: la siguiente ejecuci¢n de CREATE crea un fichero temporal de nombre 
+FILE.$$$, en el directorio \TEMP, y lo hace oculto e invisible a procesos 
+hijo. Si ya existe otro fichero con ese nombre, lo borra.
+
+-----
+int fhtemp;
+fhtemp=create("\TEMP\FILE.$$$", F_NOINH, A_HID);
+-----
+
+
+
+		CURBLK *
+
+void curblk()
+
+Restaura el cursor normal (se puede seleccionar el cursor peque¤o, como el 
+que aparece al pulsar INS en BASIC, con la funci¢n CURUND). Equivale a 
+mputc(ESC,'x','4',NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURDOWN *
+
+void curdown()
+
+Mueve el cursor una posici¢n hacia abajo. Equivale a nputc(0x1F).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURLEFT *
+
+void curleft()
+
+Mueve el cursor una posici¢n hacia la izquierda. Equivale a nputc(0x1D).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CUROFF *
+
+void curoff()
+
+Establece el cursor en modo "oculto", de forma que s¢lo ser  visible cuando 
+se requiera una entrada de texto por parte del usuario (‚ste es el modo 
+normalmente establecido). Equivale a mputc(ESC,'x','5',NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURON *
+
+void curon()
+
+Establece el cursor en modo "visible", de forma que siempre ser  visible, 
+incluso cuando se est‚ imprimiendo texto en pantalla. Equivale a 
+mputc(ESC,'y','5',NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURRIGHT *
+
+void curright()
+
+Mueve el cursor una posici¢n hacia la derecha. Equivale a nputc(0x1C).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURUND *
+
+void curund()
+
+Selecciona el cursor peque¤o, igual al que aparece al pulsar INS en BASIC. Se 
+puede restablecer el cursor normal con CURBLK. Equivale a mputc(ESC,'y','4').
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		CURUP *
+
+void curup()
+
+Mueve el cursor una posici¢n hacia arriba. Equivale a nputc(0x1E).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		DELLINE *
+
+void delline()
+
+Borra la l¡nea en la que est  situado el cursor, sin mover ‚ste. Equivale 
+mputc(ESC,'l',NULL).
+
+
+
+		DELTOENDL *
+
+void deltoendl()
+
+Borra el texto situado entre el cursor y el final de la l¡nea, sin mover el 
+cursor. Equivale mputc(ESC,'K',NULL).
+
+
+
+		DELTOENDS *
+
+void deltoends()
+
+Borra el texto situado entre el cursor y el final de la pantalla, sin mover 
+el cursor. Equivale mputc(ESC,'J',NULL).
+
+
+
+		DOSVER
+
+unsigned int dosver(int which)
+
+Devuelve la versi¢n del kernel del DOS, si "which" es cero, y de MSXDOS.SYS 
+si "which" es distinto de cero. La versi¢n est  codificada en BCD de la 
+siguiete forma: versi¢n principal en los bits 8 a 15, y versi¢n secundaria en 
+los bits 0 a 7.
+
+Si la versi¢n de MSX-DOS es inferior a la 2.00, DOSVER devolver  0 para 
+cualquier valor de "which". Es recomendable ejecutar DOSVER al principio de 
+cualquier programa que vaya a usar las funciones de NDOS, y si devuelve 0, 
+mostrar un mensaje "Este programa necesita MSX-DOS 2" y terminar 
+inmediatamente usando llamadas del DOS 1 (ver ejemplo).
+
+- Funciones del DOS usadas:
+Get MSX-DOS version number (6Fh) *
+
+Ejemplo: el siguiente programa muestra la versi¢n del DOS de forma similar al 
+comando VER del int‚rprete de comandos. Primero se obtiene la versi¢n del 
+kernel, y si es 0, el programa termina inmediatamente tras mostrar un mensaje 
+de error. En ese caso, dado que no disponemos de las llamadas del DOS 2, no 
+podemos usar las funciones de NDOS; por tanto se usar  directamente la 
+funci¢n DOSCALL (perteneciente a la librer¡a NASM) para mostrar el mensaje y 
+causar la finalizaci¢n del programa.
+
+Si el valor obtenido para la versi¢n del kernel no es 0, se desglosa en 
+versi¢n principal y secundaria; tras lo cual se obtiene la versi¢n de 
+MSXDOS.SYS, tambi‚n se desglosa, y finalmente se muestran ambas versiones en 
+pantalla.
+
+-----
+#define NSTDIO
+
+#include "nasm.h"
+#include "ndos.h"
+#include "doscodes.h"
+
+uint ver;
+int prim_ker,sec_ker,prim_sys,sec_sys;
+char bufer[10];
+
+/* NOTA: La llamada del DOS 1 _STROUT imprime la cadena 		*/
+/*	 apuntada por DE y acabada en "$".                              */
+/*	 La llamada del DOS 1 _TERM0 finaliza el programa como exit(0). */
+
+main()
+{
+	ver=dosver(0);		/* Versi¢n del kernel */
+	if(!ver)  /* Si es inferior a 2.0, termina usando funciones DOS 1 */
+	{
+		regset reg;
+		reg.de="Este programa necesita MSX-DOS 2.\n\r$";
+		doscall(_STROUT, &reg);
+		doscall(_TERM0, NULL);
+	}
+
+	sec_ker=ver&0xFF;		/* Decodifica versiones */
+	prim_ker=(ver>>8)&0xFF; 	/* Secundaria y primaria */
+
+	ver=dosver(1);			/* Idem con la versi¢n */
+	sec_sys=ver&0xFF;		/* de MSXDOS.SYS */
+	prim_sys=(ver>>8)&0xFF;
+
+	/* Imprime la informaci¢n */
+
+	mprint("Versi¢n kernel: ",xtoa(prim_ker,bufer),".",NULL);
+	println(ntoa(sec_ker,2,2,0,16,bufer));
+
+	mprint("Versi¢n MSXDOS.SYS: ",xtoa(prim_sys,bufer),".",NULL);
+	println(ntoa(sec_sys,2,2,0,16,bufer));
+
+	exit(0);
+}
+-----
+
+
+
+		DTOI
+
+uint dtoi(date dat)
+
+Codifica la estructura "dat" de tipo DATE en un entero; el proceso inverso lo 
+realiza la funci¢n ITOD. Algunas funciones que manejan informaci¢n de 
+ficheros, como FFIND o FILEDT y sus derivados, trabajan con las fechas y las 
+horas coficadas en enteros, y puede ser necesario el uso de DTOI y TTOI o sus 
+inversas.
+
+- Funciones del DOS usadas:
+Ninguna.
+
+Ejemplo: ver el ejemplo de la funci¢n SETFDATE.
+
+
+
+		DUPFH
+
+int dupfh(fhandle fh)
+
+Devuelve un duplicado del descriptor de fichero "fh"; se escoger  el n£mero 
+de descriptor libre m s bajo disponible.
+
+Una vez que haya dos descriptores id‚nticos, si a uno de ellos se le 
+modifican los atributos o el puntero, o si se renombra, el otro tambi‚n se 
+ver  afectado por las modificaciones. Pero si uno de ellos es cerrado, el 
+otro puede seguir siendo usado con normalidad. 
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Duplicate file handle (_DUP, 47h)
+
+
+
+		ENSUREFH
+
+int ensurefh(fhandle fh)
+
+Si se ha escrito sobre el fichero abierto con el descriptor "fh", al ejecutar 
+esta funci¢n los datos escritos que permanezcan en b£feres internos del 
+sistema son realmente escritos en el disco, y se actualiza la entrada de 
+directorio del fichero con el nuevo tama¤o, fecha y hora; adem s, se 
+establecer  el atributo "archivo" del fichero. Tras la operaci¢n el fichero 
+sigue abierto con el mismo descriptor, y su puntero no se ha visto 
+modificado.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Ensure file handle (_ENSURE, 46h)
+
+
+
+		EOF
+
+int eof(fhandle fh)
+
+Devuelve 0 si el puntero del fichero abierto con el descriptor "fh" se 
+encuentra m s all  del final del fichero. En caso contrario devuelve un valor 
+distinto de cero.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+I/O control for devices (_IOCTL, 4Bh)
+
+Ejemplo: la siguiente funci¢n lee un byte del fichero especificado en "fh", 
+de forma recursiva (al llegar al final del fichero vuelve al principio).
+
+-----
+char readrec(fhandle fh)
+{
+	char c;
+	if(eof(fh)) rewind(fh);
+	read(fh,&c,1);
+	return c;
+}
+-----
+
+
+
+		(N) EXIT
+
+void nexit(int code)
+
+Finaliza inmediatamente la ejecuci¢n del programa con el c¢digo de error 
+"code", que puede ser 0 indicando que no hay error. Si el int‚rprete de 
+comandos toma el control tras la finalizaci¢n, se muestra el mensaje de error 
+correspondiente al c¢digo especificado, excepto si es 0 (en este caso no se 
+muestra nada).
+
+Aunque la principal aplicaci¢n de EXIT es la finalizaci¢n del programa en 
+cualquier punto del mismo, es recomendable a¤adir siempre una instrucci¢n 
+exit(0) al final de la funci¢n principal "main", en vez de dejar que dicha 
+funci¢n acabe por s¡ sola.
+
+Se puede forzar la ejecuci¢n de una funci¢n de usuario cuando el programa va 
+a terminar. Ver la descripci¢n de la funci¢n ATEXIT.
+
+- Llamadas del DOS usadas:
+Terminate with error code (_TERM, 62h)
+
+Ejemplo: ver el ejemplo de la funci¢n OPEN
+
+
+
+		EXPLAIN
+
+int explain(int code, char* buffer)
+
+Devuelve en "buffer" un mensaje de error correspondiente al c¢digo de error 
+"code"; este mensaje es el mismo que muestra el int‚rprete de comandos cuando 
+un programa finaliza su ejecuci¢n con ese c¢digo de error.
+
+Hay tres tipos de c¢digos de error:
+
+- Errores de usuario: son los que est n en el rango 1-63. Su mensaje de error 
+es siempre "User error XX".
+
+- Errores de sistema no definidos: son algunos de los que est n en el rango 
+64-255. Su mensaje de error es siempre "System error XX".
+
+- Errores de sistema definidos: son el resto de los que est n en el rango 
+64-255, cada uno tiene su propio mensaje de error.
+
+Para saber si un error de sistema est  definido o no, basta mirar el n£mero 
+devuelto por la funci¢n EXPLAIN. Si es 0 significa que el error est  
+definido, mientras que si es igual a "code" significa que el error no est  
+definido.
+
+- Llamadas del DOS usadas:
+Explain error code (_EXPLAIN, 66h) *
+
+Ejemplo: el siguiente programa muestra los mensajes de todos los c¢digos de 
+error de sistema. Si el mensaje no est  definido, muestra "--- (no 
+definido)".
+
+-----
+#include "ndos.h"
+
+int code;
+char buffer[64];
+
+main()
+{
+	print("\n\rErrores de sistema:\n\n\r");
+	for (code=0x40; code<=0xFF; code++)
+	{
+	    if(!(explain(code, buffer)))
+		mprint("&H",xtoa(code,&b),": ",buffer,"\n\r",NULL);
+	    else
+		mprint("&H",xtoa(code,&b),": --- (no definido)\n\r",NULL);
+	}
+	exit(0);
+}
+-----
+
+
+
+		FDELETE
+
+int fdelete(char* filename)
+
+Borra el fichero especificado en "filename". No se pueden usar comodines en 
+"filename", por tanto s¢lo es posible borrar un fichero en cada ejecuci¢n de 
+FDELETE. No se puede usar FDELETE para borrar subdirectorios, para ello es 
+necesario emplear la funci¢n RMDIR.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Delete file or subdirectory (_DELETE, 4Dh)
+
+Ejemplo: la siguiente ejecuci¢n de FDELETE borra el fichero DATA.$$$ situado 
+en A:\TEMP.
+
+-----
+fdelete("A:\TEMP\DATA.$$$");
+-----
+
+
+
+		FFIND
+
+int ffind(char* mask, int attrib, fib* fileinfo, int which)
+
+Busca un fichero cuyo nombre coincida con el especificado en la m scara 
+"mask" (que puede incluir tambi‚n una ruta, por ejemplo A:\DIR\*.COM) con los 
+atributos especificados en "attrib", y devuelve un FIB con informaci¢n sobre 
+el fichero encontrado en "fileinfo". Para buscar el primer fichero 
+coincidente con "mask", "which" ha de valer 0; para buscar los siguientes, 
+hay que llamar a FFIND sucesivamente con "which" cualquiera distinto de cero. 
+Cuando ya no queden m s ficheros coincidentes con la m scara, la funci¢n 
+devolver  el error _NOFILE.
+
+Si "attrib" es cero, s¢lo se buscar n los ficheros normales (no ocultos ni de 
+sistema, ni subdirectorios). Si se especifican los atributos de oculto, 
+sistema y/o directorio en "attrib", se buscar n los ficheros/subdirectorios 
+de ese tipo, y tambi‚n los ficheros normales; no es posible buscar £nicamente 
+los ficheros con un atributo determinado o buscar £nicamente subdirectorios 
+(para ello hay que comprobar a posteriori los atributos del fichero 
+encontrado, e ignorar los ficheros que no nos interesen). Los atributos de 
+archivo y s¢lo lectura son ignorados por esta funci¢n. En la secci¢n 3 se 
+especifican las constantes disponibles para definir un byte de atributos.
+
+Es obligatorio llamar una vez a FFIND con which=0 antes de llamarla con 
+which!=0, de lo contrario el resultado es impredecible. "mask" puede ser una 
+cadena vac¡a, en ese caso significa lo mismo que "*.*"
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Funciones del DOS usadas:
+Find first entry (_FFIRST, 40h)
+Find next entry (_FNEXT, 41h)
+
+Ejemplo: el siguiente programa busca todos los archivos y directorios 
+normales y ocultos seg£n la ruta y m scara especificadas en la l¡nea de 
+comando, y muestra en pantalla los detalles de los archivos encontrados, de 
+forma similar a la instrucci¢n DIR del COMMAND.COM; en la secci¢n 2 se 
+explican los campos de la estructura FIB. Observa la estrategia de aprovechar 
+la variable "cuenta", el contador de ficheros encontrados, como indicador 
+"which" para buscar el primer fichero o los siguientes. Observa tambi‚n que 
+el tama¤o devuelto para los subdirectorios es siempre cero.
+
+-----
+/*** NDIR.C ***/
+
+#define NSTDIO
+
+#include "ndos.h"
+#include "doscodes.h"
+
+#define itobuf(n) itoa(n,bufer)
+void printfib(fib);
+
+extern void strcpy(char*, char*);      /* O bien #include "string.h" */
+
+char bufer[128];	/* Bufer gen‚rico */
+fib finfo;
+int cuenta=0, error;
+
+main()
+{
+	/* Comprueba si hay un par metro en l¡nea de comandos */
+	/* (la ruta\m scara), y lo obtiene */
+
+	if (numargs()!=1)
+	{
+		println("\n\rNestorDirecToRio\n\r"
+			"Uso: ndir ruta\\mascara");
+		exit(0);
+	}
+	getarg(1,bufer);
+
+	/* Va buscando los ficheros y mostrando su informaci¢n */
+	/* mientras no haya error */
+
+	println("\n\rFicheros encontrados:\n");
+	for(;;)
+	{
+	    if(error = ffind (bufer, A_DIR|A_HID, &finfo, cuenta)) break;
+	    cuenta++;
+	    printfib(finfo);
+	    newline();
+	}
+
+	/* Si el error es _NOFIL, es que no hay m s ficheros, */
+	/* entonces se termina normalmente */
+
+	if (error==_NOFIL)
+	{
+	    mprint("Total: ", itobuf(cuenta)," ficheros/directorios.",NULL);
+	    
+	    wpath(bufer+3);
+	    bufer[0]=finfo.drive+'A'-1;
+	    bufer[1]=':';
+	    bufer[2]='\';
+	    mprint("Total de ficheros ", bufer, ": ",
+		    itobuf(cuenta)," ficheros/directorios.",NULL);
+
+	    newline();
+	    exit(0);
+	}
+	else
+	    exit(error);
+}
+
+/*						  */
+/* Funci¢n de impresi¢n de la informacion del FIB */
+/*						  */
+
+void printfib(fib finfo)
+{
+	time t;
+	date d;
+	int i;
+	char a, at[7];
+
+	/* Muestra el nombre del fichero */
+
+	println(finfo.fname);
+
+	/* Muestra los atributos como una letra o "-" */
+
+	a = finfo.attrib;
+	strcpy(at,"advshr");
+	for (i=0; i<=5; i++)
+	{
+		if(!(a & 1)) at[5-i]='-';
+		a>>=1;
+	}
+
+	mprint("Atributos: ", at, "\n\r",NULL);
+
+	/* Muestra la hora de creaci¢n */
+
+	print("Hora: ");
+	t = itot(finfo.time);
+	mprint(itobuf(t.hour),":",NULL);
+	mprint(itobuf(t.minute),":",NULL);
+	println(itobuf(t.second));
+
+	/* Muestra la fecha de creaci¢n */
+
+	print("Fecha: ");
+	d = itod(finfo.date);
+	mprint(itobuf(d.day),"-",NULL);
+	mprint(itobuf(d.month),"-",NULL);
+	println(itobuf(d.year));
+
+	/* Muestra cluster inicial, tama¤o y unidad */
+
+	mprint("Cluster inicial: ", itobuf(finfo.startclus), CR_LF, NULL);
+	mprint("Tama¤o: ", itobuf(finfo.fsize), " bytes\n\r", NULL);
+	bufer[0]=finfo.drive+'A'-1;
+	bufer[1]=':';
+	bufer[2]=0;
+	mprint("Unidad l¢gica: ", bufer, CR_LF, NULL);
+}
+-----
+
+
+
+		(N) FGETC
+
+int nfgetc(fhandle fh)
+
+Lee un car cter del fichero abierto con el descriptor "fh". Si la escritura 
+se efect£a correctamente, devuelve el car cter leido. Si hay un error 
+devuelve -1, en este caso se puede obtener el c¢digo del error mediante la 
+funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Read from file handle (_READ, 48h)
+
+Ejemplo: la siguiente funci¢n realiza una copia del fichero "origen" en el 
+fichero "destino" leyendo y escribiendo un car cter cada vez. Tras abrir el 
+fichero de origen y crear el de destino se entra en un bucle infinito en el 
+que se lee un car cter del origen con FGETC y se escribe en el destino con 
+FPUTC; el bucle se rompe s¢lo cuando FGETC devuelve -1 (se ha llegado al 
+final del fichero). Adem s imprime en pantalla un punto cada vez que se han 
+copiado el n£mero de bytes especificado en la constante INTERVALO. Si hay un 
+error al abrir o crear un fichero, lo devuelve, si no devuelve 0.
+
+-----
+#define INTERVALO 10
+
+int charcopy(char* origen, char* destino)
+{
+	int fh_or,fh_des	/* Descriptores de origen y destino */
+	int e,cont;
+	char c; 		/* Caracter a leer y escribir */
+
+	/* Abre origen y crea destino, si hay un error termina */
+
+	fh_or=open(origen, F_NOWRITE);
+	if(e=geterr()) return e;
+	fh_des=create(destino, F_NOREAD, 0);
+	if(e=geterr())
+	{
+		close(fh_or);
+		return e;
+	}
+
+	/* Lee origen y escribe destino mientras queden car cteres */
+
+	cont=INTERVALO;
+	for(;;)
+	{
+		if((c=fgetc(fh_or))==-1) break;
+		fputc(fh_des, c);
+		if(!--cont)
+		{
+			putc('.');       /* Imprime '.' cada INTERVALO */
+			cont=INTERVALO;  /* car cteres copiados */
+		}
+	}
+
+	/* Finalmente cierra los ficheros */
+
+	close(fh_or);
+	close(fh_des);
+	return 0;
+}
+-----
+
+
+
+		FILEATT
+
+int fileatt(char* file, fhandle fh, int newatt)
+
+Esta es la funci¢n gen‚rica para el tratamiento de los atributos de los 
+ficheros: permite establecer o s¢lo consultar los atributos de un fichero sin 
+abrir (especificando su ruta y nombre) o de un fichero abierto (especificando 
+su descriptor). Funciona de la siguiente manera:
+
+- Si se quieren modificar los atributos del fichero, "newatt" ha de contener 
+el nuevo byte de atributos. Si s¢lo se quieren consultar los atributos 
+actuales, "newatt" ha de ser -1.
+
+- Si se quiere trabajar sobre un fichero sin abrir, "file" ha de contener su 
+ruta y nombre y "fh" ha de ser -1. Si se quiere trabajar sobre un fichero 
+abierto, "file" ha de ser NULL y "fh" ha de contener su descriptor. No se 
+puede trabajar sobre un fichero abierto especificando su nombre.
+
+En cualquier caso, la funci¢n devuelve siempre el byte de atributos del 
+fichero tal como queda tras la ejecuci¢n. En la secci¢n 3 se listan las 
+constantes que hay definids en NDOS.H para el tratamiento de los atributos.
+
+Normalmente, en vez de usar FILEATT ser  preferible usar alguna de las macros 
+GETFATT, SETFATT, GETHATT y SETHATT, descritas tambi‚n en este documento.
+
+- Llamadas del DOS usadas:
+Get/set file attributes (_ATTR, 50h)
+Get/set file handle attributes (_HATTR, 55h)
+
+Ejemplo: ver la definici¢n de las macros ?ET?ATT en NDOS.H, y los ejemplos 
+para dichas macros.
+
+
+
+		FILEDT
+
+int filedt(char* file, fhandle fh, int modif, int* t, int* d)
+
+Permite consultar o modificar la fecha y/o la hora de un fichero sin abrir 
+(especificando su nombre) o abierto (especificando su descriptor). Funciona 
+de la siguiente forma:
+
+- Si se quiere trabajar sobre un fichero sin abrir, en "file" se ha de 
+especificar su ruta y nombre, y "fh" ha de ser -1. Si se quiere trabajar 
+sobre un fichero abierto, "file" ha de ser NULL y en "fh" se ha de 
+especificar su descriptor.
+- Si se quiere consultar la fecha y/o la hora, "modif" ha de ser 0. Si se 
+quiere(n) modificar, ha de ser 1.
+- Si se quiere consultar/modificar la hora, en "t" se ha de especificar un 
+puntero a un entero, en el que se devolver  el resultado de la consulta (si 
+modif==0) o del que se leer  la hora a establecer (si modif==0). Si no se 
+quiere consultar/modificar la hora, "t" ha de ser NULL. Para conversiones 
+entre enteros y estructuras de tipo TIME, se han de usar las funciones ITOT y 
+TTOI.
+- Lo mismo para la fecha en "d". Para conversiones entre enteros y 
+estructuras de tipo DATE, se han de usar las funciones ITOD y DTOI.
+
+Normalmente, en vez de FILEDT ser  preferible usar alguna de las siguientes 
+macros:
+
+GETFDATE: Consulta la fecha de un fichero sin abrir
+GETFTIME: Consulta la hora de un fichero sin abrir
+GETHDATE: Consulta la fecha de un fichero abierto
+GETHTIME: Consulta la hora de un fichero abierto
+SETFDATE: Establece la fecha de un fichero sin abrir
+SETFTIME: Establece la hora de un fichero sin abrir
+SETHDATE: Establece la fecha de un fichero abierto
+SETHTIME: Establece la hora de un fichero abierto
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file date and time (_FTIME, 51h)
+Get/set file handle date and time (_HFTIME, 56h)
+
+Ejemplo: el siguiente fragmento de c¢digo intercambia las fechas y las horas 
+de los ficheros FILE1 y FILE2.
+
+-----
+int t1,t2,d1,d2;
+filedt("FILE1", -1, 0, &t1, &d1);
+filedt("FILE2", -1, 0, &t2, &d2);
+filedt("FILE1", -1, 1, &t2, &d2);
+filedt("FILE2", -1, 1, &t1, &d1);
+-----
+
+
+
+		FINDENV
+
+int findenv(int number, char* bufer, int bufsize)
+
+Devuelve en "bufer" el nombre de la variable de entorno con el n£mero 
+"number" asociado (el primer n£mero es 1). Si no existe ninguna variable con 
+ese n£mero, devuelve una cadena vac¡a (un 0 en "buffer").
+
+El tama¤o del espacio disponible en "buffer" ha de ser indicado en "bufsize" 
+Si el espacio es insuficiente, se devuelve el nombre truncado (y sin 0 final) 
+y un error _ELONG; un tama¤o de 255 bytes siempre ser  suficiente.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Find environment item (_FENV, 6Dh) *
+
+Ejemplo: el siguiente programa muestra todas las variables de entorno 
+presentes en el sistema, siendo equivalente al comando SET del int‚rprete de 
+comandos ejecutado sin par metros. Lo que hace es empezar intentando obtener 
+la variable con el n£mero 1; si dicha variable existe, obtiene su valor e 
+imprime nombre y valor juntos, tras lo cual repite la operaci¢n incrementando 
+el n£mero.
+
+-----
+#include "NDOS.H"
+
+char bufname[256];	/* Bufer para los nombres de las variables */
+char bufvalue[256];	/* Bufer para los valores de las variables */
+int num=1;
+
+main()
+{
+	/* Comprueba si hay al menos una variable, */
+	/* en caso contrario termina */
+
+	findenv(1, bufname, 255);
+	if(!bufname[0])
+	{
+		println("\n\rNo hay variables de entorno.");
+		exit(0);
+	}
+
+	/* Mientras queden variables, obtiene sus nombres y valores, */
+	/* e imprime NOMBRE = VALOR para cada una */
+
+	print("\n\rVariables de entorno presentes:\n\n\r");
+	do
+	{
+		ngetenv(bufname, bufvalue, 255);
+		mprint(bufname, " = ", bufvalue, "\n\r", NULL);
+		findenv(++num, bufname, 255);
+	} while(bufname[0]);
+
+	mprint("\n\rTotal: ",itoa(num-1, bufvalue)," variables.\n\r",NULL);
+	exit(0);
+}
+-----
+
+
+
+		FLUSH
+
+int flush(int drive, int op)
+
+Limpia los b£feres de disco inservibles para la unidad especificada en 
+"drive" (0 es la unidad por defecto, 1 es A:, etc); si se especifica -1 en 
+"drive", se limpian los b£feres para todas las unidades existentes. Si "op" 
+es distinto de 0, los b£feres tambi‚n son invalidados.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Flush disk buffers (_FLUSH, 5Fh)
+
+Ejemplo: la siguiente ejecuci¢n de FLUSH limpia e invalida los b£feres de la 
+unidad por defecto.
+
+-----
+flush(0,-1);
+-----
+
+
+
+		FNEWLINE *
+
+int fnewline(fhandle fh)
+
+Escribe un salto de l¡nea en el fichero abierto con el descriptor "fh". 
+Equivale a fprint("\n\r").
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR. El 
+valor devuelto es la longitud de la cadena escrita, es decir 2, si no hay 
+ning£n error.
+
+- Llamadas del DOS usadas:
+Write to file handle (_WRITE, 49h)
+
+
+
+		FORK
+
+int fork()
+
+Informa al sistema de que va a comenzar un proceso hijo, y devuelve el 
+identificador del proceso padre. Generalmente, esta funci¢n no se usar  nunca 
+en programas normales; para m s informaci¢n ver la descripci¢n de las 
+funciones "Fork to child process" (_FORK, 60h) y "Rejoin parent process" 
+(_JOIN, 61h) en el documento "MSX-DOS 2 function codes specification".
+
+- Llamadas del DOS usadas:
+Fork to child process (_FORK, 60h)
+
+
+
+		FORWARD *
+
+long forward(fhandle fh)
+
+Posiciona el puntero del fichero indicado por el descriptor "fh" al final del 
+mismo, tras la £ltima posici¢n; esto posibilita a¤adir datos nuevos al 
+fichero a continuaci¢n de los ya existentes. Equivale a seek(fh,0,2); ver la 
+descripci¢n de "seek" para m s detalles.
+
+- Llamadas del DOS usadas:
+Move file handle pointer (_SEEK, 4Ah)
+
+Ejemplo: ver el ejemplo de la funci¢n REDIR.
+
+
+
+		FPRINT
+
+int fprint(fhandle fh, char* string)
+
+Escribe en el fichero abierto con el descriptor "fh" la cadena apuntada por 
+"string", sin incluir el car cter 0 final. Esta funci¢n es m s r pida y m s 
+peque¤a que FPRINTF, por tanto es recomendable usarla siempre que sea posible 
+en vez de FPRINTF.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR. El 
+valor devuelto es el n£mero de car cteres que se han podido escribir en el 
+fichero, que ser  igual a la longitud de la cadena si no ha habido ning£n 
+error.
+
+- Llamadas del DOS usadas:
+Write to file handle (_WRITE, 49h)
+
+Ejemplo: El siguiente programa crea el fichero ARGS.TXT y escribe en ‚l la 
+ruta y el nombre del programa, seguido de todos los argumentos del mismo. 
+Este ejemplo es similar al de la funci¢n PRINT.
+
+-----
+#include "ndos.h"
+
+fhandle fh;
+int arg,nargs,e;
+char bufer[128];
+
+main()
+{
+	/* Crea el fichero, si ya existia lo borra */
+
+	fh=create("args.txt", F_NOINH, 0);
+	if(e=geterr()) exit(e);
+
+	/* Escribe el nombre del programa (argumento 0) */
+
+	fprint(fh, "Ruta y nombre del programa: \n\r");
+	getarg(0, bufer);
+	fprint(fh, bufer);
+	fnewline(fh);
+	fnewline(fh);
+
+	/* Escribe todos los argumentos, acabados con fin de l¡nea */
+
+	nargs=numargs();
+	if(!nargs)
+	{
+		fprint(fh, "No hay argumentos.\n\r");
+	}
+	else
+	{
+		fprint(fh, "Los argumentos son:\n\r");
+		for(arg=1; arg<=nargs; arg++)
+		{
+			getarg(arg, bufer);
+			fprint(fh, bufer);
+			fnewline(fh);
+		}
+	}
+
+	/* Cierra el fichero, muestra un mensaje en pantalla y termina */
+
+	close(fh);
+	println("\n\rFichero ARGS.TXT creado.");
+	exit(0);
+}
+-----
+
+
+
+		(N) FPRINTF
+
+int nfprintf(fhandle fh, char* string, ...)
+
+Esta funci¢n es id‚ntica a la funci¢n FPRINTF (impresi¢n formateada en un 
+fichero) incluida en la librer¡a est ndar del compilador Hitech-C. La £nica 
+diferencia estriba en que NFPRINTF usa descriptores de ficheros en lugar de 
+FCBs para acceder a los ficheros. Para detalles sobre el uso de esta funci¢n 
+consultar la descripci¢n de la funci¢n FPRINTF en la documentaci¢n del 
+compilador Hitech-C (fichero Z80DOC.TXT)
+
+El c¢digo objeto de esta funci¢n es muy grande. Cuando sea posible es 
+preferible escribir en el fichero usando directamente la funci¢n WRITE, o 
+bien usar FPRINT.
+
+- Llamadas del DOS usadas:
+Write to file handle (_WRITE, 49h)
+
+
+
+		(N) FPUTC
+
+int nfputc(fhandle fh, char c)
+
+Escribe el car cter "c" en el fichero abierto con el descriptor "fh". Si la 
+escritura se efect£a correctamente, devuelve el car cter escrito. Si hay un 
+error devuelve -1, en este caso se puede obtener el c¢digo del error 
+mediante la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Write to file handle (_WRITE, 49h)
+
+Ejemplo: ver el ejemplo de la funci¢n FGETC
+
+
+
+		(N) FTELL *
+
+long nftell(fhandle fh)
+
+Devuelve la posici¢n actual del puntero del fichero indicado por el 
+descriptor "fh". Equivale a seek(fh,0,1); ver la descripci¢n de "seek" 
+para m s detalles.
+
+- Llamadas del DOS usadas:
+Move file handle pointer (_SEEK, 4Ah)
+
+
+
+		GDATE
+
+void gdate(date* sysdat)
+
+Obtiene la fecha actual del sistema en la estructura "sysdat" de tipo DATE 
+(en la secci¢n 2 se detalla esta estructura). Se puede codificar el resultado 
+en un entero (para ser usado por ejemplo en la funci¢n SETFDATE) mediante la 
+instrucci¢n DTOI.
+
+- Llamadas del DOS usadas:
+Get date (_GDATE, 2Ah) *
+
+Ejemplo: el siguiente programa muestra en pantalla la fecha actual del 
+sistema.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+char* buf_dia=", 00";   /* Bufer para convertir el dia del mes a cadena */
+char buf_anyo[5];	/* Bufer para convertir el a¤o a cadena */
+char* buf_de=" de ";
+char* meses[]={"enero","febrero","marzo","abril","mayo","junio","julio",
+	       "agosto","septiembre","octubre","noviembre","diciembre"};
+char* dias_sem[]={"Domingo","Lunes","Martes","Mi‚rcoles","Jueves",
+		  "Viernes", "S bado"};
+date dt;
+
+main()
+{
+	gdate(&dt);
+	itoa(dt.day, buf_dia+2);	/* Convierte d¡aa a cadena */
+	itoa(dt.year, buf_anyo);	/* Convierte a¤o a cadena */
+	mprint(dias_sem[dt.wday], buf_dia, buf_de, meses[dt.month-1],
+	       buf_de, buf_anyo, CR_LF, NULL);	/* Muestra fecha */
+	exit(0);
+}
+-----
+
+
+
+		GETARG
+
+int getarg(int num, char* bufer)
+
+Devuelve en "bufer" el par metro "num" de la l¡nea de comandos, siendo el 1 
+el n£mero del primer par metro; por ejemplo, si se ha ejecutado como PROG 
+FILE /A /B, el par metro "/A" es el n£mero 2. La l¡nea de comandos se obtiene 
+mediante la lectura de la variable de entorno PARAMETERS, que nunca es 
+convertida a may£sculas sea cual sea el valor de la variable UPPER. El valor 
+devuelto corresponde a la longitud del par mtero obtenido, un valor de 0 
+indica que no existe ese par metro y en "bufer" se ha colocado una cadena 
+vac¡a.
+
+Esta funci¢n tambi‚n puede usarse para obtener el nombre y la ruta completa 
+del propio programa desde el que se llama, es decir el contenido de la 
+variable PROGRAM; para ello basta especificar el n£mero de par metro 0. Esto 
+puede hacerse siempre, aunque el programa se haya ejecutado sin par metros.
+
+- Llamadas del DOS usadas:
+Get environment item (_GENV, 6Bh) *
+
+Ejemplo: ver el ejemplo de la funci¢n PRINTLN. Los ejemplos de otras muchas 
+funciones de NDOS tambi‚n usan NUMARGS y GETARG.
+
+
+
+		(N) GETC
+
+char ngetc(int modo)
+
+Obtiene un car cter desde el teclado y lo devuelve. "modo" puede ser cero, 
+uno de los siguientes modificadores, o los dos unidos mediante el operador 
+"|":
+
+NOWAIT: Si no se especifica, la funci¢n espera hasta que el usuario pulse una 
+tecla. Si se especifica, siempre termina inmediatamente, y si no se est  
+pulsando ninguna tecla devuelve 0.
+
+NOECHO: Si se especifica, el car cter correspondiente a la tecla pulsada no 
+ser  mostrado en pantalla.
+
+- Llamadas del DOS usadas:
+Console input (_CONIN, 01h) *
+Console input without echo (_INNOE, 08h) *
+Console status (_CONST, 0Bh) *
+
+Ejemplo: ver el ejemplo de la funci¢n WAITKEY.
+
+
+
+		(N) GETCWD
+
+int ngetcwd(int drive, char* buffer)
+
+Devuelve en "buffer" el directorio actual de la unidad "drive" (0 es la 
+unidad por defecto, 1 es A:, etc). En la cadena que representa el directorio 
+no se incluye la unidad ni el car cter "\" inicial ni final, por lo que el 
+directorio ra¡z se representa mediante una cadena vac¡a.
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get current directory (_GETCD, 59h)
+
+Ejemplo: el siguiente programa muestra la unidad y el directorio actual, de 
+igual forma que el prompt del int‚rprete de comandos, pero a¤adiendo una 
+barra invertida al final de la cadena. Recuerda que en C la barra invertida, 
+"\", es un car cter de escape para imprimir c¢digos especiales, por lo que 
+para imprimir realmente una barra invertida hay que especificar "\\".
+
+-----
+#include "ndos.h"
+
+char dir[255];
+int drive,e;
+
+main()
+{
+	/* Obtiene unidad y directorio */
+
+	drive=getdrv();
+	if(e=ngetcwd(0, dir)) exit(e);
+
+	/* Imprime U:\ si es el dir. raiz, si no, imprime U:\+dir+\ */
+
+	println("\n\rEstamos en: ");
+	nputc(drive+'A');
+	if(!dir[0])
+		println(":\\");
+	else
+		mprint(":\\", dir, "\\\n\r", NULL);
+	exit(0);
+}
+-----
+
+
+
+		GETDPAR
+
+int getdpar(int drive, diskparam* dpar)
+
+Devuelve en "dpar" los par metros del disco asociado a la unidad "drive" (1 
+es A:, etc). En la secci¢n 2 se enumeran los campos de la estructura 
+"diskparam" y se explica el significado de cada uno de ellos.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get allocation information (_ALLOC, 1Bh)
+Get disk parameters (_DPARM, 31h)
+
+Ejemplo: el siguiente programa obtiene los par metros de la unidad que se le 
+pasa como par metro en la l¡nea de comandos, y la muestra por pantalla.
+
+-----
+/* DPAR.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+
+#define minusc(x) (x|32)
+
+void prinfo(char* string, int value);
+void prinfox(char* string, int value);
+long clus2k(uint clus);
+
+diskparam dpar;
+char bufer[80];
+int drive,e;
+
+main()
+{
+	println("\n\rPar metros de disco");
+
+	/* Comprueba si hay un par metro en la l¡nea de comandos */
+	/* (la unidad) y lo obtiene */
+
+	if(numargs()!=1)
+	{
+		println("Uso: dpar X:");
+		exit(0);
+	}
+
+	getarg(1,bufer);
+	drive=minusc(bufer[0])-'a'+1;
+
+	/* Obtiene par metros de la unidad y los muestra en pantalla */
+
+	if(e=getdpar(drive,&dpar)) exit(e);
+
+	newline();
+	prinfo("N£mero de unidad f¡sica: ",dpar.phdrive);
+	prinfo("Tama¤o de sector (bytes): ",dpar.secsize);
+	prinfo("Sectores por cluster: ",dpar.secpclus);
+	prinfo("Sectores reservados: ",dpar.secrsv);
+	prinfo("Copias de la FAT: ",dpar.fatcopies);
+	prinfo("Entradas en el directorio ra¡z: ",dpar.rootentr);
+	prinfo("Sectores totales: ",dpar.sectotal);
+	prinfox("Byte descriptor del dispositivo: ",dpar.mediaid);
+	prinfo("Sectores por FAT: ",dpar.secpfat);
+	prinfo("Primer sector del directorio raiz: ",dpar.firstroot);
+	prinfo("Primer sector de la zona de datos: ",dpar.firstdata);
+	prinfo("N£mero m ximo de cluster: ",dpar.maxclus);
+	mprint("Hay ficheros recuperables: ",
+		dpar.dirty?"SI":"NO", CR_LF, NULL);
+	print("Etiqueta de volumen: ");
+	if(dpar.volid==-1)
+		println("No tiene");
+	else
+		mprint("&H", ntoa(dpar.volid,8,8,0,16,bufer), CR_LF, NULL);
+	prinfo("Espacio total (KB): ",clus2k(dpar.clustotal));
+	prinfo("Espacio libre (KB): ",clus2k(dpar.clusfree));
+	prinfox("Direccion del DPB: ",dpar.dpbpnt);
+	newline();
+	exit(0);
+}
+
+/* Funciones de ayuda para la visualizaci¢n */
+
+void prinfo(char* string, int value)
+{
+	mprint(string, itoa(value,bufer), CR_LF, NULL);
+}
+
+void prinfox(char* string, int value)
+{
+	mprint(string, "&H", xtoa(value,bufer), CR_LF, NULL);
+}
+
+/* Convierte una cantidad de clusters a una de kilobytes */
+
+long clus2k(uint clus)
+{
+	int kpclus;
+	kpclus=(dpar.secpclus*dpar.secsize)/1024;
+	return (kpclus?(kpclus*clus):(clus/2));
+}
+-----
+
+
+
+		GETDRV
+
+int getdrv()
+
+Devuelve la unidad de disco por defecto establecida en el sistema (0 es A:, 
+etc).
+
+- Llamadas del DOS usadas:
+Get current drive (_CURDRV, 19h) *
+
+Ejemplo: el siguiente fragmento de c¢digo imprime informaci¢n sobre la unidad 
+por defecto.
+
+-----
+char drive[2];
+drive[0]=getdrv()+'A';
+drive[1]=0;
+mprint("La unidad por defecto es ", drive, ":\n\r", NULL);
+-----
+
+
+
+		GETDTA
+
+int getdta()
+
+Obtiene la direcci¢n el  rea de transferencia de disco (DTA) usado por las 
+llamadas de DOS 1 para manejo de ficheros y acceso directo a sectores. Este 
+ rea se establece mediante las funciones SETDTA y ABSEC; por defecto (al 
+comenzar el programa o tras ejecutar la llamada del DOS "Disk reset", 0Dh) se 
+sit£a en la direcci¢n 0x0080.
+
+Todas las funciones de NDOS para el manejo de ficheros usan llamadas de DOS 
+2, que no usan el DTA, por tanto no hay que preocuparse por este  rea si no 
+se van a realizar accesos directos a sectores (funciones ABSEC, RDSEC y 
+WRSEC).
+
+- Llamadas del DOS usadas:
+Get disk transfer address (_GETDTA, 57h) *
+
+
+
+		(N) GETENV
+
+int ngetenv(char* name, char* buffer, int bufsize)
+
+Obtiene la cadena correspondiente a la variable de entorno de nombre "name" y 
+la deposita en "buffer". Si no existe ninguna variable con nombre "name", se 
+devuelve una cadena vac¡a (un car cter 0 en "buffer") pero no se genera 
+error.
+
+El tama¤o del espacio disponible en "buffer" ha de ser indicado en "bufsize" 
+Si el espacio es insuficiente, se devuelve la cadena truncada (y sin 0 final) 
+y un error _ELONG; un tama¤o de 255 bytes siempre ser  suficiente.
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get environment item (_GENV, 6Bh) *
+
+Ejemplo: La siguiente ejecuci¢n de GETENV obtiene la ruta completa del 
+programa que la ejecuta. Ver tambi‚n el ejemplo de la funci¢n FINDENV.
+
+-----
+char bufer[255];
+getenv("PROGRAM", bufer, 255);
+-----
+
+
+
+		GETERR
+
+int geterr()
+
+Devuelve el c¢digo del error generado por la £ltima ejecuci¢n de una llamada 
+al DOS. Esta es la £nica forma de saber si una funci¢n de NDOS ha generado un 
+error en los casos en los que la funci¢n no devuelve directamente un c¢digo 
+de error porque necesita devolver otro resultado (por ejemplo, la funci¢n 
+OPEN necesita devolver el descriptor del fichero que acaba de abrir).
+
+Normalmente, en programas sencillos se desea que la ejecuci¢n acabe 
+inmediatamente si se produce un error del DOS (por ejemplo, si no se 
+encuentra el fichero que se ha de procesar), de forma que el int‚rprete de 
+comandos muestre el mensaje de error correspondiente. Por ejemplo, supongamos 
+que en esas condiciones queremos ejecutar FUNCION(fichero) que devuelve un 
+c¢digo de error. Entonces haremos:
+
+int e;
+if(e=funcion(fichero)) exit(e);
+
+Pero si FUNCION devuelve otro resultado que no es un c¢digo de error, 
+haremos:
+
+int e,resultado;
+resultado=funcion(fichero);
+if(e=geterr()) exit(e);
+else ... /* Procesa resultado */
+
+Hay que tener cuidado, sin embargo, en no terminar el programa inmediatamente 
+si hay ficheros abiertos; en ese caso habr  que cerrarlos todos antes de 
+terminar.
+
+- Llamadas del DOS usadas:
+Get previous error code (_ERROR, 65h) *
+
+Ejemplos: gran parte de los ejemplos de las funciones de NDOS usan la funci¢n 
+GETERR, por ejemplo el de la funci¢n OPEN.
+
+
+
+		GETFATT *
+
+int getfatt(char* name)
+
+Esta funci¢n, que equivale a fileatt(name,-1,-1), obtiene el byte de 
+atributos del fichero "name", que no puede estar abierto: para obtener el 
+byte de atributos de un fichero abierto hay que usar GETHATT. En la secci¢n 3 
+se listan las constantes que hay definids en NDOS.H para el tratamiento de 
+los atributos.
+
+Esta funci¢n producee un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Get/set file attributes (_ATTR, 50h)
+
+Ejemplo: la siguiente funci¢n devuelve 1 si el nombre pasado corresponde a un 
+directorio, 0 si corresponde a un fichero, y -1 si hay alg£n error.
+
+-----
+int isdir(char* name)
+{
+	int att;
+	att=getfatt(name);
+	if(geterr()) return -1;
+	if(att & A_DIR)
+		return 1;
+	else
+		return 0;
+}
+-----
+
+
+
+		GETFDATE *
+
+int getfdate(char* file, int* d)
+
+Obtiene en "d" la fecha del fichero "file", que no puede estar abierto. Se 
+puede convertir "d" a una estructura de tipo DATE con la funci¢n ITOD. La 
+macro GETFDATE es equivalente a filedt(file,-1,0,NULL,d)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file date and time (_FTIME, 51h)
+
+Ejemplo: el siguiente fragmento de c¢digo establece la fecha y hora actuales 
+como las del fichero "FILE".
+
+-----
+int d,t;
+date d_struc;
+time t_struc;
+
+getfdate("FILE", &d);
+getftime("FILE", &t);
+
+d_struc=itod(d);
+t_struc=itot(t);
+
+sdate(&d_struc);
+stime(&t_struc);
+-----
+
+
+
+		GETFTIME *
+
+int getftime(char* file, int* t)
+
+Obtiene en "t" la hora del fichero "file", que no puede estar abierto. Se 
+puede convertir "t" a una estructura de tipo TIME con la funci¢n ITOT. La 
+macro GETFTIME es equivalente a filedt(file,-1,0,t,NULL)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file date and time (_FTIME, 51h)
+
+Ejemplo: ver el ejemplo de la funci¢n GETFDATE.
+
+
+
+		GETHATT *
+
+int gethatt(fhandle fh)
+
+Esta funci¢n, que equivale a fileatt(NULL,fh,-1), obtiene el byte de 
+atributos del fichero abierto cuyo descriptor es "fh"; si un fichero est  
+abierto, esta es la £nica forma de obtener sus atributos, no se puede usar 
+GETFATT. En la secci¢n 3 se listan las constantes que hay definids en NDOS.H 
+para el tratamiento de los atributos.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Get/set file handle attributes (_HATTR, 55h)
+
+Ejemplo: la siguiente funci¢n devuelve 1 si el descriptor pasado corresponde 
+a un fichero oculto, 0 si corresponde a un fichero normal, y -1 si hay alg£n 
+error.
+
+-----
+int ishid_fh(fhandle fh)
+{
+	int att;
+	att=gethatt(fh);
+	if(geterr()) return -1;
+	if(att & A_HID)
+		return 1;
+	else
+		return 0;
+}
+-----
+
+
+
+		GETHDATE *
+
+int gethdate(fhandle fh, int* d)
+
+Obtiene en "d" la fecha del fichero abierto cuyo descriptor es "fh". Se 
+puede convertir "d" a una estructura de tipo DATE con la funci¢n ITOD. La 
+macro GETHDATE es equivalente a filedt(NULL,fh,0,NULL,d)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file handle date and time (_HFTIME, 56h)
+
+
+
+		GETHTIME *
+
+int gethtime(fhandle fh, int* t)
+
+Obtiene en "t" la fecha del fichero abierto cuyo descriptor es "fh". Se 
+puede convertir "t" a una estructura de tipo TIME con la funci¢n ITOT. La 
+macro GETHTIME es equivalente a filedt(NULL,fh,0,t,NULL)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file handle date and time (_HFTIME, 56h)
+
+
+
+		GETLOGV
+
+int getlogv()
+
+Devuelve un entero con informaci¢n sobre las unidades de disco existentes en 
+el sistema. El bit 0 estar  a 1 si la unidad A: existe, el bit 1 para la 
+unidad B:, y as¡ hasta el bit 7 para la unidad H:. Puede ser £til convertir 
+el entero devuelto a una estructura de tipo "flags" mediante un cast, para un 
+tratamiento m s f cil del mismo.
+
+- Llamadas del DOS usadas:
+Get login vector (_LOGIN, 18h) *
+
+Ejemplo: el siguiente programa muestra en pantalla las unidades de disco 
+existentes en el sistema. El m‚todo usado para comprobar cada bit del entero 
+devuelto por GETLOGV es el siguiente: comprueba el bit 0 (mediante una 
+operaci¢n "&1"), si est  a 1 muestra la unidad, y a continuaci¢n rota el 
+entero a la derecha (con ">>=1") de forma que el siguiente bit queda en la 
+posici¢n 0; repite este proceso ocho veces en un bucle.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+main()
+{
+	int i,drives;
+	char curdrv='A';        /* Unidad cuyo bit se comprueba */
+	drives=getlogv();
+	println("Unidades disponibles:");
+	for(i=0;i<8;i++)
+	{
+		if(drives&1)	/* ¨El bit 0 est  a 1? */
+		{
+			putc(curdrv);
+			putc(':');
+			newline();
+		}
+		curdrv++;
+		drives>>=1;	/* Rota "drives" a la derecha */
+	}
+	exit(0);
+}
+-----
+
+
+
+		GTIME
+
+void gtime(time* systim)
+
+Obtiene la hora actual del sistema en la estructura "systim" de tipo TIME 
+(en la secci¢n 2 se detalla esta estructura). Se puede codificar el resultado 
+en un entero (para ser usado por ejemplo en la funci¢n SETFTIME) mediante la 
+instrucci¢n TTOI.
+
+- Llamadas del DOS usadas:
+Get time (_GTIME, 2Ch) *
+
+Ejemplo: el siguiente programa muestra en pantalla la hora actual del 
+sistema.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+char* itoa_2d(int, char*);
+char buf_hora[3];	/* Bufer para convertir la hora a una cadena */
+char buf_min[3];	/* Bufer para convertir los minutos a una cadena */
+char buf_seg[3];	/* Bufer para convertir los segundos a una cadena */
+char* dospun=":";
+time t;
+
+main()
+{
+	gtime(&t);
+	itoa_2d(t.hour, buf_hora);
+	itoa_2d(t.minute, buf_min);
+	itoa_2d(t.second, buf_seg);
+	mprint(buf_hora, dospun, buf_min, dospun, buf_seg, CR_LF, NULL);
+	exit(0);
+}
+
+/* Esta funci¢n convierte un entero a una cadena como ITOA, */
+/* pero el resultado ocupa siempre dos d¡gitos */
+
+char* itoa_2d(int num, char* buf)
+{
+	return ntoa(num, 2, 2, 0, 10, buf);
+}
+-----
+
+
+
+		HOME *
+
+void home()
+
+Sit£a el cursor al principio de la pantalla. Equivale a nputc(0x0B).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		INPUT
+
+int input(char* buffer, int size)
+
+Obtiene en "buffer" la cadena que el usuario entra por el teclado. A la hora 
+de introducir la cadena, el usuario dispone de diversas facilidades de 
+edici¢n proporcionadas por el sistema operativo. La cadena se da por 
+terminada cuando el usuario pulsa ENTER; el car cter de terminaci¢n de l¡nea 
+no se incluye al final de la cadena, en su lugar se inserta un car cter 0.
+
+"size" ha de contener la longitud m xima de la cadena, sin incluir el 0 
+final. El usuario no podr  introducir m s car cteres que los especificados 
+por "size". Si lo intenta, sonar  un beep por cada car cter extra que intente 
+introducir.
+
+Tras la ejecuci¢n de INPUT, la cadena no estar  en realidad almacenada a 
+partir de la direcci¢n "buffer", sino a partir de "buffer+2". buffer[0] 
+contendr  el valor "size", y buffer[1] contendr  la longitud real de la 
+cadena introducida, sin incluir el car cter 0 final. Por tanto, el tama¤o 
+m¡nimo del b£fer ha de ser size+3.
+
+El valor devuelto es la longitud de la cadena introducida, igual que el 
+valor almacenado en buffer[1].
+
+- Funciones del DOS usadas:
+Buffered line input (_BUFIN, 0Ah) *
+
+Ejemplo: el siguiente programa pide al usuario que escriba una cadena, y a 
+continuaci¢n la imprime.
+
+-----
+#include "ndos.h"
+
+#define MAX_LON 80
+
+char bufer[MAX_LON+3];
+char buflon[4];
+int long;
+
+main()
+{
+	print("Escribe una frase: ");
+	long=input(bufer,20);
+	newline();
+	mprint("La frase es: ", bufer+2, CR_LF, NULL);
+	mprint("Y su longitud es: ", itoa(long,buflon), NULL);
+	exit(0);
+}
+-----
+
+
+
+		INSLINE *
+
+void insline()
+
+Inserta una l¡nea nueva encima de la l¡nea en la que est  situado el cursor, 
+desplazando para ello el resto de la pantalla hacia abajo. Deja el cursor al 
+principio de la nueva l¡nea. Equivale a mputc(ESC,'L',NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		IOCTRL
+
+int ioctrl(fhandle fh, int subf, flags* params)
+
+Permite consultar y modificar ciertos aspectos del descriptor de fichero 
+"fh"; en particular permite averiguar si el descriptor se refiere realmente a 
+un fichero o a un dispositivo. Funciona de la siguiente forma, seg£n el 
+n£mero de subfunci¢n pasado en "subf":
+
+- subf=0: obtiene en "params" diversa informaci¢n sobre el descriptor. Si 
+‚ste corresponde a un dispositivo obtendremos:
+
+params.b0=1 si se trata de un dispositivo de entrada por teclado
+params.b1=1 si se trata de un dispositivo de salida por pantalla
+params.b5=1 si el dispositivo funciona en modo ASCII, 0 si funciona en modo 
+binario
+params.b6=1 si el dispositivo est  en condici¢n de "final de fichero" (si una 
+lectura anterior del descriptor produjo un error _EOF)
+params.b7=1 indicando que es un dispositivo, no un fichero
+
+Si por el contrario corresponde a un fichero, obtendremos:
+
+params.b0 a params.b5: n£mero de unidad (0 es A:, etc). Se puede obtener con 
+un "cast" de la siguiente forma: (int)params&3F.
+params.b6=1 si el puntero del fichero est  m s all  del final del mismo
+parambs.b7=0 indicando que es un fichero, no un dispositivo
+
+Podemos distinguir si se trata de un fichero o de un dispositivo simplemente 
+observando el valor de params.b7.
+
+- subf=1: Si "fh" corresponde a un dispositivo, permite establecer el modo 
+de funcionamiento del mismo, ASCII o binario. Para ello hay que pasarle el 
+modo deseado en params.b5, 1 para ASCII y 0 para binario.
+
+- subf=2: Comprueba si "fh" est  listo para ser le¡do, en cuyo caso devolver  
+params.b0 a params.b7 puestos a 1; en caso contrario los devolver  puestos a 
+0. Si "fh" corresponde a un dispositivo, el significado de "listo para ser 
+le¡do" depende del dispositivo. Un fichero siempre est  listo para ser le¡do, 
+excepto si su puntero est  m s all  del final del fichero.
+
+- subf=3: Similar al caso anterior, pero ahora comprueba si "fh" est  listo 
+para ser escrito. Un fichero siempre est  listo para ser escrito.
+
+- subf=4: Asume que el descriptor se refiere a un dispositivo de pantalla y 
+obtiene las dimensiones de la misma; para ello asume que "params" es un 
+entero y devuelve el n£mero de columnas en los bits 0 a 7 y el n£mero de 
+filas en los bits 8 a 15. Se pueden obtener mediante un "cast": 
+filas=(int)params>>8&0xFF; columnas=(int)params&0xFF. Si "fh" es en realidad 
+un fichero, o un dispositivo para el que no tiene sentido hablar de 
+dimensiones, ambos valores ser n cero, lo cual debe interpretarse como 
+"tama¤o ilimitado".
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+I/O control for devices (_IOCTL, 4Bh)
+
+Ejemplo: el siguiente programa muestra informaci¢n sobre el descriptor 
+indicado como par metro en la l¡nea de comandos, asumiendo que corresponde a 
+un dispositivo (los £nicos descriptores siempre disponibles son los numerados 
+de 0 a 4, que corresponden a los descriptores del sistema).
+
+-----
+/* DEVINFO.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+
+extern int atoi(char*);
+
+char bufer[128];
+flags par;
+int fh,e;
+
+main()
+{
+	/* Obtiene descriptor a examinar */
+
+	if(!numargs())
+	{
+		println("Uso: devinfo descriptor");
+		exit(0);
+	}
+
+	getarg(1,&bufer);
+	fh=atoi(&bufer);
+
+	/* Obtiene informaci¢n del descriptor, termina si hay alg£n error */
+
+	if(e=ioctrl(fh,0,&par)) exit(e);
+	if(!par.b7)
+	{
+		println("No es un dispositivo.");
+		exit(0);
+	}
+
+	/* Muestra informaci¢n general (subfunci¢n 0) */
+
+	mprint("C¢nsola de entrada: ",(par.b0) ? "SI":"NO",CR_LF,NULL);
+	mprint("C¢nsola de salida : ",(par.b1) ? "SI":"NO",CR_LF,NULL);
+	mprint("Modo: ",(par.b5) ? "ASCII":"binario",CR_LF,NULL);
+	mprint("EOF: ",(par.b6) ? "SI":"NO",CR_LF,NULL);
+
+	/* Muestra si est  listo para entrada/salida (subf. 2 y 3) */
+
+	ioctrl(fh,2,&par);
+	mprint("Input ready: ",par.b0?"SI":"NO",CR_LF,NULL);
+
+	ioctrl(fh,3,&par);
+	mprint("Output ready: ",par.b0?"SI":"NO",CR_LF,NULL);
+
+	/* Muestra dimensiones (subfunci¢n 4) */
+
+	ioctrl(fh,4,&par);
+	mprint("Filas: ",itoa((int)par>>8&0xFF,&bufer),"\n\r",NULL);
+	mprint("Columnas: ",itoa((int)par&0xFF,&bufer),"\n\r",NULL);
+
+	exit(0);
+}
+-----
+
+
+
+		ITOA *
+
+char* itoa(long num, char* bufer)
+
+Genera en "bufer" una cadena con la representaci¢n en base decimal del n£mero 
+entero con signo "num". S¢lo se generan los d¡gitos necesarios, sin ceros ni 
+espacios a la izquierda; si se requiere otro formato para la cadena hay que 
+usar directamente NTOA. itoa(num, buf) equivale a ntoa(num,1,1,1,10,bufer).
+
+El valor devuelto es "buffer", por tanto se puede incrustar una llamada a 
+NTOA en una llamada a por ejemplo MPRINT. Ver ejemplo y notas a este respecto 
+para la funci¢n NTOA.
+
+- Llamadas del DOS usadas:
+Ninguna.
+
+Ejemplo: ver el ejemplo de la funci¢n BTOA.
+
+
+
+		ITOD
+
+date itod(uint i)
+
+Devuelve la decodificaci¢n de la estructura de tipo DATE codificada en el 
+entero "i"; el proceso inverso lo realiza la funci¢n DTOI. Algunas funciones 
+que manejan informaci¢n de ficheros, como FFIND o FILEDT y sus derivados, 
+trabajan con las fechas y las horas coficadas en enteros, y puede ser 
+necesario el uso de ITOD e ITOT o sus inversas.
+
+- Funciones del DOS usadas:
+Ninguna.
+
+Ejemplo: ver el ejemplo de la funci¢n FFIND.
+
+
+
+		ITOT
+
+time itot(uint i)
+
+Devuelve la decodificaci¢n de la estructura de tipo TIME codificada en el 
+entero "i"; el proceso inverso lo realiza la funci¢n TTOI. Algunas funciones 
+que manejan informaci¢n de ficheros, como FFIND o FILEDT y sus derivados, 
+trabajan con las fechas y las horas coficadas en enteros, y puede ser 
+necesario el uso de ITOD e ITOT o sus inversas.
+
+- Funciones del DOS usadas:
+Ninguna.
+
+Ejemplo: ver el ejemplo de la funci¢n FFIND.
+
+
+
+		JOIN
+
+uint join(int parent)
+
+Ejecutada por un proceso hijo, devuelve el control al proceso padre cuyo 
+identificador es "parent" y devuelve los errores primario y secundario con 
+los que ha terminado dicho proceso hijo (el primario en los bits 0 a 7, y el 
+secundario en los bits 8 a 15). Generalmente, esta funci¢n no se usar  nunca 
+en programas normales; para m s informaci¢n ver la descripci¢n de las 
+funciones "Fork to child process" (_FORK, 60h) y "Rejoin parent process" 
+(_JOIN, 61h) en el documento "MSX-DOS 2 function codes specification".
+
+- Llamadas del DOS usadas:
+Rejoin parent process (_JOIN, 61h)
+
+
+
+		LOCATE *
+
+void locate(int x, int y)
+
+Sit£a el cursor en la columna "x", file "y" de la pantalla. Equivale a 
+mputc(ESC,'Y',x+32,y+32,NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		(N) MKDIR
+
+int nmkdir(char* name)
+
+Crea un directorio con el nombre "name". Si "name" s¢lo especifica un nombre 
+y no una unidad y/o ruta, el directorio se crea como hijo del directorio 
+actual de la unidad por defecto. Tambi‚n se puede especificar una unidad y un 
+nombre, entonces se crea el directorio como hijo del directorio actual de la 
+unidad especificada; o se puede especificar unidad, ruta y nombre.
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error. Aunque se puede usar CREATE para crear un 
+directorio, es mejor usar MKDIR, dado que su uso es m s simple y realiza un 
+mejor tratamiento de errores (si ya existe un directorio con nombre "name" 
+devuelve un error _DIRX, no _FILEX).
+
+- Llamadas del DOS usadas:
+Create file handle (_CREATE, 44h)
+Get previous error code (_ERROR, 65h) *
+Get/set file attributes (_ATTR, 50h)
+
+Ejemplo: la siguiente ejecuci¢n de MKDIR crea el directorio PRUEBA en el 
+directorio actual de la unidad C:
+
+-----
+nmkdir("C:PRUEBA");
+-----
+
+
+
+		MOVE
+
+int move(char* oldpath, char* newpath)
+
+Traslada el fichero o subdirectorio especificado en "oldpath" hacia la nueva 
+ruta indicada en "newpath". A tener en cuenta:
+
+- "newpath" no puede contener especificaci¢n de unidad.
+- No se pueden usar comodines, s¢lo se puede mover un fichero con cada 
+ejecuci¢n de MOVE. Pero si se mueve un directorio, todos sus subdirectorios 
+tambi‚n se mueven.
+- No se puede mover un fichero si est  abierto.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Move file or subdirectory (_MOVE, 4Fh)
+
+Ejemplo: la siguiente ejecuci¢n de "move" traslada el fichero AMOVER.TXT 
+situado en el directorio \TXT\PRUEBAS al directorio padre del actual.
+
+-----
+move("\TXT\PRUEBAS\AMOVER.TXT", "..");
+-----
+
+
+
+		MPRINT
+
+void mprint(char* cadena,..., char* cadena, NULL)
+
+Esta funci¢n imprime en pantalla un n£mero cualquiera de cadenas que se le 
+pasan como par metro; el £ltimo par metro de la funci¢n ha de ser 
+obligatoriamente NULL. Equivale a la ejecuci¢n de un PRINT para cada cadena.
+
+Aunque esta funci¢n es el equivalente de la sentencia de BASIC "PRINT 
+cadena;cadena;...", no act£a exactamente igual. Ver las notas en la 
+descripci¢n de la funci¢n NTOA.
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+Ejemplo: muchos de los ejemplos de las funciones de NDOS realizan llamadas a 
+MPRINT. Una de estas funciones es XTOA.
+
+
+
+		MPUTC
+
+void mputc(char caracter,..., char caracter, NULL)
+
+Esta funci¢n imprime en pantalla un n£mero cualquiera de car cteres que se le 
+pasan como par metro; el £ltimo par metro de la funci¢n ha de ser 
+obligatoriamente NULL. Equivale a la ejecuci¢n de un PUTC para cada car cter.
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+Ejemplo: las siguientes instrucciones producen todas el mismo efecto, un 
+salto de l¡nea en pantalla.
+
+-----
+newline();
+print("\n\r");
+print(CR_LF);
+mputc('\n','\r',NULL);
+mputc(13,10,NULL);
+-----
+
+
+
+		NEWLINE *
+
+int newline()
+
+Imprime un salto de l¡nea en pantalla. Equivale a print("\n\r"), por tanto 
+devuelve la longitud de la cadena impresa, que es 2.
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		NTOA
+
+char* ntoa ([unsigned] long num, char digits, char length,
+	    uchar sign, uchar base, char* buffer)
+
+Genera una cadena con la representaci¢n de un n£mero entero (de tipo "long" o 
+"unsigned long") con el formato especificado por los par metros de entrada; 
+representa pues la inversa de la funci¢n de librer¡a est ndar ATOI. Los 
+par metros de entrada son:
+
+- num: el n£mero a convertir.
+- digits: el n£mero total de d¡gitos a generar. Si es mayor del necesario, 
+se imprimen car cteres '0' en el lugar de los d¡gitos sobrantes.
+- length: longitud total de la cadena. Si es mayor que el n£mero de d¡gitos, 
+la cadena se alinea a la derecha y se imprimen espacios en los car cteres 
+sobrantes.
+- sign: 0 si el n£mero es de tipo "unsigned long", 1 si es de tipo "long".
+- base: la base en la que se representar  el n£mero, de 2 a 16.
+- buffer: la direcci¢n de memoria en la que se generar  la cadena.
+
+Detalles a tener en cuenta:
+
+- Si "length" es menor que "digits", se asume que son iguales.
+- Si "digits" o "length" son insuficientes para representar todo el n£mero, 
+se asumen como iguales a la longitud necesaria. Por tanto, para generar 
+£nicamente los car cteres necesarios para representar el n£mero sea cual sea 
+‚ste, basta especificar digits=1 y length=1.
+- El valor m ximo para "width" y "length" est  fijado en 30. Se puede 
+modificar recompilando la funci¢n.
+- Si el n£mero es negativo se imprimir  con un "-" delante, sea cual sea la 
+base especificada.
+
+El valor devuelto es "buffer", por tanto se puede incrustar una llamada a 
+NTOA en una llamada a por ejemplo MPRINT, de la siguiente forma:
+
+mprint("El numero es: ", ntoa(numero,...), "\n\r",NULL);
+
+­OJO! Cuidado al incrustar m s de una llamada a NTOA en una llamada a MPRINT. 
+Si est s acostumbrado al BASIC, tendr s la tentaci¢n de hacer algo como esto:
+
+char bufer[30];
+mprint("El uno es: ", ntoa(34,1,1,0,10,bufer),
+       " y el dos es: ", ntoa(100,1,1,0,10,bufer), ".\n\r", NULL);
+
+y esperar el siguiente resultado:
+
+El uno es: 34, y el dos es: 100.
+
+Sin embargo lo que obtendr s es:
+
+El uno es: 100, y el dos es: 100.
+
+La raz¢n de esto es el distinto funcionamiento del C y el BASIC. En BASIC, 
+las distintas subcadenas se van evaluando e imprimiendo a medida que la 
+secuencia PRINT se interpreta. Pero en C, primero se eval£an todas las 
+expresiones que forman los par metros de MPRINT (esto incluye la ejecuci¢n de 
+las dos llamadas a NTOA), y s¢lo despu‚s se ejecuta MPRINT. Por tanto, como 
+ambas llamadas a NTOA usan el mismo b£fer, la segunda llamada machaca el 
+resultado de la primera.
+
+Normalmente, en vez de NTOA ser  preferible usar las macros ITOA, XTOA y 
+BTOA, que transforman un n£mero a una cadena decimal, hexadecimal y binaria 
+respectivamente, cuya longitud es la m¡nima para representar el n£mero 
+completo.
+
+- Llamadas del DOS usadas:
+Ninguna.
+
+Ejemplos:
+
+-----
+ulong numero=1234;
+char bufer[30];
+
+/* Genera "  001234" (dos espacios a la izquierda) */
+ntoa(numero, 6, 8, 0, 10, bufer);
+
+/* Genera "    1234" (cuatro espacios a la izquierda)*/
+ntoa(numero, 1, 8, 0, 10, bufer);
+
+/* Genera "001234" */
+nota(numero, 6, 1, 0, 10, bufer);
+
+/* Genera "1234" */
+nota(numero, 1, 1, 0, 10, bufer);
+
+/* Genera "&H04D2" */
+ntoa(numero, 4, 1, 0, 16, bufer+2);
+bufer[0]='&';
+bufer[1]='H';
+
+/* Genera "-1234" */
+nota(-numero, 1, 1, 1, 10, bufer);
+-----
+
+
+
+		NUMARGS
+
+int numargs()
+
+Devuelve el n£mero de par metros que se han pasado en la l¡nea de comandos al 
+ejecutar el programa; por ejemplo, si se ha ejecutado como PROG FILE /A /B 
+devolver  3. La l¡nea de comandos se obtiene mediante la lectura de la 
+variable de entorno PARAMETERS.
+
+- Llamadas del DOS usadas:
+Get environment item (_GENV, 6Bh) *
+
+Ejemplo: ver el ejemplo de la funci¢n PRINTLN. Los ejemplos de otras muchas 
+funciones de NDOS tambi‚n usan NUMARGS y GETARG.
+
+
+
+		(N) OPEN
+
+fhandle nopen(char* filename, char mode)
+
+Abre el fichero especificado en la cadena "filename", seg£n el modo indicado 
+en "mode", y devuelve un descriptor de fichero nuevo asociado al fichero 
+reci‚n abierto. El modo puede ser 0, o uno o m s de los siguientes 
+indicadores, concatenados mediante el operador "|":
+
+F_NOWRITE: No se podr  escribir en el fichero
+F_NOREAD: No se podr  leer del fichero
+F_NOINH: El fichero no ser  heredado por los procesos hijo creados con FORK
+
+Se pueden combinar dos o m s con el operador "|". Por ejemplo, especificando
+F_NOINH|F_NOWRITE como modo de apertura, el fichero se abrir  como s¢lo 
+lectura y no heredable.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Open file handle (_OPEN, 43h)
+
+Ejemplo: El siguiente programa sirve de ejemplo del uso de las funciones 
+OPEN, CLOSE, READ, WRITE, GETERR, NUMARGS, GETARG, PRINT y EXIT. Se trata de 
+una versi¢n simplificada del comando TYPE del COMMAND.COM: simplemente 
+muestra por pantalla el contenido del fichero indicado como par metro en la 
+l¡nea de comandos al ejecutarlo.
+
+B sicamente, lo que hace el programa es intentar leer 32K del fichero hacia 
+la direcci¢n 4000h de TPA, y a continuaci¢n volcar los datos le¡dos a 
+pantalla mediante una escritura al descriptor de fichero STDOUT. Si realmente 
+se han podido leer 32K, probablemente a£n quedan datos en el fichero; 
+entonces se repite la operaci¢n. Si se han podido leer menos de 32K, ese era 
+el £ltimo (o el £nico) bloque del fichero, entonces la ejecuci¢n finaliza 
+tras imprimirlo por pantalla. Si no se ha podido leer nada, se finaliza 
+directamente.
+
+-----
+/* Pseudo TYPE - Muestra por pantalla el contenido de un fichero */
+/* Uso: PTYPE fichero */
+
+#define NSTDIO
+
+#include "ndos.h"
+#include "doscodes.h"
+
+#define BUFER ((char*)0x4000)
+#define BUFSIZE 0x8000
+
+int fh,num,e;
+
+main()
+{
+
+/* Comprueba que hay exactamente un argumento en la l¡nea de comandos.	*/
+/* En caso contrario muestra un mensaje explicativo y termina.		*/
+
+if(numargs()!=1)
+{
+	println("\n\rPseudoType - Uso: ptype fichero");
+	exit(0);
+}
+
+/* Obtiene el nombre del fichero (el £nico argumento		*/
+/* de la l¡nea de comandos) e intenta abrirlo.			*/
+/* En caso de error termina, mostrando el mensaje de error.	*/
+
+getarg(1,BUFER);
+
+fh=open(BUFER,F_NOWRITE);
+if(e=geterr()) exit(e);
+
+/* Intenta leer 32K, y si lo consigue o si consigue leer menos, */
+/* imprime por pantalla lo que ha leido.			*/
+/* Si realmente ha podido leer 32K, repite la operacion.	*/
+
+do
+{
+	num=read(fh,BUFER,BUFSIZE);
+	if(e=geterr())	    /* Si hay error, cierra el fichero y termina */
+	{
+		close(fh);
+		exit(e);
+	}
+	if(num) write(STDOUT,BUFER,num);
+
+} while(num==BUFSIZE);
+
+/* Cuando ya se ha imprimido todo, cierra el fichero y termina	*/
+
+close(fh);
+exit(0);
+}
+-----
+
+
+
+		PARSEF
+
+int parsef(char* fname, char* bufer, parsedata* pdata)
+
+Esta funci¢n es similar a PARSEP, con las siguientes diferencias:
+
+- La cadena a tratar, "fname", no representa una ruta+un nombre de fichero, 
+sino £nicamente un nombre de fichero. Por tanto, los campos f.b0, f.b1 y f.b2 
+de "pdata" siempre ser n puestos a 0.
+- Si "fname" contiene comodines "*", ‚stos son convertidos a secuencias de 
+"?". La cadena resultante de la conversi¢n es devuelta en "bufer".
+- El campo "logdrive" de "pdata" no ser  establecido, y "lastitem" contendr  
+la direcci¢n "bufer".
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Parse filename (_PFILE, 5Ch)
+
+Ejemplo: el siguiente programa, muy similar al del ejemplo de la funci¢n 
+PARSEP, muestra la informaci¢n generada por PARSEF para la cadena que se le 
+pasa en la l¡nea de comandos.
+
+-----
+/* PARSEF.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+#include "nasm.h"
+
+char bufer[128];
+char bufexp[16];
+parsedata pdata;
+
+void dataprint(char*, int);
+
+main()
+{
+	int e;
+	if (!numargs())
+	{
+		println("Uso: parsef cadena");
+		exit(0);
+	}
+
+	/* Obtiene par metro y le aplica PARSEF */
+
+	getarg(1,bufer);
+	if (e=parsef(bufer, bufexp, &pdata)) exit(e);
+	pd.termchar[0] = 0;	/* Para poder imprimir la cadena */
+
+	/* Imprime cadena normal y con los comodines expandidos */
+
+	mprint("\n\rCadena: ", bufer, CR_LF, NULL);
+	mprint("Cadena con los comodines expandidos: ",
+		bufexp, CR_LF, NULL);
+	newline();
+
+	/* Imprime la informaci¢n de las banderas */
+
+	dataprint("Nombre especificado:       ",pd.f.b3);
+	dataprint("Extensi¢n especificada:    ",pd.f.b4);
+	dataprint("Nombre/extension ambiguos: ",pd.f.b5);
+	dataprint("La cadena es . o ..:       ",pd.f.b6);
+	dataprint("La cadena es ..:           ",pd.f.b7);
+
+	exit(0);
+}
+
+/* Funci¢n de impresi¢n del estado de una bandera */
+
+void dataprint(char* cadena, int decision)
+{
+	mprint(cadena, (decision ? "SI":"NO"), CR_LF, NULL);
+}
+-----
+
+
+
+		PARSEP
+
+int parsep(char* path, parsedata* pdata)
+
+Interpreta la cadena "path", que ha de contener una ruta y/o un nombre de 
+fichero (no importa si la ruta o el fichero no existen realmente, PARSEP s¢lo 
+trabaja sobre la cadena sin acceder al disco), y devuelve la estructura 
+"pdata" de tipo PARSEDATA con diversa informaci¢n sobre dicha cadena. En la 
+secci¢n 2 se explica la estructura PARSEDATA.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Parse pathname (_PARSE, 5Bh)
+
+Ejemplo: el siguiente programa muestra la informaci¢n generada por PARSEP 
+para la cadena que se le pasa en la l¡nea de comandos.
+
+-----
+/* PARSEP.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+#include "nasm.h"
+
+char bufer[128];
+parsedata pdata;
+
+void dataprint(char*, int);
+
+main()
+{
+	int e;
+	if (!numargs())
+	{
+		println("Uso: nparsep cadena");
+		exit(0);
+	}
+
+	/* Obtiene par metro y le aplica PARSEP */
+
+	getarg(1,bufer);
+	if (e=parsep(bufer, &pdata)) exit(e);
+	pd.termchar[0] = 0;	/* Para poder imprimir la cadena */
+
+	/* Imprime cadena, £ltimo elemento y unidad l¢gica */
+
+	mprint("\n\rCadena: ", bufer, CR_LF, NULL);
+	mprint("Ultimo elemento: ", pdata.lastitem, CR_LF, NULL);
+	print("Unidad l¢gica: "); putc(pdata.logdrive+'A'-1); newline();
+	newline();
+
+	/* Imprime la informaci¢n de las banderas */
+
+	dataprint("S¢lo unidad:               ",!pd.f.b0);
+	dataprint("Directorio especificado:   ",pd.f.b1);
+	dataprint("Unidad especificada:       ",pd.f.b2);
+	dataprint("Nombre especificado:       ",pd.f.b3);
+	dataprint("Extensi¢n especificada:    ",pd.f.b4);
+	dataprint("Ultimo elemento ambiguo:   ",pd.f.b5);
+	dataprint("Ultimo elemento es . o ..: ",pd.f.b6);
+	dataprint("Ultimo elemento es ..:     ",pd.f.b7);
+
+	exit(0);
+}
+
+/* Funci¢n de impresi¢n del estado de una bandera */
+
+void dataprint(char* cadena, int decision)
+{
+	mprint(cadena, (decision ? "SI":"NO"), CR_LF, NULL);
+}
+-----
+
+
+
+		PAUSEKEY *
+
+void pausekey()
+
+Espera a que el usuario pulse una tecla, y una vez pulsada, ‚sta es extra¡da 
+del bufer del teclado (al contrario que en WAITKEY) y la ejecuci¢n contin£a. 
+Equivale a ngetc(NOECHO).
+
+Esta funci¢n es £til cuando simplemente queremos pausar la ejecuci¢n del 
+programa hasta que el usuario pulse una tecla, sin importarnos qu‚ tecla 
+pulsa en realidad.
+
+- Llamadas del DOS usadas:
+Console input (_CONIN, 01h) *
+Console input without echo (_INNOE, 08h) *
+Console status (_CONST, 0Bh) *
+
+Ejemplo: el siguiente fragmente de c¢digo mostrar¡a un texto haciendo una 
+pausa cada vez que la pantalla estuviera llena, si se definiera la variable 
+"numpant" conteniendo el n£mero de pantallas de texto a mostrar, y la funci¢n 
+"showpant" que se encargar¡a de mostrar una pantalla de texto.
+
+-----
+while(numpant--)
+{
+	showpant();
+	print("Pulsa una tecla para continuar... ");
+	pausekey();
+}
+-----
+
+
+
+		PRINT *
+
+int print(char* string)
+
+Imprime en pantalla la cadena apuntada por "string". Esta funci¢n es m s 
+r pida y m s peque¤a que PRINTF, por tanto es recomendable usarla siempre que 
+sea posible en vez de PRINTF. Devuelve la longitud de la cadena.
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+Ejemplo: ver el ejemplo de la funci¢n GETDRV.
+
+
+
+		(N) PRINTF
+
+int nprintf(char* string, ...)
+
+Esta funci¢n es id‚ntica a la funci¢n PRINTF (impresi¢n formateada en 
+pantalla) incluida en la librer¡a est ndar del compilador Hitech-C. La £nica 
+diferencia estriba en que NPRINTF usa la llamada del DOS _WRITE con el 
+descriptor de fichero STDOUT para acceder a la pantalla. Para detalles sobre 
+el uso de esta funci¢n consultar la descripci¢n de la funci¢n PRINTF en la 
+documentaci¢n del compilador Hitech-C (fichero Z80DOC.TXT)
+
+El c¢digo objeto de esta funci¢n es muy grande. Cuando sea posible es 
+preferible usar la funci¢n PRINT, m s simple pero tambi‚n de menor 
+tama¤o.
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		PRINTLN *
+
+void println(char* string)
+
+Imprime la cadena "string" en pantalla, tras lo cual imprime un salto de 
+l¡nea, actuando pues como la instrucci¢n PRINT de BASIC. Equivale a 
+mprint(string,CR_LF,NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+Ejemplo: El siguiente programa imprime en pantala la ruta y el nombre del 
+programa, seguido de todos los argumentos del mismo. Este ejemplo es similar 
+al de la funci¢n FPRINT.
+
+-----
+#include "ndos.h"
+
+int arg,nargs;
+char bufer[128];
+
+main()
+{
+	/* Escribe el nombre del programa (argumento 0) */
+
+	println("Ruta y nombre del programa: ");
+	getarg(0, bufer);
+	println(bufer);
+	newline();
+
+	/* Escribe todos los argumentos, acabados con fin de l¡nea */
+
+	nargs=numargs();
+	if(!nargs)
+	{
+		println("No hay argumentos.");
+	}
+	else
+	{
+		println("Los argumentos son:");
+		for(arg=1; arg<=nargs; arg++)
+		{
+			getarg(arg, bufer);
+			println(bufer);
+		}
+	}
+	exit(0);
+}
+-----
+
+
+
+		(N) PUTC *
+
+int nputc(char c)
+
+Esta funci¢n simplemente imprime el car cter "c" en pantalla y devuelve el 
+mismo car cter. Equivale a nfputc(STDOUT,c).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+Ejemplo: ver el ejemplo de la funci¢n FPUTC, en el que se usa PUTC para 
+imprimir los puntos.
+
+
+
+		RAMDISK
+
+int ramdisk(int size)
+
+Crea o destruye el disco RAM del sistema (RAMdisk), o consulta su tama¤o, en 
+funci¢n del par metro "size", seg£n el siguiente m‚todo:
+
+- Si "size" vale -1, simplemente se consulta el tama¤o del RAMdisk, sin 
+modificarlo.
+- Si "size" vale 0, se destruye el RAMdisk existente; no se hace nada si no 
+existe el RAMdisk.
+- Si "size" es mayor de 0, se intenta crear el RAMdisk con el tama¤o en 
+KBytes especificado en "size", redondeado por exceso a un m£ltiplo de 16. El 
+valor m ximo para "size" es 4064; si se especifica un valor mayor, se asume 
+4064.
+- El valor devuelto es siempre el tama¤o en KBytes del RAMdisk tras la 
+ejecuci¢n de la funci¢n, que ser  0 si el RAMdisk no existe.
+
+Si no hay memoria suficiente para crea un RAMdisk del tama¤o especificado en 
+"size", se crea uno de menor tama¤o, pero no se genera un error. S¢lo se 
+genera un error si no nay ning£n segmento de memoria libre y no se puede 
+crear el RAMdisk; para obtener el c¢digo del error generado por esta funci¢n 
+(0 si no hay error) hay que usar la funci¢n GETERR. El disco RAM siempre 
+tiene asignada la unidad H:
+
+- Llamadas del DOS usadas:
+Create or destroy RAMdisk (_RAMD, 68h)
+
+Ejemplo: el siguiente programa funciona de forma similar al comando RAMDISK 
+del int‚rprete de comandos. Si se ejecuta sin par metros muestra el tama¤o 
+actual del RAMdisk; si se ejecuta con 0 como par mtero destruye el RAMdisk 
+existente; y si se ejecuta con cualquier otro n£mero como par metro, intenta 
+crear un RAMdisk con el tama¤o en KBytes especificado. No pide confirmaci¢n 
+para destruir el RAMdisk si se ejecuta con 0 como par metro.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+#include "doscodes.h"
+
+extern int atoi(char*);
+
+int size,e;
+char bufer[128];
+
+main()
+{
+	/* Ejecuci¢n sin par metros: muestra el tama¤o del RAMdisk actual */
+
+	if(!numargs())
+	{
+		size=ramdisk(-1);
+		if(e=geterr()) exit(e);
+		if(!size) exit(_NRAMD);
+		mprint("Tama¤o del RAMdisk: ",itoa(size,bufer)," KBytes.",
+		       CR_LF, NULL);
+		exit(0);
+	}
+
+	/* Si hay un n£mero como par metro, lo obtiene y crea el RAMdisk */
+	/* con ese tama¤o (genera error si es mayor de 4064) */
+
+	getarg(1,bufer);
+	size=atoi(bufer);
+
+	if(size>4064) exit(_IPARM);
+	ramdisk(size);
+	exit(geterr());
+}
+-----
+
+
+
+		RDSEC *
+
+int rdsec(int drive, int sector, int number, char* address)
+
+Lee sectores de disco. Esta funci¢n es id‚ntica a ABSEC especificando 0 en el 
+par metro "op". Ver la descripci¢n de ABSEC para detalles y un ejemplo.
+
+- Llamadas del DOS usadas:
+Set disk transfer address (_SETDTA, 1Ah)
+Absolute sector read (_RDABS, 2Fh)
+
+
+
+		(N) READ
+
+int nread(fhandle fh, char* bufer, int nbytes)
+
+Lee "nbytes" bytes del fichero abierto con descriptor "fh", hacia la posici¢n 
+de memoria "bufer", tras lo cual actualiza el puntero del fichero. La funci¢n 
+devolver  el n£mero de bytes que realmente han podido ser leidos.
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR. Si 
+no se han podido leer todos los bytes requeridos porque se ha llegado al 
+final de fichero, pero se ha podido hacer una lectura parcial, no se generar  
+un error _EOF; dicho error s¢lo se generar  si no se ha podido leer ning£n 
+byte.
+
+- Llamadas del DOS usadas:
+Read from file handle (_READ, 48h)
+
+Ejemplo: ver el ejemplo de la funci¢n OPEN.
+
+
+
+		REDIR
+
+int redir(int input, int output)
+
+Permite anular temporalmente la redirecci¢n de la entrada y/o salida est ndar 
+(teclado y/o pantalla respectivamente) hacia un fichero (ya sea redirecci¢n 
+por el uso de los modificadores "<",">",">>" o "|" al ejecutar el programa, o 
+por haber cerrado los descriptores de fichero 0 y/o 1 abri‚ndolos despu‚s 
+como ficheros normales). La utilidad de aunlar la redirecci¢n es 
+principalmente la de poder mostrar mensajes de error por pantalla aunque la 
+salida est‚ redirigida hacia un fichero. REDIR funciona de la siguiente 
+forma:
+
+- Si "input" u "output" son 0, la redirecci¢n de la entrada o de la salida, 
+respectivamente, queda anulada y desde ese momento las lecturas/escrituras 
+del descriptor 0 (STDIN)/1 (STDOUT) se realizan realmente del teclado/a la 
+pantalla. Si son 1, la redirecci¢n es restablecida.
+- Si "input" u "output" son cualquier valor mayor de 1, la redirecci¢n de 
+la entrada o de la salida, respectivamente, no se ven modificadas.
+- El valor devuelto corresponde al estado de la redirecci¢n antes de la 
+ejecuci¢n de la funci¢n; el bit 0 contiene el estado de la redirecci¢n de la 
+entrada y el bit 1 el de la salida (1 si la entrada/salida est ndar est  
+redirigida, 0 si no lo est ). 
+
+Hay que tener en cuenta que la anulaci¢n de la redirecci¢n s¢lo es efectiva 
+si se usan las funciones antiguas de DOS 1 para acceder al teclado y a la 
+pantalla (por ejemplo _CONIN, _CONOUT o _STROUT). Si se lee/escribe usando 
+las fucniones de acceso a ficheros sobre los descriptores STDIN o STDOUT 
+(como hacen todas las funciones de acceso a pantalla y teclado de NDOS), la 
+redirecci¢n es restablecida autom ticamente, siendo por tanto imposible 
+acceder realmente al teclado y/o a la pantalla.
+
+- Llamadas del DOS usadas:
+Get/set redirection state (_REDIR, 70h) *
+
+Ejemplo: el siguiente programa lee un fichero de texto y genera otro igual, 
+pero con todas las letras convertidas a may£sculas. En vez de usar las 
+funciones de acceso a ficheros, lee los car cteres desde el teclado y los 
+escribe en pantalla, dando pues por sentado que tanto la entrada como la 
+salida est ndar ser n redirigidas; para ello hay que ejecutar el programa de 
+la siguiente forma:
+
+mayus < fichero_entrada > fichero_salida
+
+En caso de que intente ejecutarse el programa sin la entrada y/o sin la 
+salida redirigidas, se anular  la redirecci¢n de la salida est ndar y se 
+mostrar  en pantalla un mensaje de error. Si todo est  bien, tambi‚n se 
+anular  temporalmente para mostrar en pantalla el mensaje "Generando fichero 
+de salida...", tras lo cual se restablecer  para procesar los ficheros. Se 
+definen las funciones GETC_DOS1, PUTC_DOS1 y PRINT_DOS1 que obtienen un 
+car cter del teclado, imprimen un car cter en pantalla e imprimen una cadena, 
+respectivamente, usando las funciones del DOS 1.
+
+-----
+/* MAYUS.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+#include "nasm.h"
+#include "doscodes.h"
+
+#define toupper(c) (c>='a' && c<='z' ? c-'a'+'A' : c)
+#define NOCHANGE 2
+#define OFF 0
+#define ON 1
+
+char getc_dos1();
+void putc_dos1(char);
+void print_dos1(char*);
+
+char c;
+int r,rinput,routput,size;
+regset reg;
+
+main()
+{
+	/* Comprueba redirecciones. Si la entrada o la salida no est n */
+	/* redirigidas, muestra informaci¢n en pantalla y termina. */
+
+	r=redir(NOCHANGE, NOCHANGE);
+	rinput=r&1;
+	routput=r>>1;
+	if(!(rinput && routput))
+	{
+		redir(NOCHANGE, OFF);
+		print_dos1("\n\rMayusculator\n\r$");
+		print_dos1("Uso: mayus < fichero_in > fichero_out\n\n\r$");
+		exit(0);
+	}
+
+	/* Anula la redirecci¢n para mostrar un mensaje en pantalla */
+
+	redir(NOCHANGE, OFF);
+	print_dos1("Generando fichero de salida...\n\r$");
+
+	/* Restablece redirecci¢n y procesa entrada y salida */
+
+	redir(ON, ON);
+	size=forward(0)-1;
+	rewind(0);
+	while(size--)
+	{
+		c=getc_dos1();
+		putc_dos1(toupper(c));
+	}
+
+	/* Vuelve a anular la redirecci¢n de la salida para mostrar */
+	/* otro mensaje, y termina */
+
+	redir(NOCHANGE, OFF);
+	print_dos1("Terminado.\n\r$");
+	exit(0);
+}
+
+/* Versiones DOS 1 de las rutinas de acceso a teclado y pantalla */
+
+char getc_dos1()
+{
+	doscall(_INNOE,&reg);
+	return reg.a;
+}
+
+void putc_dos1(char c)
+{
+	reg.de=c;
+	doscall(_CONOUT,&reg);
+}
+
+void print_dos1(char* string)	/* Requiere que la cadena acabe en "$" */
+{
+	reg.de=(uint)string;
+	doscall(_STROUT,&reg);
+}
+-----
+
+
+
+		(N) RENAME
+
+int nrename(char* oldname, char* newname)
+
+Renombra el archivo o subdirectorio con nombre "oldname" como "newname". A 
+tener en cuenta:
+- "oldname" puede ser una ruta completa unidad:\directorio\nombre, pero 
+"newname" s¢lo puede ser un nombre de fichero o subdirectorio.
+- "oldname" no puede contener comodines (no se puede renombrar m s de un 
+fichero a la vez), pero "newname" s¡ (por tanto se puede, por ejemplo, 
+cambiar s¢lo la extensi¢n del fichero).
+- No se puede renombrar un fichero abierto. Para ello hay que usar la funci¢n 
+RENAMEFH, usando su descriptor de fichero.
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Rename file or subdirectory (_RENAME, 4Eh)
+
+Ejemplo: la siguiente ejecuci¢n de RENAME renombra el fichero FILE.EXT 
+situado en A:\MIDIR a FILE.BAK.
+
+-----
+int err;
+err=nrename("a:\midir\file.ext","*.bak");
+-----
+
+
+
+		(N) REWIND *
+
+long nrewind(fhandle fh)
+
+Posiciona el puntero del fichero indicado por el descriptor "fh" al principio 
+del mismo. Equivale a seek(fh,0,0); ver la descripci¢n de "seek" para m s 
+detalles.
+
+Ejemplo: ver el ejemplo de la funci¢n EOF
+
+- Llamadas del DOS usadas:
+Move file handle pointer (_SEEK, 4Ah)
+
+Ejemplo: ver el ejemplo de la funci¢n REDIR.
+
+
+
+		(N) RMDIR
+
+int nrmdir(char* dirname)
+
+Borra el subdirectorio "dirname", que ha de estar vac¡o.
+
+Esta funci¢n devuelve como resultado un c¢digo de error, que puede ser 0 
+indicando que no hubo ning£n error. No se puede usar FDELETE para borrar 
+un directorio, siendo obligatorio usar RMDIR para ello.
+
+- Llamadas del DOS usadas:
+Delete file or subdirectory (_DELETE, 4Dh)
+Get previous error code (_ERROR, 65h) *
+Get/set file attributes (_ATTR, 50h)
+
+Ejemplo: este es un ejemplo bastante completo del uso de RMDIR, FDELETE y 
+FFIND. Se trata de DDEST, un programa que destruye el directorio que se le 
+pasa como par metro: borra todos sus ficheros, aunque tengan el atributo de 
+oculto o el de s¢lo lectura establecido, y tambi‚n borra todos sus 
+subdirectorios. Es similar al comando DELTREE de MS-DOS pero no pide 
+confirmaci¢n antes de borrar cada fichero.
+
+Lo primero que hace DDEST es comprobar que realmente se le ha pasado un 
+nombre de directorio; si es as¡ comprueba que realmente dicho directorio 
+existe (si FFIND lo encuentra y realmente es un directorio, no un fichero). 
+Entonces muestra un mensaje de advertencia y si el usuario confirma la 
+operaci¢n de borrado, ejecuta la funci¢n ddestroy.
+
+La funci¢n ddestroy borra recursivamente todos los ficheros y subdirectorios 
+del directorio especificado. Act£a de la siguiente forma:
+
+- Establece el directorio a destruir.
+- Busca el primer fichero o subdirectorio presente excepto "." y ".."
+- Le quita los atributos de oculto y s¢lo lectura, si lo tiene.
+- Si es un fichero, lo borra. Si es un subdirectorio, se ejecuta a s¡ misma 
+recursivamente con el subdirectorio encontrado como par metro.
+- Mientras queden m s ficheros o subirectorios, busca el siguiente y repite 
+los dos pasos anteriores.
+- Al llegar a este punto el directorio a destruir ya est  vac¡o. Establece el 
+directorio padre ("..") y borra el directorio con RMDIR.
+
+El programa muestra un mensaje en pantalla cada vez que se borra un fichero o 
+se cambia a otro directorio recursivamente.
+
+-----
+/* DDEST.COM - Destruye un directorio */
+
+#define NSTDIO.H
+
+#include "ndos.h"
+#include "nasm.h"
+#include "doscodes.h"
+
+void ddestroy(char*);
+char direc[255],k;
+
+main()
+{
+	int e,d;
+	fib finfo;
+
+	/* Si no se especifica directorio, muestra ayuda y termina. */
+
+	if(!numargs()==1)
+	{
+	print("\n\rDirectory Destroyator - By Konami Man, 2-2001\n\r"
+	      "Uso: ddest directorio\n\n\r"
+	      "Destruye el directorio especificado aunque contenga\n\r"
+	      "ficheros ocultos o de s¢lo lectura.\n\n\r");
+	exit(0);
+	}
+
+	/* Obtiene el nombre del directorio y lo busca. */
+	/* Si no lo encuentra, o si existe pero es un fichero, termina. */
+
+	getarg(1, direc);
+
+	e=ffind(direc, A_DIR, &finfo, 0);
+	if(e) exit(e==_NOFIL?_NODIR:e);
+	if(!(finfo.attrib & A_DIR)) exit(_NODIR);
+
+	/* Muestra mensaje de advertencia; si no se pulsa "S", termina. */
+
+	mprint("\n\r­ATENCION! Se borrar  el directorio \"",direc, "\""
+	       " y todo su contenido,\n\r"
+	       "incluyendo ficheros ocultos y de s¢lo lectura.\n\n\r"
+	       "¨Continuar? (S/N) ", NULL);
+	k=getc(0);
+	newline();
+	newline();
+	if(!((k|32)=='s'))      /* Letra may | 32 == misma letra en min */
+	{
+		println("Operaci¢n cancelada.\n");
+		exit(0);
+	}
+
+	/* Establece la unidad del directorio a borrar y ejecuta ddestroy. */
+	/* Nota (1): finfo.drive es 1 para A:, 2 para B:, etc; */
+	/* pero setdrv espera 0 para A:, 1 para B:, etc */
+
+	d=getdrv();	/* Primero guarda la unidad actual */
+	setdrv(finfo.drive-1);	/* (1) */
+	ddestroy(direc);
+	setdrv(d);	/* Restablece la unidad anterior */
+	println("\n\rOperaci¢n completada.\n");
+	exit(0);
+}
+
+/* Funci¢n ddestroy: destruye el directorio "dirname". */
+/* Borra todos los ficheros (incluidos ocultos y de solo lectura). */
+/* Tambi‚n borra los subdirectorios de "dirname" ejecut ndose */
+/* a s¡ misma recursivamente. */
+/* OJO: "dirname" ha de estar en la unidad por defecto. */
+
+void ddestroy(char* dirname)
+{
+    int e,att;
+    fib finfo;
+    if(e=chdir(dirname)) exit(e);
+    mprint("\n\r* Directorio ", dirname, "\n\n\r",NULL);
+    if(e=ffind("*.*", A_HID|A_DIR, &finfo, 0)) return;
+    do
+    {
+	if(finfo.fname[0]!='.') /* No hace nada si es "." o ".." */
+	{
+	    att=((int)finfo.attrib) & (~(A_HID|A_RDO));
+	    setfatt(finfo.fname, att); /* Borra atributos RDO y HID */
+	    if(att&A_DIR)     /* Subdir: ejecuta ddestroy recursivamente */
+	    {
+		 ddestroy(finfo.fname);
+		 mprint("\n\r* Vuelta al directorio ",dirname,"\n\n\r",NULL);
+	    }
+	    else	      /* Fichero: lo borra */
+	    {
+		 mprint("Borrando fichero ",finfo.fname," ...\n\r", NULL);
+		 if(e=fdelete(finfo.fname)) exit(e);
+	    }
+	}
+	e=ffind("*.*", (A_HID|A_DIR), &finfo, 1);
+	} while(!e); /* Repite para todos los ficheros/dirs que encuentre */
+	/* Finalmente borra el propio directorio */
+	if(e=chdir("..")) exit(e);
+	mprint("Borrando directorio ",dirname," ...\n\r",NULL);
+	if(e=rmdir(dirname)) exit(e);
+}
+-----
+
+
+
+		SDATE
+
+int sdate(date* newdat)
+
+Establece la fecha del sistema como la indicada en la estructura "newdat" de 
+tipo DATE (en la secci¢n 2 se detalla esta estructura), devolviendo un error 
+si dicha fecha es incorrecta. Se puede obtener una estructura de tipo DATE a 
+partir de una fecha codificada en un entero (obtenida por ejemplo con FFIND) 
+mediante la instrucci¢n ITOD.
+
+Nota: el campo "wday" de la estructura "newdat" es ignorado por esta funci¢n.
+
+- Llamadas del DOS usadas:
+Set date (_SDATE, 2Bh) *
+
+Ejemplo: el siguiente fragmento de c¢digo incrementa la fecha actual en un 
+a¤o. Antes de realizar el incremento se comprueba si la fecha es 29 de 
+febrero, entonces se cambia a 28, ya que el a¤o siguiente no ser  bisiesto.
+
+-----
+date dt;
+gdate(&dt);
+if(dt.month==2 && dt.day==29) dt.day=28;
+dt.year++;
+sdate(&dt);
+-----
+
+
+
+		SEEK
+
+long seek(fhandle fh, long offset, int method)
+
+Mueve el puntero del fichero abierto con el descriptor "fh" el 
+desplazamiento "offset", seg£n el m‚todo "method". Hay tres m‚todos de 
+desplazamiento:
+
+0: Relativo al principio del fichero
+1: Relativo a la posici¢n actual del puntero
+2: Relativo al final del fichero
+
+La funci¢n devuelve el valor del puntero tras la modificaci¢n. Se puede 
+consultar la posici¢n actual del puntero, sin modificarlo, usando offset=0 y 
+method=1; tambi‚n se puede obtener la longitud del fichero usando offset=0 y 
+method=2. Es perfectamente posible situar el puntero m s all  del final del 
+fichero.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Move file handle pointer (_SEEK, 4Ah)
+
+Ejemplo: la siguiente funci¢n imprime el contenido del fichero abierto con el 
+descriptor "fh", en orden inverso (empezando por el final y retrocediendo).
+
+-----
+void prinv(fhandle fh)
+{
+	int lon;
+	char c;
+	lon = seek(fh, -1, 2);	   /* Coloca puntero en la £ltima posici¢n */
+	if(!lon) return;	       /* Termina si el fichero est  vac¡o */
+	do
+	{
+		read(fh, &c, 1);       /* Lee un car cter de fh a c */
+		putc(c);
+		seek(fh, -2, 1);       /* Retrocede dos posiciones */
+		lon--;
+	} while(lon);
+}
+-----
+
+
+
+		SETDRV
+
+int setdrv(int drive)
+
+Selecciona la unidad indicada en "drive" (0 para A:, etc) como unidad por 
+defecto del sistema. Devuelve el n£mero de unidades disponibles en el sistema 
+pero sin incluir el RAMdisk.
+
+- Llamadas del DOS usadas:
+Select disk (_SELDSK, 0Eh)
+
+Ejemplo: la siguiente ejecuci¢n de SETDRV establece C: como unidad por 
+defecto.
+
+-----
+setdrv(2)
+-----
+
+
+
+		SETDTA
+
+void setdta (char* address)
+
+Establece en la direcci¢n "address" el  rea de transferencia de disco (DTA) 
+que usar n las llamadas de DOS 1 para manejo de ficheros y acceso directo a 
+sectores. Todas las funciones de NDOS para el manejo de ficheros usan 
+llamadas de DOS 2, que no usan el DTA, por tanto no hay que preocuparse por 
+este  rea si no se van a realizar accesos directos a sectores (funciones 
+ABSEC, RDSEC y WRSEC).
+
+Por defecto (al comenzar el programa o tras ejecutar la llamada del DOS "Disk 
+reset", 0Dh), el DTA se sit£a en la direcci¢n 0x0080.
+
+- Llamadas del DOS usadas:
+Set disk transfer address (_SETDTA, 1Ah)
+
+Ejemplo: la siguiente ejecuci¢n de SETDTA establece el DTA al principio de la 
+p gina 2.
+
+-----
+setdta((char*)0x8000)
+-----
+
+
+
+		(N) SETENV
+
+int nsetenv(char* name, char* buffer)
+
+Establece el valor de la variable de entorno "name" como la cadena apuntada 
+por "buffer". Si es una cadena vac¡a, borra la variable. El m ximo tama¤o del 
+valor para una variable de entorno es 255 bytes.
+
+El nombre de una variable de entorno no es sensible a may£sculas y 
+min£sculas, pero su valor s¡ (si se establece por ejemplo una variable como 
+"VaLoR", ese ser  exactamente exactamente el valor de la variable, no "valor" 
+ni "VALOR").
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Set environment item (_SENV, 06Dh) *
+
+Ejemplo: la siguiente ejecuci¢n de SETENV equivale a ejecutar SET ECHO=OFF en 
+el int‚rprete de comandos.
+
+-----
+nsetenv("ECHO","OFF");
+-----
+
+
+
+		SETFATT *
+
+int setfatt(char* name, int newatt)
+
+Esta funci¢n, que equivale a fileatt(name,-1,newatt), establece "newatt" como 
+el byte de atributos del del fichero "name", que no puede estar abierto: para 
+establecer el byte de atributos de un fichero abierto hay que usar SETHATT. 
+El valor devuelto corresponde al byte de atributos del fichero tal como queda 
+trtas la ejecuci¢n de la funci¢n. En la secci¢n 3 se listan las constantes 
+que hay definids en NDOS.H para el tratamiento de los atributos.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Get/set file attributes (_ATTR, 50h)
+
+Ejemplo: la siguiente funci¢n establece el atributo de oculto del fichero 
+"name" si "hid" es distinto de cero, y borra dicho atributo si "hid" es cero. 
+Devuelve el c¢digo de error generado, o 0 si no hay error.
+
+-----
+int filehid(char* name, int hid)
+{
+	int att,e;
+	att=getfatt(name);
+	if(e=geterr()) return e;
+	if(hid)
+		att|=A_HID;
+	else
+		att&=(~A_HID);
+	setfatt(name, att);
+	return geterr();
+}
+-----
+
+
+
+		SETFDATE *
+
+int setfdate(char* file, int* d)
+
+Establece la fecha del fichero "file", que no puede estar abierto, como "d". 
+Se puede obtener "d" a partir una estructura de tipo DATE con la funci¢n 
+DTOI. La macro SETFDATE es equivalente a filedt(file,-1,1,NULL,d)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file date and time (_FTIME, 51h)
+
+Ejemplo: el siguiente programa establece la fecha y la hora del fichero cuyo 
+nombre se le pasa como par metro, como la fecha y la hora actuales del 
+sistema.
+
+-----
+/* SETNOW.C */
+
+#define NSTDIO
+
+#include "ndos.h"
+
+char bufer[128];
+int d,t,e;
+time t_struc;
+date d_struc;
+
+main()
+{
+	/* Obtiene el nombre del fichero */
+
+	if(numargs()!=1)
+	{
+		println("Uso: setnow fichero");
+		exit(0);
+	}
+	getarg(1,bufer);
+
+	/* Obtiene fecha y hora del sistema y las convierte a enteros */
+
+	gdate(&d_struc);
+	gtime(&t_struc);
+
+	d=dtoi(d_struc);
+	t=ttoi(t_struc);
+
+	/* Establece fecha y hora del fichero */
+
+	if(e=setfdate(bufer, &d)) exit(e);
+	if(e=setftime(bufer, &t)) exit(e);
+
+	exit(0);
+}
+-----
+
+
+
+		SETFTIME *
+
+int setftime(char* file, int* t)
+
+Establece la hora del fichero "file", que no puede estar abierto, como "t". 
+Se puede obtener "t" a partir una estructura de tipo TIME con la funci¢n 
+TTOI. La macro SETFTIME es equivalente a filedt(file,-1,1,t,NULL)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file date and time (_FTIME, 51h)
+
+Ejemplo: ver el ejemplo de la funci¢n SETFDATE.
+
+
+
+		SETHATT *
+
+int sethatt(fhandle fh, int newatt)
+
+Esta funci¢n, que equivale a fileatt(NULL,fh,newatt), establece "newatt" como 
+el byte de atributos del del fichero abierto cuyo descriptor es "fh"; si un 
+fichero est  abierto, esta es la £nica forma de establecer sus atributos, no 
+se puede usar SETFATT. El valor devuelto corresponde al byte de atributos del 
+fichero tal como queda trtas la ejecuci¢n de la funci¢n. En la secci¢n 3 se 
+listan las constantes que hay definids en NDOS.H para el tratamiento de los 
+atributos.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Get/set file handle attributes (_HATTR, 55h)
+
+Ejemplo: la siguiente funci¢n establece el atributo de s¢lo lectura del 
+fichero abierto con el descriptor "fh" si "rdo" es distinto de cero, y borra 
+dicho atributo si "rdo" es cero. Devuelve el c¢digo de error generado, o 0 si 
+no hay error.
+
+-----
+int fh_rdo(fhandle fh, int rdo)
+{
+	int att,e;
+	att=gethatt(fh);
+	if(e=geterr()) return e;
+	if(rdo)
+		att|=A_RDO;
+	else
+		att&=(~A_RDO);
+	sethatt(fh, rdo);
+	return geterr();
+}
+-----
+
+
+
+		SETHDATE *
+
+int sethdate(fhandle fh, int* d)
+
+Establece como "d" La fecha del fichero abierto cuyo descriptor es "fh". Se 
+puede obtener "d" a partir una estructura de tipo DATE con la funci¢n DTOI. 
+La macro SETHDATE es equivalente a filedt(NULL,fh,1,NULL,d)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file handle date and time (_HFTIME, 56h)
+
+
+
+		SETHTIME *
+
+int sethtime(fhandle fh, int* t)
+
+Establece como "t" La hora del fichero abierto cuyo descriptor es "fh". Se 
+puede obtener "t" a partir una estructura de tipo TIME con la funci¢n TTOI. 
+La macro SETHTIME es equivalente a filedt(NULL,fh,1,t,NULL)
+
+Esta funci¢n devuelve un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error.
+
+- Llamadas del DOS usadas:
+Get/set file handle date and time (_HFTIME, 56h)
+
+
+
+		(N) SPRINTF
+
+int nsprintf(char* dest_string, char* string, ...)
+
+Esta funci¢n es id‚ntica a la funci¢n SPRINTF (impresi¢n formateada en una 
+cadena) incluida en la librer¡a est ndar del compilador Hitech-C. La mayor 
+parte del c¢digo de las funciones NPRINTF, NFPRINTF y NSPRINTF es com£n para 
+las tres; por tanto, a fin de ahorrar memoria, si en un programa se usan 
+NPRINTF y/o NFPRINTF es preferible usar tambi‚n NSPRINTF en vez del SPRINTF 
+de la librer¡a est ndar, aunque ambas sean id‚nticas. Para detalles sobre el 
+uso de esta funci¢n consultar la descripci¢n de la funci¢n SPRINTF en la 
+documentaci¢n del compilador Hitech-C (fichero Z80DOC.TXT)
+
+- Llamadas del DOS usadas:
+Ninguna.
+
+
+
+		STIME
+
+int stime(date* newtim)
+
+Establece la hora del sistema como la indicada en la estructura "newtim" de 
+tipo TIME (en la secci¢n 2 se detalla esta estructura), devolviendo un error 
+si dicha hora es incorrecta. Se puede obtener una estructura de tipo TIME a 
+partir de una hora codificada en un entero (obtenida por ejemplo con FFIND) 
+mediante la instrucci¢n ITOT.
+
+- Llamadas del DOS usadas:
+Set time (_STIME, 2Dh) *
+
+Ejemplo: el siguiente fragmento de c¢digo decrementa la hora actual en una
+hora. Si la hora es 0, se establece en 23.
+
+-----
+time t;
+gtime(&t);
+t.hour=(t.hour?t.hour-1:23);
+stime(&t);
+-----
+
+
+
+		SUPRLINE *
+
+void suprline()
+
+Elimina la l¡nea en la que est  situado el cursor, para lo cual desplaza el 
+resto de la pantalla una l¡nea hacia arriba. Deja el cursor al principio de 
+la siguiente l¡nea. Equivale a mputc(ESC,'M',NULL).
+
+- Llamadas del DOS usadas:
+Write to file handle, descriptor STDOUT (_WRITE, 49h) *
+
+
+
+		TESTFH
+
+int testfh(char* fname, fhandle fh)
+
+Comprueba si el fichero abierto con el descriptor "fh" es en realidad el 
+fichero cuya ruta y nombre se especifican en "fname". Si son el mismo 
+fichero, devuelve -1; en caso contrario devuelve 0. Si el descriptor se 
+refiere a un dispositivo, siempre devuelve 0.
+
+Esta funci¢n es £til para aquellos programas que tengan que leer o escribir 
+un fichero en varias veces, pudiendo haber un cambio de disco entre ellas 
+(como le ocurre por ejemplo al comando COPY del int‚rprete de comandos).
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Funciones del DOS usadas:
+Test file handle (_HTEST, 4Ch)
+
+Ejemplo: la primera de las siguientes ejecuciones de TESTFH devolver  -1, y 
+la segunda devolver  0.
+
+-----
+int fh,check;
+
+fh=nopen("C:\DIR\FICH.ERO",0);
+check=testfh("C:\DIR\FICH.ERO",fh);             /* Devuelve -1 */
+check=testfh("A:\OTRODIR\OTROFICH.ERO",fh);     /* Devuelve 0  */
+-----
+
+
+
+		TTOI
+
+uint ttoi(time t)
+
+Codifica la estructura "t" de tipo TIME en un entero; el proceso inverso lo 
+realiza la funci¢n ITOT. Algunas funciones que manejan informaci¢n de 
+ficheros, como FFIND o FILEDT y sus derivados, trabajan con las fechas y las 
+horas coficadas en enteros, y puede ser necesario el uso de DTOI y TTOI o sus 
+inversas.
+
+- Funciones del DOS usadas:
+Ninguna.
+
+Ejemplo: ver el ejemplo de la funci¢n SETFDATE.
+
+
+
+		VERIFY
+
+int verify(int mode)
+
+Activa, desactiva o comprueba el estado de la verificaci¢n autom tica del 
+sector de arranque cada vez que se accede a un fichero de disco. Cuando la 
+verificaci¢n est  activada, es imposible acceder al disco equivocado de forma 
+accidental al realizar un cambio de disco, ya que en ese caso se genera un 
+error y no se realiza la operaci¢n de acceso al fichero.
+
+Si "mode" es 0, se desactivar  la verificaci¢n autom tica. Si es 1, se 
+activar . Si es cualquier otro valor mayor que 1, simplemente se comprobar  
+el estado actual de la verificaci¢n sin modificarlo. El valor devuelto es el 
+estado actual de la verificaci¢n (0 si est  desactivada, 1 si est  activada; 
+cualquier otro valor indica un c¢digo de error).
+
+- Llamadas del DOS usadas:
+Get/set disk check status (_DSKCHK, 6Eh)
+
+Ejemplo: el siguiente fragmento de c¢digo informa sobre el estado de la 
+verificaci¢n autom tica.
+
+-----
+int v;
+if((v=verify())>1) println("­Error!");
+else
+mprint("La verificaci¢n autom tica est  ",v?"":"des","activada.\n\r",NULL);
+-----
+
+
+
+		WAITKEY
+
+void waitkey()
+
+Espera hasta que el usuario pulsa una tecla. Una vez pulsada, la ejecuci¢n 
+contin£a, pero la tecla no es extra¡da del bufer del teclado como en el caso 
+de PAUSEKEY. Por tanto, una ejecuci¢n posterior de GETC devolver  
+inmediatamente la tecla pulsada aunque no se especifique NOWAIT; igualmente, 
+si la funci¢n que se ejecuta posteriormente es INPUT, la tecla pulsada ser  
+tomada como el primer car cter de la cadena.
+
+Esta funci¢n es £til cuando queremos realizar una determinada acci¢n 
+inmediatamente antes del inicio de un bucle de entrada de texto (como puede 
+ser el borrado de pantalla del ejemplo), pero no queremos que dicha acci¢n 
+forme parte del bucle.
+
+- Llamadas del DOS usadas:
+Console status (_CONST, 0Bh) *
+
+Ejemplo: el siguiente programa muestra al usuario una indicaci¢n para que 
+escriba una frase, que se almacenar  en "bufer" y ser  posteriormente 
+imprimida. Cuando empieza a escribirla se borra la pantalla y va mostrando 
+los car cteres escritos.
+
+El usado en este ejemplo es un m‚todo v lido para la introducci¢n de cadenas 
+desde el teclado (uso de GETC en un bucle); sin embargo es mejor usar la 
+funci¢n PRINT, ya que su uso es m s simple y proporciona facilidades de 
+edici¢n.
+
+-----
+#define NSTDIO
+
+#include "ndos.h"
+
+#define CR 13
+#define TAMBUF 80
+
+char bufer[TAMBUF+1];
+int i=0;
+
+main()
+{
+	char c;
+	print("Escribe una frase... ");
+	waitkey();
+	cls();
+	do	/* Lee car cteres hasta que se pulsa ENTER */
+		/* o se agota el espacio en "bufer" */
+		bufer[i++]=(c=getc(0));
+	while(c!=CR && i<TAMBUF);
+	bufer[i]=0;
+	mprint("\n\rLa frase es: ",bufer,"\n\r",NULL);
+	exit(0);
+}
+-----
+
+
+
+		WPATH
+
+char* wpath(char* bufer)
+
+Copia en "bufer" una cadena con la ruta completa y la m scara expandida (con 
+los "*" convertidos a cadenas de "?") de la b£squeda efectudada por la £ltima 
+ejecuci¢n de FFIND realizada, sin incluir especificaci¢n de unidad ni "\" 
+inicial. El valor devuelto es la direcci¢n en "bufer" del £ltimo elemento de 
+la cadena devuelta (es decir, la m scara de b£squeda).
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener dicho error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Get whole path string (_WPATH, 5Eh)
+
+Ejemplo: prueba a cambiar la £ltima parte de la funci¢n MAIN del programa de 
+ejemplo de la funci¢n FFIND por esta otra:
+
+-----
+	if (error==_NOFIL)
+	{
+	    wpath(bufer+3);
+	    bufer[0]=finfo.drive+'A'-1;
+	    bufer[1]=':';
+	    bufer[2]='\';
+	    mprint("Total de ficheros/directorios seg£n ", bufer, ": ",
+		    itobuf(cuenta),".",NULL);
+	    newline();
+	    exit(0);
+	}
+	else
+	    exit(error);
+-----
+
+
+
+		(N) WRITE
+
+int nwrite(fhandle fh, char* bufer, int nbytes)
+
+Escribe "nbytes" bytes desde la posici¢n de memoria "bufer" al fichero 
+abierto con el descriptor "fh" asociado, tras lo cual actualiza el puntero 
+del fichero. La funci¢n devolver  el n£mero de bytes que realmente han podido 
+ser leidos, aunque normalmente dicho valor puede ser ignorado ya que si no se 
+pueden escribir todos los bytes requeridos se generar  un error.
+
+Esta funci¢n produce un c¢digo de error, que puede ser 0 indicando que no 
+hubo ning£n error. Para obtener el error hay que usar la funci¢n GETERR.
+
+- Llamadas del DOS usadas:
+Write to file handle (_WRITE, 49h)
+
+Ejemplo: ver el ejemplo de la funci¢n OPEN.
+
+
+
+		WRSEC *
+
+int wrsec(int drive, int sector, int number, char* address)
+
+Escribe sectores de disco. Esta funci¢n es id‚ntica a ABSEC especificando 1 
+en el par metro "op". Ver la descripci¢n de ABSEC para detalles y un ejemplo.
+
+- Llamadas del DOS usadas:
+Set disk transfer address (_SETDTA, 1Ah)
+Absolute sector write (_WRABS, 30h)
+
+
+
+		XTOA *
+
+char* xtoa(ulong num, char* bufer)
+
+Genera en "bufer" una cadena con la representaci¢n en base hexadecimal del 
+n£mero entero sin signo "num". S¢lo se generan los d¡gitos necesarios, sin 
+ceros ni espacios a la izquierda; si se requiere otro formato para la cadena 
+hay que usar directamente NTOA. xtoa(num, buf) equivale a 
+ntoa(num,1,1,0,16,bufer).
+
+El valor devuelto es "buffer", por tanto se puede incrustar una llamada a 
+NTOA en una llamada a por ejemplo MPRINT. Ver ejemplo y notas a este respecto 
+para la funci¢n NTOA.
+
+- Llamadas del DOS usadas:
+Ninguna.
+
+Ejemplo: el siguiente fragmento de c¢digo muestra la direcci¢n en la que 
+acaba la TPA (Transient Program Area).
+
+-----
+char bufer[5];
+long tpa_end;
+tpa_end=(*(uint*)0x0006);
+mprint("La TPA acaba en la direcci¢n &H",xtoa(tpa_end,bufer),".\n\r",NULL);
+-----
+
+
+6. LO DE SIEMPRE
+
+NDOS es gratuito, as¡ que distrib£yelo como quieras, pero por favor 
+distribuye todos los ficheros (los listados en la secci¢n 1), y si haces 
+alguna modificaci¢n expl¡cala en un fichero aparte.
+
+Si quieres pegarme o felicitarme o bla, bla... contacta conmigo en 
+konamiman@konamiman.com, y visita mi p gina web en http://www.konamiman.com
+
+Y que Kyoko es la es la m s mejor.
+
+

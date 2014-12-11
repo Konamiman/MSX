@@ -1,0 +1,72 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Mostrador de ficheros .OBJ de una libreria
+rem *** Por Konami Man, 2-2001
+rem *** Uso: vl [@]nombre[.ext] [libreria]
+rem ***      vl [@]* [libreria]
+rem *** (usar XXX para LIBXXX.LIB)
+rem *** Si no se especifica extension, se asume .O
+rem *** Se mostrara nombre.ext si existe en la libreria.
+rem *** Si se especifica "*", se muestran todos los ficheros de la libreria.
+rem *** Si se antepone "@", se muestran los simbolos del .O especificado.
+rem *** "@*" muestra todos los simbolos de todos los .O de la libreria.
+rem *** Si no se especifica libreria, se toma el valor de la variable
+rem *** HICLIB. Si no existen ni [libreria] ni HICLIB, se genera un error.
+rem *** Usa la variables HICPATH y CECHO, ver C2X.BTM
+
+if not .%currentbtm%==. goto ~continua
+set defext=o
+set chkexist=off
+set currentbtm=%0
+comun.btm %&
+
+~continua
+set currentbtm=
+
+rem ***
+rem *** ESTABLECE KE KEREMOS VIPAR
+rem ***
+
+iff %@left[%snamext%,1]%==@
+	set snamext=%@mid[%snamext%,2]%
+	set libcom=s
+else
+	set libcom=m
+endiff
+
+if %1==* OR %1==@* set snamext=
+
+rem ***
+rem *** ESTABLECE LIBRERIA
+rem ***
+
+set cfin=
+iff %@len[.%2]% == 1
+	iff %@len[.%hiclib%]% == 1
+		set cmessage=*** Error: Library name was not specified and HICLIB does not exist
+		set cfin=on
+	else
+		set clib = %hiclib%
+	endiff
+else
+	set clib = %2
+endiff
+if .%cfin%==.on comun.btm
+
+rem ***
+rem *** MUESTRALIBRACIONA
+rem ***
+
+set echo=off
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+libr %libcom% lib%clib%.lib %@lower[%snamext%]%
+cd %oldpath%
+popd
+set libcom=
+comun.btm
+
+

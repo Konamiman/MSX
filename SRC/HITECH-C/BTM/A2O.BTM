@@ -1,0 +1,44 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Ensamblatron de ficheros .AS a .O
+rem *** Por Konami Man, 2-2001
+rem *** Uso: A2O [unidad:][ruta\]fichero[.ext] [opciones para el ensamblador]
+rem *** Si no se especifica extension, se asume .AS
+rem *** El fichero sera ensamblado a un fichero objeto .O
+rem *** Usa la variables HICPATH y CECHO, ver C2X.BTM
+
+if not .%currentbtm%==. goto ~continua
+set defext=as
+set chkexist=on
+set currentbtm=%0
+comun.btm %&
+
+~continua
+set currentbtm=
+
+rem ***
+rem *** COMPILATROCIONA
+rem ***
+
+if not %@len[.%cecho%]% == 1 set echo = %cecho%
+if exist %sname%.o* del %sname%.o*
+copy %spath%%snamext% %hicp%
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+if exist %sname%.o* del %sname%.o*
+zas %snamext% %2&
+ren %sname%.obj %sname%.o
+del %snamext%
+cd %oldpath%
+popd
+iff %ddrive% == %cdrive%
+	move %cpath%%sname%.o >> $EXEC.BAT
+else
+	copy %cpath%%sname%.o >> $EXEC.BAT
+	del %cpath%%sname%.o >> $EXEC.BAT
+endiff
+comun.btm
+

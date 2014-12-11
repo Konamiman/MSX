@@ -1,0 +1,52 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Enclascatron de ficheros .O en una libreria
+rem *** Por Konami Man, 2-2001
+rem *** Uso: o2l [unidad:][ruta\]fichero[.ext] [libreria]
+rem *** Si no se especifica libreria (usar XXX para LIBXXX.LIB),
+rem *** se usa la especificada en la variable HICLIB
+rem *** Usa la variable HICPATH (ver C2X.BTM)
+
+if not .%currentbtm%==. goto ~continua
+set defext=o
+set chkexist=on
+set currentbtm=%0
+comun.btm %&
+
+~continua
+set currentbtm=
+
+rem ***
+rem *** ESTABLECE LIBRERIA
+rem ***
+
+set cfin=
+iff %@len[.%2]% == 1
+	iff %@len[.%hiclib%]% == 1
+		set cmessage=*** Error: Library name was not specified and HICLIB does not exist
+		set cfin=on
+	else
+		set clib = %hiclib%
+	endiff
+else
+	set clib = %2
+endiff
+if .%cfin%==.on comun.btm
+
+rem ***
+rem *** COMPILATROCIONA Y LIBRACIONA
+rem ***
+
+if not %@len[.%cecho%]% == 1 set echo = %cecho%
+copy %spath%%snamext% %hicp%
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+libr r lib%clib%.lib %@lower[%snamext%]%
+del %snamext%
+popd
+comun.btm
+
+

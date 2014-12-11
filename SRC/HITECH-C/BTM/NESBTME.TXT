@@ -1,0 +1,462 @@
+NestorBeTeMes 1.01, by Konami Man, 2-2001
+-----------------------------------------
+
+1. ¨WHAT IS THIS?
+
+NestorBeTeMes is a set of BTM files (BAT loaded in memory) intended to make 
+Hitech-C compiler use easier, by allowing to make compilation and library 
+management operations with subdirectory support, which is not possible with 
+Hitech-C alone. For example it is possible to do:
+
+C:\COMS>c2x A:\SOURCES\TEST
+
+and TEST.C file located at A:\SOURCES will be compiled into TEST.COM file 
+and placed into C:\COMS. The compiler itself may be located in any other 
+directory, for example D:\HITECHC.
+
+NestorBeTeMes requieres of course the complete HITECH-C package (at least the 
+files C.COM, CGEN.COM, CPP.COM, LIBR.COM, LINK.COM, OBJTOHEX.COM, OPTIM.COM, 
+P1.COM, ZAS.COM, CREF.COM, LIBC.LIB and CRT.O), as well as the MSX-DOS 2 
+operating system and the command interpreter COMMAND 2.4x developped by Fokke 
+Post, aka CPU.
+
+
+2. INSTALLATION
+
+Before using NestorBeTeMes you must perform the following operations:
+
+1) Create a directory for the compiler, for example A:\HIC
+
+2) Copy to the new directory all the Hitech-C files (see list in previous 
+section), all the libraries you will use (.LIB files), all the header files 
+(.H files) and all the BTM files which compose NestorBeTeMes.
+
+3) Modify AUTOEXEC.BAT so the following environment variables, needed for 
+NestorBeTeMes operation, are properly SET (command SET variable=value):
+
+- HICPATH. Indicates the directory where Hitech-C is placed, for example SET 
+HICPATH = A:\HIC. None of the BTMs can work if this variable is not set.
+
+- PATH variable must be modified so it includes also the Hitech-C directory. 
+For example, before setting HICPATH variable you can do SET PATH = 
+%PATH%;%HICPATH%
+
+- CECHO. If ON, the execution of the BTMs will be verbose, that is, every 
+single instruction of the BTM being executed will be prompted at the screen 
+before its execution. If OFF, execution will not be verbose. If CECHO is not 
+set up, the execution will be verbose or not depending on ECHO.
+
+- HICDEFL. Indicates the libraries which will be always scanned for object 
+files when compiling+linkg source files (with C2X.BTM) or when only linking 
+object files (with O2X.BTM), in abbreviated format (XXX for LIBXXX.LIB), 
+separed by semicolons (";"). For example, SET HICDEFL = f;gfx;snd will cause 
+libraries LIBF.LIB, LIBGFX.LIB and LIBSND.LIB to be always scanned. It is not 
+necessary to specify LIBC.LIB since this is the Hitech-C standard library so 
+it will be always scanned. This variable is optional.
+
+- HICLIB. This variable is used by the library management BTMs (O2L.BTM, 
+C2L.BTM, A2L.BTM, DL.BTM, VL.BTM, EL.BTM and XL.BTM), it specifies the 
+library to which the operation refers when no library name is specified (in 
+abbreviated format, XXX for LIBXXX.LIB). This variable is optional, but if it 
+does not exist, the library name must be always explicity given when 
+executing the BTM.
+
+4) Execute the new AUTOEXEC.BAT or reset your machine, so the variables are 
+set up.
+
+From that moment you can use NestorBeTemes to compile, assemble and link 
+files placed at any directory; only the compiler, the libraries and the 
+headers must be placed in the same directory (the one specified in HICPATH).
+
+
+3. BTMs DESCRIPTION
+
+I tried to choose short but at the same time clear names for the BTMs. 
+a2b.BTM means "convert an 'a' type file into a 'b' type file", where a and b 
+are: C (C source file), A (assembler source file), X (COM executable file), O 
+(object file) and L (library file, in this case the meaning is not "convert 
+to" but "insert into"). aL.BTM means "perform the operation 'a' on the 
+library", where a is L (list file), X (extract file), D (delete file) or E 
+(relocate file at the end of the library). EDH.BTM means "Edit .H file".
+
+If you don't like these names you can rename the BTMs as you want. The only 
+one you can't modify is COMUN.BTM, which is directly referred in the other 
+BTMs (if you change its name, search for "comun.btm" string in all the BTMs 
+and replace it by the new name).
+
+A detailed description of each BTM follows:
+
+
+* C2X
+
+This BTM compiles a C source file and links it with the appropriate 
+libraries, generating a .COM executable file. Its syntax is:
+
+C2X [path]file[.ext] [options for C.COM]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified), and the target file will be generated in the 
+current directory. If no extension is given, .C is assumed.
+
+The libraries scanned for the link process will be LIBC.LIB, the ones 
+specified in the HICDEFL variable as explained in the previous section, and 
+the ones specified as -LXXX (for LIBXXX.LIB) as a part of [options for 
+C.COM].
+
+Besides of library files it is also possible to specify object files to be 
+linked, just specifying its name as a part of [options for C.COM], but note 
+that these files must then be placed in the Hitech-C directory.
+
+Examples:
+
+C:\COMS>SET HICDEFL=
+C:\COMS>c2x A:\SOURCES\TEST
+
+Generates TEST.COM file in C:\COMS, taking TEST.C placed in A:\SOURCES as 
+source. Only LIBC.LIB will be scanned for linking.
+
+C:\COMS>SET HICDEFL=
+C:\COMS>c2x A:\SOURCES\TEST -Lgfx
+
+Same as before, but now LIBC.LIB and LIBGFX.LIB are scanned for linking.
+
+C:\COMS>SET HICDEFL=f;snd
+C:\COMS>c2x A:\SOURCES\TEST
+
+Same as before, but now LIBC.LIB, LIBF.LIB and LIBSND.LIB are scanned for 
+linking.
+
+C:\COMS>SET HICDEFL=snd
+C:\COMS>c2x A:\SOURCES\TEST -Lgfx
+
+Same as before, but now LIBC.LIB, LIBSND.LIB and LIBGFX.LIB are scanned for 
+linking.
+
+
+* O2X
+
+This BTM links an object file with the appropriate libraries, generating a 
+.COM executable file. Its syntax is:
+
+O2X [path]file[.ext] [options for LINK.COM]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified), and the target file will be generated in the 
+current directory. If no extension is given, .O is assumed.
+
+The libraries scanned for the link process will be LIBC.LIB, the ones 
+specified in the HICDEFL variable as explained in the previous section, and 
+the ones specified as -LXXX (for LIBXXX.LIB) as a part of [options for 
+LINK.COM].
+
+Examples: see the ones for C2X, assuming now that the specified file is 
+TEST.O
+
+
+* C2O
+
+This BTM compiles a C source file but does not link it, so it just returns an 
+object file. Its syntax is:
+
+C2O [path]file[.ext] [options for C.COM]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified), and the target file will be generated in the 
+current directory. If no extension is given, .C is assumed.
+
+Example:
+
+C:\OBJS>c2o A:\SOURCES\TEST
+
+Genartes TEST.O file at C:\OBJS, taking file TEST.C placed in A:\SOURCES as 
+source.
+
+
+* A2O
+
+This BTM assembles an assembler source file, returning an object file. Its 
+syntax is:
+
+A2O [path]file[.ext] [options for C.COM]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified), and the target file will be generated in the 
+current directory. If no extension is given, .AS is assumed.
+
+Example:
+
+C:\OBJS>a2o A:\SOURCES\TEST
+
+Generates TEST.O file at C:\OBJS, taking file TEST.AS placed in A:\SOURCES as 
+source.
+
+
+* C2L
+
+This BTM compiles a C source file but does not link it; an object file is 
+generated and inserted into the appropriate library file. Its syntax is:
+
+C2L [path]file[.ext] [library]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified). If no extension is given, .C is assumed.
+
+[library] specifies, in abbreviated format (XXX for LIBXXX.LIB), the library 
+file into which the generated object file will be inserted. If there is not 
+any library file with the given name in the directory specified by HICPATH, a 
+new one will be created. If no [library] is specified, the value of HICLIB 
+variable will be taken. If neither [library] nor HICLIB exist, an error 
+message is prompted.
+
+Examples:
+
+C:\COMS>SET HICLIBL=def
+C:\COMS>c2l A:\SOURCES\TEST
+
+Generates object file TEST.O taking source file TEST.C, placed at A:\SOURCES, 
+as source; and inserts it into LIBDEF.LIB library file.
+
+C:\COMS>SET HICLIB=def
+C:\COMS>c2l A:\SOURCES\TEST mine
+
+Same as before, but now the library file used is LIBMINE.LIB.
+
+C:\COMS>SET HICLIB=
+C:\COMS>c2l A:\SOURCES\TEST mine
+
+Same as before: the library file used is LIBMINE.LIB.
+
+C:\COMS>SET HICLIB=
+C:\COMS>c2l A:\SOURCES\TEST
+
+The following message is prompted:
+*** Error: library name was not specified and HICLIB does not exist
+
+
+* A2L
+
+This BTM assembles an assembler source file, generating an object file which 
+is inserted into the appropriate library file. Its syntax is:
+
+A2L [path]file[.ext] [library]
+
+The source file will be searched in the specified path (the current directory 
+if no path is specified). If no extension is given, .AS is assumed.
+
+Meaning of [library] and examples: see C2L.BTM description.
+
+
+* O2L
+
+This BTM just inserts an already existing object file into the appropriate 
+library. Its syntax is:
+
+O2L [path]file[.ext] [library]
+
+The object file will be searched in the specified path (the current directory 
+if no path is specified). If no extension is given, .O is assumed.
+
+Meaning of [library] and examples: see C2L.BTM description.
+
+
+* VL
+
+This BTM scans a library file searching for an object file, prompts its name 
+if it is found, and optionally shows all the symbols defined and used in the 
+found file. Its syntax is:
+
+VL [@]file[.ext] [library]
+VL [@]* [librer¡a]
+
+The library specification is done explicity or via HICLIB variable, in the 
+same way as for C2L.BTM
+
+The specified file is searched into the library file (if no extension is 
+given, .O is assumed). If found, simply its name is prompted; if not found, 
+nothing is prompted. If "@" is added as a prefix to the file name, all the 
+symbols defined and used in the specified file are shown, besides of its 
+name, if it is found.
+
+If "@" is specified instead of a file name, a list of all the object files 
+contained in the library is shown. "@*" shows all the symbols for all the 
+files.
+
+Examples:
+
+A:\>SET HICLIB=def
+A:\>vl myobject
+
+If MYOBJECT.O exists into LIBDEF.LIB, the name MYOBJECT.O is prompted in the 
+screen; otherwise nothing is prompted.
+
+A:\>vl * mine
+
+Shows a list of all the object files contained into LIBMINE.LIB
+
+A:\>vl @myobject mine
+
+If MYOBJECT.O exists into LIBMINE.LIB, all its defined and used symbols are 
+shown; otherwise nothing is shown.
+
+
+* DL
+
+This BTM deletes an object file from a library file. Its syntax is:
+
+VL file[.ext] [library]
+
+The library specification is done explicity or via HICLIB variable, in the 
+same way as for C2L.BTM. If no extension is given, .O is assumed.
+
+Examples:
+
+A:\>SET HICLIB=def
+A:\>dl myobject
+
+Deletes MYOBJECT.O file from LIBDEF.LIB
+
+A:\>dl myobject mine
+
+Deletes MYOBJECT.O file from LIBMINE.LIB
+
+
+* XL
+
+This file extracts and object file from a library, without deleting it. Its 
+syntax is:
+
+XL fichero[.ext] [librer¡a]
+
+The file is copied into the current directory. The library specification is 
+done explicity or via HICLIB variable, in the same way as for C2L.BTM. If no 
+extension is given, .O is assumed.
+
+Examples:
+
+A:\OBJS>SET HICLIB=def
+A:\OBJS>xl myobject
+
+Copies file MYOBJECT.O from LIBDEF.LIB into A:\OBJS
+
+A:\OBJS>xl myobject mine
+
+Copies file MYOBJECT.O from LIBMINE.LIB into A:\OBJS
+
+
+* EL
+
+This BTM searches for an object file contained into a library file, and 
+relocates it the end of the library. Its syntax is:
+
+EL fichero[.ext] [librer¡a]
+
+The library specification is done explicity or via HICLIB variable, in the 
+same way as for C2L.BTM. If no extension is given, .O is assumed.
+
+This operation is necessary when we obtain a "undefined symbol" error when 
+compiling but the object file in which that symbol is defined is actually 
+contained in one of the libraries specified for linking. Relocating that 
+object file at the end of its library, the problem is solved.
+
+Example:
+
+A:\>SET HICLIB=def
+A:\>vl *
+
+first.o
+second.o
+third.o
+
+A:\>el first
+A:\>vl *
+
+second.o
+third.o
+first.o
+
+
+* EDH
+
+Changes to the Hitech-C directory and loads TED with the specified header 
+file. It syntax is:
+
+EDH file[.ext]
+
+If no header is specified, .H is assumed.
+
+This BTM is only useful for editing header files without having to change to 
+Hitech-C directory nor specify the complete file path in the TED command 
+line. Since the Hitech-C directory is actually the current directory while 
+TED is being executed, you can load any other header file by just typing its 
+name in the disk menu. When exiting TED, the previous directory is restored.
+
+If you want to use any other text editor instead of TED, search for the 
+string "ted" into EDH.BTM file, and change it by the name of your text 
+editor.
+
+Example:
+
+A:\SOURCES>edh miheader
+
+Changes to the Hitech-C directory and executes TED MIHEADER.H. When exiting 
+TED, restores A:\SOURCES as the current directory.
+
+
+* COMUN
+
+COMUN.BTM contains common instructions for all the BTMs, the file is called 
+from all of them. It is not intended to be executed alone, except for 
+executing it without parameters, in this case it erases all the temporary 
+variables previously created by another BTM. (All the BTMs erase its 
+temporary variables when finishing the process, so there will remain residual 
+temporary variables in the system only if a BTM process is aborted before it 
+finishes).
+
+COMUN.BTM can't be renamed, since it is directly referred from all the other 
+BTM files.
+
+
+4. NOTES
+
+Aborting the execution of a BTM program (due for example to compilation 
+errors) may cause problems if execution was inside a conditional block. There 
+is a small troubleshooting:
+
+- If after aborting a BTM the command interprete does not accept any command, 
+execute ELSE.
+
+- If after aborting a BTM you see that you are placed in the Hitech-C 
+directory, you can return to your original directory by simply executing POPD 
+(you may have to execute it twice).
+
+- If during the BTM execution you obtain "Too many parameters" messages, 
+execute ENDIFF a few times or go BASIC and return DOS, before executing it 
+again.
+
+- After aborting a BTM program execution, execute COMUN without parameters 
+(or any other BTM file without parameters) in order to clear residual 
+temporary variables.
+
+
+5. THE USUAL BULLSHIT
+
+NestorBeTeMes is freeware, so distribute it as you want, but please 
+distribute only the complete package (the explained BTMs plus NESBTM.TXT and 
+NESBTME.TXT) and if you do any modification please explain it in a separate 
+text file.
+
+If you want to kick me or congratulate me or blah, blah... contact me at 
+konamiman@konamiman.com, and visit my home page at http://www.konamiman.com
+
+Remember that COMMAND 2.4x is not freeware, please buy it to the author 
+because he did a great job and besides it is a cheap stuff. At the time of 
+writing this, the only way to buying it is contacting directly with Fokke 
+Post (direccion@lokesea.com), and the price is 15.88 euro.
+
+And Kyoko rules.
+
+
+6. VERSION INFORMATION
+
+* 1.01 (14-2-2001): Faster EDH.BTM version, this one does not call COMUN.BTM
+

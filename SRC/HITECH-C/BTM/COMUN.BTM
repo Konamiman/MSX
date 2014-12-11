@@ -1,0 +1,115 @@
+set echo=off
+set prompt="%_cwd%>"
+
+rem *** COMPILATRON - Fichero comun
+rem *** Este fichero es llamada desde ?2?.BTM, EDH.BTM y ?L.BTM
+rem *** NO se puede renombrar (si se hace, han de modificarse los .BTM)
+
+set cfin=
+iff %@len[.%1]% == 1 OR .%cclear%==.on
+	set cmessage=Cleaning variables...
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+set ddrive = %_disk%:
+
+rem ***
+rem *** COMPRUEBA SI EXISTE LA VARIABLE HICPATH ***
+rem ***
+
+iff %@len[.%hicpath%]% == 1
+	set cmessage=*** Error: HICPATH variable not set up
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+rem ***
+rem *** ESTABLECE UNIDAD, DIRECTORIO, NOMBRE, EXTENSION ***
+rem ***
+
+iff %@mid[%@parse[%1]%,6,1]% == 0 then
+	set sdrive = %_disk%:
+else
+	set sdrive = %@drive[%1]%
+endiff
+
+iff %@mid[%@parse[%1]%,7,1]% == 0 then
+	set spath = %sdrive%
+else
+	set spath = %@path[%1]%
+endiff
+
+iff %@mid[%@parse[%1]%,5,1]% == 0 then
+	set cmessage=*** Error: Filename not specified
+	set cfin=on
+else
+	set snamext = %@lower[%@file[%1]%]%
+endiff
+if .%cfin%==.on goto ~fin
+
+iff not %@mid[%@parse[%1]%,1,2]% == 00 then
+	set cmessage=*** Error: Invalid filename
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+iff %@mid[%@parse[%1]%,4,1]% == 0 then
+	set snamext = %@newfile[%snamext%,*.%defext%]%
+endiff
+
+set sname=%@lower[%@newfile[%snamext%,*.]%]%
+
+iff not exist %spath%%snamext% AND %chkexist%==on
+	set cmessage=*** Error: File %@upper[%spath%%snamext%]% not found
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+rem ***
+rem *** IDEM PARA EL COMPILADOR ***
+rem ***
+
+set hicp=%hicpath%
+if not %@right[%hicp%,1]% == \ then set hicp = %hicp%\
+
+iff %@mid[%@parse[%hicp%]%,6,1]% == 0 then
+	set cdrive = %_disk%:
+else
+	set cdrive = %@drive[%hicp%]%
+endiff
+
+iff %@mid[%@parse[%hicp%]%,7,1]% == 0 then
+	echo *** Error: Invalid HICPATH variable
+	set cfin=on
+else
+	set cpath = %@path[%hicp%]%
+endiff
+if .%cfin%==.on goto ~fin
+
+%currentbtm% %&
+
+~fin
+echo
+echo %cmessage%
+echo
+set currentbtm=
+set oldpath=
+set sdrive=
+set spath=
+set sname=
+set snamext=
+set cdrive=
+set cpath=
+set ddrive=
+set cmessage=
+set libsline=
+set cfin=
+set hicp=
+set defext=
+set chkexist=
+if not %@len[.%oldecho%]% == 1 set echo = %oldecho%
+set oldecho=
+pro 1
+
+

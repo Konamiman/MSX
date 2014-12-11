@@ -1,0 +1,17 @@
+/*** ENSUREFH - By Konami Man, 2-2001 ***/
+
+#include "doscodes.h"
+#include "nasm.h"
+#include "ndos.h"
+
+#undef ensurefh
+
+int ensurefh (fhandle fh)
+{
+	regset8 regs;
+	regs.b = (uchar) fh;
+	doscall(_ENSURE, &regs);
+	return regs.a;
+}
+
+

@@ -1,0 +1,100 @@
+set oldecho = %echo%
+set echo = off
+
+rem *** Editeador de ficheros de cabecera
+rem *** Por Konami Man, 2-2001
+rem *** Uso: edh fichero[.ext]
+rem *** Carga el TED con el fichero especificado, que busca en el
+rem *** directorio especificado por la variable HICPATH.
+rem *** Si no se especifica extension, se asume .H
+rem *** Usa la variables HICPATH y CECHO, ver C2X.BTM
+
+set cfin=
+iff %@len[.%1]% == 1 OR .%cclear%==.on
+	set cmessage=Cleaning variables...
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+iff %@mid[%@parse[%1]%,5,1]% == 0 then
+	set cmessage=*** Error: Filename not specified
+	set cfin=on
+else
+	set snamext = %@lower[%@file[%1]%]%
+endiff
+if .%cfin%==.on goto ~fin
+
+rem *** ESTABLECE SNAMEXT
+
+iff not %@mid[%@parse[%1]%,1,2]% == 00 then
+	set cmessage=*** Error: Invalid filename
+	set cfin=on
+endiff
+if .%cfin%==.on goto ~fin
+
+iff %@mid[%@parse[%1]%,4,1]% == 0 then
+	set snamext = %@newfile[%snamext%,*.h]%
+endiff
+
+rem *** ESTABLECE CDRIVE Y CPATH
+
+set hicp=%hicpath%
+if not %@right[%hicp%,1]% == \ then set hicp = %hicp%\
+
+iff %@mid[%@parse[%hicp%]%,6,1]% == 0 then
+	set cdrive = %_disk%:
+else
+	set cdrive = %@drive[%hicp%]%
+endiff
+
+iff %@mid[%@parse[%hicp%]%,7,1]% == 0 then
+	set cmessage=*** Error: Invalid HICPATH variable
+	set cfin=on
+else
+	set cpath = %@path[%hicp%]%
+endiff
+if .%cfin%==.on goto ~fin
+
+rem *** EDITA Y TERMINA
+
+gosub ~edita
+
+~fin
+echo
+echo %cmessage%
+echo
+set currentbtm=
+set oldpath=
+set sdrive=
+set spath=
+set sname=
+set snamext=
+set cdrive=
+set cpath=
+set ddrive=
+set cmessage=
+set libsline=
+set cfin=
+set hicp=
+set defext=
+set chkexist=
+if not %@len[.%oldecho%]% == 1 set echo = %oldecho%
+set oldecho=
+end
+
+rem ***
+rem *** EDITACIONA
+rem ***
+
+~edita
+if not %@len[.%cecho%]% == 1 set echo = %cecho%
+pushd
+%cdrive%
+set oldpath = %_cwps%
+cd %cpath%
+ted %snamext%
+cd %oldpath%
+popd
+set echo off
+return
+

@@ -1,0 +1,465 @@
+NestorBeTeMes 1.01, por Konami Man, 2-2001
+------------------------------------------
+
+1. ¨QUE ES ESTO?
+
+NestorBeTeMes es un conjunto de ficheros BTM (BAT cargados en memoria) 
+dise¤ado para facilitar el uso del compilador Hitech-C, permitiendo realizar 
+las operaciones de compilaci¢n y gesti¢n de librer¡as teniendo soporte de 
+subdirectorios, cosa que no permite el Hitech-C por s¡ solo. Por ejemplo es 
+posible hacer:
+
+C:\COMS>c2x A:\FUENTES\PRUEBA
+
+y el fichero PRUEBA.C situado en A:\FUENTES ser  compilado a un fichero 
+PRUEBA.COM situado en C:\COMS. El compilador puede estar en cualquier 
+otro directorio, por ejemplo D:\HITECHC.
+
+NestorBeTeMes requiere por supuesto el paquete completo de HITECH-C (ficheros 
+C.COM, CGEN.COM, CPP.COM, LIBR.COM, LINK.COM, OBJTOHEX.COM, OPTIM.COM, 
+P1.COM, ZAS.COM, CREF.COM, LIBC.LIB y CRT.O como m¡nimo), as¡ como el sistema 
+operativo MSX-DOS 2 y el int‚rprete de comandos COMMAND 2.4x desarrollado por 
+Fokke Post, alias CPU.
+
+
+2. INSTALACION (no me pegueis)
+
+Antes de usar NestorBeTeMes hay que realizar las siguientes operaciones:
+
+1) Crea un directorio para el compilador, por ejemplo A:\HIC
+
+2) Copia en el directorio reci‚n creado todos los ficheros del Hitech-C (ver 
+lista en la secci¢n anterior), todas las librer¡as que vayas a usar (ficheros 
+.LIB), todas las cabeceras (ficheros .H) y los BTMs que componen 
+NestorBeTeMes.
+
+3) Modifica el AUTOEXEC.BAT de forma que sean establecidas las siguientes 
+variables de entorno (comando SET variable=valor) necesarias para el 
+funcionamiento de NestorBeTeMes:
+
+- HICPATH. Indica el directorio del compilador, por ejemplo SET HICPATH = 
+A:\HIC. Si no existe HICPATH no pueden funcionar los BTM.
+
+- La variable PATH ha de ser modificada para contener tambi‚n el directorio 
+del compilador. Por ejemplo, despu‚s de establecer HICPATH se puede hacer SET 
+PATH = %PATH%;%HICPATH%
+
+- CECHO. Si est  en ON, cada instrucci¢n de los BTM ser  mostrada en pantalla 
+antes de ejecutarse. Si est  en OFF, no se mostrar n las instrucciones. Si 
+CECHO no existe, se mostrar n o no dependiendo de ECHO.
+
+- HICDEFL. Indica las librerias que ser n usadas siempre al compilar+enlazar 
+(con C2X.BTM) o s¢lo enlazar (con O2X.BTM) ficheros, en formato abreviado 
+(XXX para LIBXXX.LIB), separadas por punto y coma. Por ejemplo, SET HICDEFL = 
+f;gfx;snd causar  que siempre se usen las librer¡as LIBF.LIB, LIBGFX.LIB y 
+LIBSND.LIB. No es necesario especificar LIBC.LIB ya que ‚sta es la librer¡a 
+est ndar de Hitech-C y se usa siempre. Esta variable es opcional.
+
+- HICLIB. Esta variable es usada por los BTM de gesti¢n de librer¡a (O2L.BTM, 
+C2L.BTM, A2L.BTM, DL.BTM, VL.BTM, EL.BTM y XL.BTM), y especifica la librer¡a 
+sobre la que se va a operar en caso de no especificar ninguna (en formato 
+abreviado: XXX para LIBXXX.LIB). Esta variable es opcional, pero si no 
+existe, hay que especificar siempre la librer¡a de forma expl¡cita al 
+ejecutar los BTM.
+
+4) Ejecuta el nuevo AUTOEXEC.BAT, o bien haz reset, para que las variables 
+sean establecidas.
+
+A partir de aqu¡ ya puede usar NestorBeTemes para compilar, ensamblar y 
+enlazar ficheros situados en cualquier directorio, con la £nica restricci¢n 
+de que el compilador, las librer¡as y las cabeceras han de estar en el mismo 
+directorio (el especificado en HICPATH).
+
+
+3. DESCRIPCION DE LOS BTM
+
+He intentado dar a los BTM nombres cortos pero a la vez claros. a2b.BTM 
+significa "convierte un fichero de tipo 'a' en un fichero de tipo 'b'", donde 
+a y b son: C (fichero fuente C), A (fichero fuente ensamblador), X (fichero 
+ejecutable COM), O (fichero objeto) y L (fichero de librer¡a, en este caso no 
+es "convierte en" sino "inserta en"). aL.BTM significa "realiza la operaci¢n 
+'a' sobre la librer¡a", donde a = L (listar fichero), X (extraer fichero), D 
+(borrar fichero) o E (recolocar fichero al final). EDH.BTM significa "Editar 
+fichero .H"
+
+Si no te gustan estos nombres, puedes renombrar los BTM a tu gusto. El £nico 
+que no puedes renombrar es COMUN.BTM (si lo haces, busca la cadena 
+"comun.btm" en todos los dem s BTM y c mbiala por el nombre nuevo).
+
+A continuaci¢n una descripci¢n detallada de cada BTM:
+
+
+* C2X
+
+Este BTM compila un fichero fuente en C y lo enlaza con las librer¡as 
+adecuadas, generando un fichero ejecutable .COM. Su sintaxis es:
+
+C2X [ruta]fichero[.ext] [opciones para C.COM]
+
+El fichero fuente ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica), y el fichero resultante ser  generado en el directorio 
+actual. Si no se especifica extensi¢n, se asume .C
+
+Las librer¡as usadas para enlazar ser n LIBC.LIB, las especificadas en la 
+variable HICDEFL seg£n se explica en el apartado anterior, y las 
+especificadas mediante -LXXX (para LIBXXX.LIB) como parte de [opciones para 
+C.COM].
+
+Adem s de librer¡as es posible especificar directamente ficheros objeto en 
+[opciones para C.COM] para que sean enlazados (simplemente especificando su 
+nombre), pero ‚stos han de estar situados en el directorio del Hitech-C.
+
+Ejemplos:
+
+C:\COMS>SET HICDEFL=
+C:\COMS>c2x A:\FUENTES\PRUEBA
+
+Genera el fichero PRUEBA.COM en C:\COMS, a partir de PRUEBA.C situado en 
+A:\FUENTES. Se enlaza s¢lo con la librer¡a LIBC.LIB.
+
+C:\COMS>SET HICDEFL=
+C:\COMS>c2x A:\FUENTES\PRUEBA -Lgfx
+
+Como antes, pero se enlaza con las librer¡as LIBC.LIB y LIBGFX.LIB.
+
+C:\COMS>SET HICDEFL=f;snd
+C:\COMS>c2x A:\FUENTES\PRUEBA
+
+Como antes, pero se enlaza con las librer¡as LIBC.LIB, LIBF.LIB y LIBSND.LIB.
+
+C:\COMS>SET HICDEFL=snd
+C:\COMS>c2x A:\FUENTES\PRUEBA -Lgfx
+
+Como antes, pero se enlaza con las librer¡as LIBC.LIB, LIBSND.LIB y 
+LIBGFX.LIB.
+
+
+* O2X
+
+Este BTM enlaza un fichero objeto con las librer¡as adecuadas, generando un 
+fichero ejecutable .COM. Su sintaxis es:
+
+O2X [ruta]fichero[.ext] [opciones para LINK.COM]
+
+El fichero objeto ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica), y el fichero resultante ser  generado en el directorio 
+actual. Si no se especifica extensi¢n, se asume .O
+
+Las librer¡as usadas para enlazar ser n LIBC.LIB, las especificadas en la 
+variable HICDEFL seg£n se explica en el apartado anterior, y las 
+especificadas mediante -LXXX (para LIBXXX.LIB) como parte de [opciones para 
+LINK.COM].
+
+Ejemplos: ver los de C2X, suponiendo ahora que el fichero especificado es 
+PRUEBA.O
+
+
+* C2O
+
+Este BTM compila un fichero fuente en C pero no lo enlaza, devolviendo un 
+fichero objeto. Su sintaxis es:
+
+O2X [ruta]fichero[.ext] [opciones para C.COM]
+
+El fichero fuente ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica), y el fichero resultante ser  generado en el directorio 
+actual. Si no se especifica extensi¢n, se asume .C
+
+Ejemplo:
+
+C:\OBJS>c2o A:\FUENTES\PRUEBA
+
+Genera el fichero PRUEBA.O en C:\OBJS, a partir de PRUEBA.C situado en 
+A:\FUENTES.
+
+
+* A2O
+
+Este BTM ensambla un fichero fuente en ensamblador, devolviendo un fichero 
+objeto. Su sintaxis es:
+
+A2X [ruta]fichero[.ext] [opciones para C.COM]
+
+El fichero fuente ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica), y el fichero resultante ser  generado en el directorio 
+actual. Si no se especifica extensi¢n, se asume .AS
+
+Ejemplo:
+
+C:\OBJS>a2o A:\FUENTES\PRUEBA
+
+Genera el fichero PRUEBA.O en C:\OBJS, a partir de PRUEBA.AS situado en 
+A:\FUENTES.
+
+
+* C2L
+
+Este BTM compila un fichero fuente en C pero no lo enlaza, generando un 
+fichero objeto que es insertado en la librer¡a adecuada. Su sintaxis es:
+
+C2L [ruta]fichero[.ext] [librer¡a]
+
+El fichero fuente ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica). Si no se especifica extensi¢n, se asume .C
+
+[librer¡a] especifica, en formato abreviado (XXX para LIBXXX.LIB), la 
+librer¡a en la que se insertar  el fichero objeto resultante. Si no existe 
+ning£n fichero de librer¡a con ese nombre en el directorio especificado por 
+HICPATH, se crea uno nuevo. Si no se especifica [librer¡a], se toma el valor 
+de la variable HICLIB. Si no existen [librer¡a] ni HICLIB, se genera un 
+error.
+
+Ejemplos:
+
+C:\COMS>SET HICLIBL=def
+C:\COMS>c2l A:\FUENTES\PRUEBA
+
+Genera el fichero objeto PRUEBA.O a partir del fichero fuente PRUEBA.C 
+situado en A:\FUENTES, y lo inserta en la librer¡a LIBDEF.LIB
+
+C:\COMS>SET HICLIB=def
+C:\COMS>c2l A:\FUENTES\PRUEBA mia
+
+Como antes, pero ahora la librer¡a usada es LIBMIA.LIB
+
+C:\COMS>SET HICLIB=
+C:\COMS>c2l A:\FUENTES\PRUEBA mia
+
+Como antes: la librer¡a usada es LIBMIA.LIB
+
+C:\COMS>SET HICLIB=
+C:\COMS>c2l A:\FUENTES\PRUEBA
+
+Se muestra el siguiente mensaje:
+*** Error: library name was not specified and HICLIB does not exist
+
+
+* A2L
+
+Este BTM ensambla un fichero fuente en ensamblador, generando un fichero 
+objeto que es insertado en la librer¡a adecuada. Su sintaxis es:
+
+A2L [ruta]fichero[.ext] [librer¡a]
+
+El fichero fuente ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica). Si no se especifica extensi¢n, se asume .AS
+
+Significado de [librer¡a] y ejemplos: ver la descripci¢n de C2L.BTM
+
+
+* O2L
+
+Este BTM simplemente inserta un fichero objeto (ya existente) en la librer¡a 
+adecuada. Su sintaxis es:
+
+O2L [ruta]fichero[.ext] [librer¡a]
+
+El fichero objeto ser  buscado en la ruta especificada (el directorio actual 
+si no se especifica). Si no se especifica extensi¢n, se asume .O
+
+Significado de [librer¡a] y ejemplos: ver la descripci¢n de C2L.BTM
+
+
+* VL
+
+Este BTM busca un fichero objeto en una librer¡a, muestra su nombre si 
+existe, y opcionalmente muestra todos los s¡mbolos definidos y usados en 
+dicho fichero. Su sintaxis es:
+
+VL [@]fichero[.ext] [librer¡a]
+VL [@]* [librer¡a]
+
+La especificaci¢n de la librer¡a se hace de forma expl¡cita o bien mediante 
+la variable HICLIB, igual que en C2L.BTM
+
+Se busca el fichero especificado (si no se especifica extensi¢n se asume .O) 
+en la librer¡a. Si existe, se muestra su nombre; si no existe, no se muestra 
+nada. Si se antepone "@" al nombre, se muestran todos los s¡mbolos definidos 
+y usados en el fichero objeto, adem s de su nombre, si se encuentra.
+
+Si se especifica "*" en vez de un nombre de fichero, se muestra una lista de 
+todos los ficheros contenidos en la librer¡a. "@*" muestra todos los s¡mbolos 
+de todos los ficheros.
+
+Ejemplos:
+
+A:\>SET HICLIB=def
+A:\>vl miobjeto
+
+Si existe MIOBJETO.O en LIBDEF.LIB, se muestra en pantalla MIOBJETO.O; en 
+caso contrario no se muestra nada.
+
+A:\>vl * mia
+
+Muestra todos los ficheros objeto contenidos en LIBMIA.LIB
+
+A:\>vl @miobjeto mia
+
+Si existe MIOBJETO.O en LIBMIA.LIB, se muestran en pantalla todos sus 
+s¡mbolos usados y definidos. En caso contrario no se muestra nada.
+
+
+* DL
+
+Este BTM borra un fichero objeto de una librer¡a. Su sintaxis es:
+
+DL fichero[.ext] [librer¡a]
+
+La especificaci¢n de la librer¡a se hace de forma expl¡cita o bien mediante 
+la variable HICLIB, igual que en C2L.BTM. Si no se especifica extensi¢n, se 
+asume .O
+
+Ejemplos:
+
+A:\>SET HICLIB=def
+A:\>dl miobjeto
+
+Borra el fichero MIOBJETO.O de LIBDEF.LIB
+
+A:\>dl miobjeto mia
+
+Borra el fichero MIOBJETO.O de LIBMIA.LIB
+
+
+* XL
+
+Este BTM extrae un fichero objeto de una librer¡a, sin borrarlo. Su sintaxis 
+es:
+
+XL fichero[.ext] [librer¡a]
+
+El fichero es copiado al directorio actual. La especificaci¢n de la librer¡a 
+se hace de forma expl¡cita o bien mediante la variable HICLIB, igual que en 
+C2L.BTM. Si no se especifica extensi¢n, se asume .O
+
+Ejemplos:
+
+A:\OBJS>SET HICLIB=def
+A:\OBJS>xl miobjeto
+
+Copia el fichero MIOBJETO.O de LIBDEF.LIB en A:\OBJS
+
+A:\OBJS>xl miobjeto mia
+
+Copia el fichero MIOBJETO.O de LIBMIA.LIB en A:\OBJS
+
+
+* EL
+
+Este BTM recoloca un fichero objeto existente en una librer¡a, al final de la 
+misma. Su sintaxis es:
+
+EL fichero[.ext] [librer¡a]
+
+La especificaci¢n de la librer¡a se hace de forma expl¡cita o bien mediante 
+la variable HICLIB, igual que en C2L.BTM. Si no se especifica extensi¢n, se 
+asume .O
+
+Esta operaci¢n es necesaria si al compilar obtenemos el error "undefined 
+symbol" pero sabemos que el fichero objeto en el que se define ese s¡mbolo 
+existe realmente en una de las librer¡as especificadas para enlazar. 
+Recolocando dicho fichero objeto al final de su librer¡a se soluciona el 
+problema.
+
+Ejemplo:
+
+A:\>SET HICLIB=def
+A:\>vl *
+
+primera.o
+segunda.o
+tercera.o
+
+A:\>el primera
+A:\>vl *
+
+segunda.o
+tercera.o
+primera.o
+
+
+* EDH
+
+Cambia al directorio del Hitech-C y carga el TED con el fichero de cabecera 
+especificado. Su sintaxis es:
+
+EDH fichero[.ext]
+
+Si no se especifica extensi¢n se asume .H
+
+La utilidad de este BTM es £nicamente la de poder editar ficheros de cabecera 
+sin tener que cambiar al directorio del Hitech-C ni especificarlo en la l¡nea 
+de comandos del TED. Dado que mientras el TED se est  ejecutando el 
+directorio por defecto es el del Hitech-C, se puede cargar cualquier otro 
+fichero de cabecera sin m s que especificar su nombre desde el men£ de disco. 
+Al salir del TED, el directorio anterior es restablecido.
+
+Si prefieres usar otro editor en vez del TED, busca la cadena "ted" en el 
+fichero EDH.BTM y c mbiala por el nombre de tu editor.
+
+Ejemplo:
+
+A:\FUENTES>edh miheader
+
+Cambia al directorio del Hitech-C y ejecuta TED MIHEADER.H. Al salir del TED 
+restablece el directorio A:\FUENTES.
+
+
+* COMUN
+
+El fichero COMUN.BTM contiene instrucciones comunes para todos los BTM y es 
+llamado por ellos. No se debe ejecutar por separado, a no ser que se ejecute 
+sin par metros, en cuyo caso borra todas las variables temporales usadas 
+anteriormente por otro BTM. (Todos los BTM borran sus variables temporales 
+al final del proceso, por lo que s¢lo quedar n variables residuales en el 
+sistema si un BTM es abortado antes de terminar.)
+
+El fichero COMUN.BTM no puede ser renombrado, dado que es referenciado 
+directamente desde todos los otros BTM.
+
+
+4. NOTAS
+
+Abortar la ejecuci¢n de un fichero BTM (debido a errores de compilaci¢n, por 
+ejemplo) puede dar problemas si la ejecuci¢n estaba dentro de un bloque 
+condicional. Minigu¡a de soluciones:
+
+- Si tras abortar la ejecuci¢n de un BTM el int‚rprete de comandos no ejecuta 
+ninguna orden, ejecuta ELSE.
+
+- Si tras abortar la ejecuci¢n de un BTM te encuentras en el directorio del 
+Hitech-C, puedes volver al directorio en el que estabas ejecutando POPD 
+(puede ser necesario ejecutarlo dos veces).
+
+- Si al ejecutar un BTM obtenemos mensajes "Too many parameters", ejecuta 
+ENDIFF varias veces, o bien sal al BASIC y vuelve al DOS, antes de ejecutarlo 
+de nuevo.
+
+- Tras abortar la ejecuci¢n de un ficehro BTM, ejecuta COMUN sin par metros 
+(o bien cualquier otro BTM sin par metros) para borrar las variables 
+residuales.
+
+
+5. LO DE SIEMPRE
+
+NestorBeTeMes es gratuito, as¡ que distrib£yelo como quieras, pero por favor 
+distribuye el paquete completo (los BTMs nombrados y los ficheros NESBTM.TXT 
+y NESBTME.TXT), y si haces alguna modificaci¢n expl¡cala en un fichero 
+aparte.
+
+Que si quieres pegarme o felicitarme o bla, bla... contacta conmigo en 
+konamiman@konamiman.com, y que visites mi p gina web en 
+http://www.konamiman.com
+
+Que el COMMAND 2.4x no es de gratix y que se lo compres al pobre hombre que 
+se lo trabaj¢ lo suyo, y adem s es barato. Al escribir estas l¡neas la £nica 
+forma de adquirirlo es pidi‚ndoselo directamente a Fokke Post,
+(autor@direccion.esa), y su precio es 15.88 euros.
+
+Y que anda que no mola Kyoko.
+
+
+6. INFORMACION SOBRE VERSIONES
+
+* 1.01 (14-2-2001): Versi¢n de EDH.BTM m s r pida, que no llama a COMUN.BTM
+
