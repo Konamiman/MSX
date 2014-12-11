@@ -1,0 +1,222 @@
+
+
+
+Version 0.2                                                   N. Soriano
+                                                           Comunidad MSX
+                                                              Julio 2007
+
+
+                        Introduccion a MSX-UNAPI
+
+Resumen
+
+   Este documento es una introduccion a MSX-UNAPI, un procedimiento
+   estandar para definir, descubrir y utilizar nuevas APIs (Application
+   Program Interface) para ordenadores MSX.  La especificacion detallada
+   se encuentra en un documento aparte (especificacion MSX-UNAPI).
+
+
+Indice
+
+   1.  Motivacion
+   2.  Conceptos clave
+   3.  Ejemplo
+   Apendice A.  Agradecimientos
+   Apendice B.  Historial de versiones del documento
+   Direccion del autor
+
+
+1.  Motivacion
+
+   Durante los ultimos anos muchos aficionados al MSX han desarrollado
+   hardware amateur para estas maquinas.  Normalmente, este hardware
+   incorpora una ROM que contiene un API (Application Program
+   Interface), consistente en un conjunto de rutinas que permiten a los
+   desarrolladores interactuar con el hardware.
+
+   Dado que cada dispositivo tiene su propio API, estos no son
+   intercambiables desde el punto de vista del software.  Por ejemplo,
+   InterNestor Lite solo funciona con la tarjeta ethernet ObsoNET, y no
+   funcionara con ninguna otra tarjeta ethernet desarrollada en el
+   futuro.
+
+   El objetivo de la especificacion MSX-UNAPI es resolver este problema,
+   para lo cual define una serie de reglas a seguir para crear
+   implementaciones intercambiables de APIs.
+
+
+2.  Conceptos clave
+
+   La especificacion completa de MSX-UNAPI puede parecer complicada a
+   primera vista, pero esta basada en unicamente unos pocos conceptos
+   clave, enumerados a continuacion.
+
+   Nota: En el texto que sigue, los terminos "especificacion API" e
+   "implementacion API" hacen referencia a especificaciones e
+   implementaciones de APIs que siguen las reglas de la especificacion
+   MSX-UNAPI.
+
+   o  Una "especificacion API" es un conjunto de rutinas que realizan
+      una serie de tareas concretas.  Cada especificacion tiene asignada
+      un identificador alfanumerico corto que sirve para distinguirla de
+      forma inequivoca de otras especificaciones.
+
+         Por ejemplo, la especificacion de un API para tarjetas ethernet
+         podria tener el identificador ETHERNET y estar compuesto de
+         tres rutinas: enviar paquete, recibir paquete y comprobar el
+         estado de la red.
+
+   o  Una "implementacion API" es la plasmacion en codigo de una
+      especificacion API.  Pueden existir multiples implementaciones de
+      la misma especificacion, y dado que todas ellas implementan el
+      mismo juego de rutinas, son intercambiables.  Cada implementacion
+      tiene un nombre corto que sirve para distinguirla de otras
+      implementaciones.
+
+         Por ejemplo, "ObsoNET BIOS" y "Dumas BIOS" podrian ser los
+         nombres de dos implementaciones del API cuyo identificador es
+         ETHERNET.  Una pila TCP/IP preparada para manejar la API
+         ETHERNET seria capaz de trabajar con ambas implementaciones.
+
+   o  La especificacion MSX-UNAPI proporciona un conjunto basico de
+      reglas que deben ser seguidas por todas las especificaciones e
+      implementaciones de APIs.  Esto tiene como objetivo facilitar el
+      desarrollo del software que hace uso de implementaciones de APIs.
+
+         Las reglas principales son: el codigo de una implementacion API
+         debe residir en ROM, en RAM mapeada o en la RAM de la pagina 3;
+         debe haber un unico punto de llamada para todas las rutinas (el
+         numero de rutina se pasa en el registro A); y debe existir una
+         rutina que informe del nombre y la version de la implementacion
+         API.  Todo esto se explica con detalle en el documento
+         "especificacion MSX-UNAPI".
+
+   o  Es posible que varias implementaciones de una misma especificacion
+      API sean instaladas simultaneamente.  El mecanismo de BIOS
+      extendida del MSX se usa para descubrir la presencia y la
+      ubicacion de las implementaciones disponibles.
+
+         Normalmente, si se encuentra mas de una implementacion de un
+         mismo API, no importa cual se usa para realizar las tareas
+         ofrecidas por la especificacion API.  Sin embargo, en caso
+         necesario, las implementaciones pueden ser distinguidas gracias
+         a sus nombres.
+
+
+3.  Ejemplo
+
+   Este ejemplo muestra el pseudo-codigo de una hipotetica pila TCP/IP
+   que usa la API ETHERNET para enviar y recibir datos.  En el codigo,
+   los nombres A, B, C, HL y DE hacen referencia a registros del Z80;
+   otros nombres hacen referencia a rutinas o variables.  El simbolo de
+   punto y coma (;) indica que el resto de la linea es un comentario.
+
+   El documento "especificacion MSX-UNAPI" proporciona informacion
+   detallada sobre el uso de las rutinas API, el uso de la BIOS
+   extendida y el uso de los registros del Z80.
+
+      PRINT "!Bienvenido a esta pila TCP/IP para la API ETHERNET!"
+      PRINT "Voy a buscar implementaciones de la API ETHERNET API..."
+
+      POKE &HF847,"ETHERNET"+0
+      A=0
+      B=0
+      DE=&H2222
+      CALL &HFFCA ; El gancho EXTBIO
+
+      IF B=0 THEN
+         PRINT "!Ooops!"
+         PRINT "!No he encontrado implementaciones de la API ETHERNET!"
+         END
+      ENDIF
+
+      PRINT "He encontrado "+B+" implementaciones de la API ETHERNET"
+      PRINT "Voy a usar la implementacion con indice 1"
+
+      ; Obtiene la ubicacion de la implementacion
+      ; (direccion, slot y/o segmento)
+      ; y como primera tarea obtiene su nombre y version
+
+      POKE &HF847,"ETHERNET"+0 ; No necesario si memoria no cambiada
+      A=1 ; Indice de la implementacion
+      DE=&H2222
+      CALL &HFFCA ; El gancho EXTBIO
+      ApiSlot=A
+      ApiSegment=B
+      ApiEntry=HL
+
+      A=0 ; 0 es el indice de la rutina de informacion sobre el API
+      CALL EXE_UNAPI
+      PRINT "El nombre del API es: "+READ_UNAPI(HL)
+      PRINT "La version del API es: "+B+"."+C
+
+      ; Supongase ahora que segun la especificacion del API ETHERNET,
+      ; la rutina 3 devuelve A=1 si la red esta disponible o 0 si no
+
+      A=3
+      CALL EXE_UNAPI
+      IF A=0 THEN
+         PRINT "!Ooops! !No hay red!"
+         END
+      ENDIF
+
+      PRINT "!Red OK!  Vamos a internetear."
+      ; etc etc...
+
+
+      ;--- Esta rutina llama a la rutina API cuyo indice se pasa en A
+
+      EXE_UNAPI:
+         IF ApiEntry>=&HC000 THEN
+            CALL ApiEntry
+         ELSE IF ApiSegment=&HFF THEN
+            CALL ApiEntry AT SLOT ApiSlot
+         ELSE
+            CALL ApiEntry AT SEGMENT ApiSegment AT SLOT ApiSlot
+         RETURN
+
+
+      ;--- Esta rutina lee la memoria de la implementacion API desde
+      ;--- la direccion pasada como parametro, hasta encontrar un cero
+
+      READ_UNAPI(Address):
+         HL=Address
+         String=""
+         LOOP:
+         IF Address>=&HC000 THEN
+            A=PEEK(HL)
+         ELSE IF ApiSegment=&HFF THEN
+            A=READ (HL) AT SLOT ApiSlot
+         ELSE
+            A=READ (HL) AT SEGMENT ApiSegment AT SLOT ApiSlot
+         ENDIF
+         IF A<>0 THEN
+            String=String+A
+            HL=HL+1
+            GOTO LOOP
+         RETURN String
+
+
+Apendice A.  Agradecimientos
+
+   Este documento ha sido generado usando xml2rfc v1.32 (en
+   http://xml.resource.org/) a partir de una fuente en formato XML segun
+   RFC-2629.
+
+
+Apendice B.  Historial de versiones del documento
+
+   o  Version 0.2
+      *  Se han realizado varios cambios menores propuestos por Tanni,
+         a fin de clarificar el texto.
+
+
+Direccion del autor
+
+   Nestor Soriano
+   Comunidad MSX
+
+   Email: konamiman@konamiman.com
+   URI:   http://www.konamiman.com
+
+

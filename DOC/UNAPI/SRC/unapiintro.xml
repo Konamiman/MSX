@@ -1,0 +1,223 @@
+﻿<?xml version="1.0"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+
+<?rfc toc="yes" ?>
+<?rfc topblock="yes" ?>
+<?rfc symrefs="yes" ?>
+<?rfc sortrefs="yes" ?>
+<?rfc compact="yes" ?>
+<?rfc private="Version 0.2" ?>
+
+<rfc ipr="full3978" docName="UNAPI_INTRO">
+
+	<!-- Header -->
+
+	<front>
+		<title abbrev="MSX-UNAPI">Introduction to MSX-UNAPI</title>
+		<author initials="N." surname="Soriano" fullname="Nestor Soriano">
+			<organization>MSX community</organization>
+			<address>
+				<email>konamiman@konamiman.com</email>
+				<uri>http://www.konamiman.com</uri>
+			</address>
+		</author>
+		<date month="July" year="2007" />
+		<abstract>
+			<t>This document introduces MSX-UNAPI, a standard procedure for defining, discovering and using new APIs (Application Program Interfaces)
+			for MSX computers. For the detailed specification, please read the MSX-UNAPI specification document.</t>
+		</abstract>
+	</front>
+
+	<middle>
+	
+		<!-- Motivation -->
+	
+		<section anchor="motivation" title="Motivation">
+			<t>In the last years, several MSX hobbyists have developed various kinds of amateur hardware for MSX computers.
+			Usually, each of these pieces of hardware comes with a ROM containing an API (Application Program Interface), which consists
+			of a series of routines that allow developers to interact with the hardware.</t>
+			<t>As each device has its own API, devices are not interchangeable from the software point of view. For example, InterNestor Lite
+			works only with the ethernet card ObsoNET, and it will not work with any other card developed in the future.</t>
+			<t>The MSX-UNAPI specification aims to solve this problem, by defining a set of rules for creating interchangeable
+			API implementations.</t>
+		</section>
+
+		<!-- Key concepts -->
+		
+		<section anchor="key_concepts" title="Key concepts">
+			<t>The complete MSX-UNAPI specification may seem complicated at first glance, but it relies on just a few key concepts, which are
+			enumerated below.</t>
+			<t>Note: In the following text, the terms "API specification" and "API implementation" refer to API specifications and implementations
+			that obey the rules of the MSX-UNAPI specification.</t>
+			<vspace blankLines='1' />
+				<list style="symbols">
+					<t>An "API specification" is a set of routines for performing a set of concrete tasks. Each specification
+					has a short alphanumeric identifier that serves as a signature to uniquely distinguish it from other specifications.</t>
+					<vspace blankLines='1' />
+					<list style="empty">
+						<t>For example, an API specification for ethernet cards could have the identifier ETHERNET and be composed of three routines:
+						send packet, receive packet and check network state.</t>
+					</list>
+					<vspace blankLines='1' />
+					<t>An "API implementation" is the realisation in code of an API specification. There may be several implementation
+					of the same API specification, and since all of them implement the same set of routines, they are interchangeable.
+					Each implementation has a short name that serves to distinguish it from other implementations.</t>
+					<vspace blankLines='1' />
+					<list style="empty">
+						<t>For example, "ObsoNET BIOS" and "Dumas BIOS" could be the names of two implementations of the API
+						whose identifier is ETHERNET. A TCP/IP stack prepared to deal with the ETHERNET API could
+						work with both implementations.</t>
+					</list>
+					<vspace blankLines='1' />
+					<t>The MSX-UNAPI specification provides a set of minimal rules that must be followed by all compliant API specifications and implementations.
+					This is done to ease the development of software that make use of API implementations.</t>
+					<vspace blankLines='1' />
+					<list style="empty">
+						<t>The main rules are: API implementation code must be placed in ROM, in mapped RAM or in page 3 RAM;
+						there must be one single call point for all the API routines (routine number is passed in register A);
+						and there must be one routine that informs about the API name and version. All of this is detailed
+						in the MSX-UNAPI specification document.</t>
+					</list>
+					<vspace blankLines='1' />
+					<t>More than one implementation of a given API specification may be installed at the same time.
+					The MSX extended BIOS mechanism is used to discover and locate the available implementations.</t>
+					<vspace blankLines='1' />
+					<list style="empty">
+						<t>Usually, when more than one implementation is found, it does not matter which one is used
+						to perform the tasks offered by the API specification. However, if necessary, implementations
+						can be distinguished thanks to their names.</t>
+					</list>
+				</list>
+		</section>
+
+		<!-- Example -->
+		
+		<section anchor="example" title="Example">
+			<t>This example provides pseudo-code for an hypothetical TCP/IP stack that relies on the ETHERNET API to send and receive data.
+			In the code, the names A, B, C, HL and DE refer to Z80 registers; other names refer to routines or variables.
+			Semicolons (;) indicate that the rest of the line is a comment.</t>
+			<t>Please refer to the MSX-UNAPI specification document for details about how to call API routines and extended BIOS, as well as Z80
+			registers usage.</t>
+			<vspace blankLines='1' />
+			<list style="empty">
+				<t>PRINT "Welcome to this wonderful ETHERNET API aware TCP/IP stack!"</t>
+				<t>PRINT "Now I'm going to search for ETHERNET API implementations...</t>
+				<vspace blankLines='1' />
+				<t>POKE &HF847,"ETHERNET"+0</t>
+				<t>A=0</t>
+				<t>B=0</t>
+				<t>DE=&H2222</t>
+				<t>CALL &HFFCA  ; The EXTBIO hook</t>
+				<vspace blankLines='1' />
+				<t>IF B=0 THEN</t>
+				<list style="empty">
+					<t>PRINT "Ooops!"</t>
+					<t>PRINT "I haven't found any ETHERNET API implementation!"</t>
+					<t>END</t>
+				</list>
+				<t>ENDIF</t>
+				<vspace blankLines='1' />
+				<t>PRINT "I've found "+B+" implementations of the ETHERNET API!"</t>
+				<t>PRINT "I'll use implementation with index 1"</t>
+				<vspace blankLines='1' />
+				<t>; Obtain implementation location (address, slot and/or segment)</t>
+				<t>; and as the first task, obtain its name and version</t>
+				<vspace blankLines='1' />
+				<t>POKE &HF847,"ETHERNET"+0  ; Not necessary if memory not modified</t>
+				<t>A=1  ; The implementation index</t>
+				<t>DE=&H2222</t>
+				<t>CALL &HFFCA  ; The EXTBIO hook</t>
+				<t>ApiSlot=A</t>
+				<t>ApiSegment=B</t>
+				<t>ApiEntry=HL</t>
+				<vspace blankLines='1' />
+				<t>A=0  ; 0 is the index for the API information routine</t>
+				<t>CALL EXE_UNAPI</t>
+				<t>PRINT "The API name is: "+READ_UNAPI(HL)</t>
+				<t>PRINT "The API version is: "+B+"."+C</t>
+				<vspace blankLines='1' />
+				<t>; Now assume that per the ETHERNET API specification,</t>
+				<t>; routine 3 returns A=1 if network is available or 0 otherwise</t>
+				<vspace blankLines='1' />
+				<t>A=3</t>
+				<t>CALL EXE_UNAPI</t>
+				<t>IF A=0 THEN</t>
+				<list style="empty">
+					<t>PRINT "Ooops! No network!"</t>
+					<t>END</t>
+				</list>
+				<t>ENDIF</t>
+				<vspace blankLines='1' />
+				<t>PRINT "Network OK! Let's internetwork!"</t>
+				<t>; etc etc...</t>
+				<vspace blankLines='2' />
+				<t>;--- This routine calls the API routine whose index is passed in A</t>
+				<vspace blankLines='1' />
+				<t>EXE_UNAPI:</t>
+				<list style="empty">
+					<t>IF ApiEntry>=&HC000 THEN</t>
+					<list style="empty">
+						<t>CALL ApiEntry</t>
+					</list>
+					<t>ELSE IF ApiSegment=&HFF THEN</t>
+					<list style="empty">
+						<t>CALL ApiEntry AT SLOT ApiSlot</t>
+					</list>
+					<t>ELSE</t>
+					<list style="empty">
+						<t>CALL ApiEntry AT SEGMENT ApiSegment AT SLOT ApiSlot</t>
+					</list>
+					<t>RETURN</t>
+				</list>
+				<vspace blankLines='2' />
+				<t>;--- This routine reads the API memory whose address</t>
+				<t>;--- is passed as parameter, until a zero is found</t>
+				<vspace blankLines='1' />
+				<t>READ_UNAPI(Address):</t>
+				<list style="empty">
+					<t>HL=Address</t>
+					<t>String=""</t>
+					<t>LOOP:</t>
+					<t>IF Address>=&HC000 THEN</t>
+					<list style="empty">
+						<t>A=PEEK(HL)</t>
+					</list>
+					<t>ELSE IF ApiSegment=&HFF THEN</t>
+					<list style="empty">
+						<t>A=READ (HL) AT SLOT ApiSlot</t>
+					</list>
+					<t>ELSE</t>
+					<list style="empty">
+						<t>A=READ (HL) AT SEGMENT ApiSegment AT SLOT ApiSlot</t>
+					</list>
+					<t>ENDIF</t>
+					<t>IF A<>0 THEN</t>
+					<list style="empty">
+						<t>String=String+A</t>
+						<t>HL=HL+1</t>
+						<t>GOTO LOOP</t>
+					</list>
+					<t>RETURN String</t>
+				</list>
+						
+			</list>
+		</section>
+
+		<!-- Appendixes -->
+
+		<back>
+			<section title="Acknowledgements">
+				<t>This document was produced using xml2rfc v1.32 (of http://xml.resource.org/) from a source in RFC-2629 XML format.</t>
+			</section>
+			<section title="Document version history">
+			<vspace blankLines='1' />
+			<list style="symbols">
+				<t>Version 0.2</t>
+				<list style="symbols">
+					<t>Done some minor changes proposed by Tanni, in order to clarify the text.</t>
+				</list>
+			</list>
+			</section>
+		</back>
+	</middle>
+</rfc>

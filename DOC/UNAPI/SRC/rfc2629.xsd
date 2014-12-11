@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.rfc2629.org"
+    xmlns="http://www.rfc2629.org"
+    elementFormDefault="qualified">
+  <xs:element name="abstract">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="t" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="address">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="postal" minOccurs="0" />
+        <xs:element ref="phone" minOccurs="0" />
+        <xs:element ref="facsimile" minOccurs="0" />
+        <xs:element ref="email" minOccurs="0" />
+        <xs:element ref="uri" minOccurs="0" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="annotation">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:element ref="xref" />
+        <xs:element ref="eref" />
+        <xs:element ref="iref" />
+        <xs:element ref="cref" />
+        <xs:element ref="spanx" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="appendix">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element ref="t" />
+        <xs:element ref="figure" />
+        <xs:element ref="texttable" />
+        <xs:element ref="iref" />
+        <xs:element ref="appendix" />
+      </xs:choice>
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="title" type="xs:string" use="required" />
+      <xs:attribute name="toc" use="optional" default="default">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="include" />
+            <xs:enumeration value="exclude" />
+            <xs:enumeration value="default" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="area">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="artwork">
+    <xs:complexType mixed="true">
+      <xs:attribute name="height" type="xs:string" use="optional" />
+      <xs:attribute name="name" type="xs:string" use="optional" />
+      <xs:attribute name="width" type="xs:string" use="optional" />
+      <xs:attribute name="type" type="xs:string" use="optional" />
+      <xs:attribute name="alt" type="xs:string" use="optional" />
+      <xs:attribute name="src" type="xs:string" use="optional" />
+      <xs:attribute name="align" use="optional" default="left">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="left" />
+            <xs:enumeration value="center" />
+            <xs:enumeration value="right" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="author">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="organization" />
+        <xs:element ref="address" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="fullname" type="xs:string" use="optional" />
+      <xs:attribute name="surname" type="xs:string" use="optional" />
+      <xs:attribute name="initials" type="xs:string" use="optional" />
+      <xs:attribute name="role" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="editor" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="back">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="references" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="section" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="c">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:element ref="xref" />
+        <xs:element ref="eref" />
+        <xs:element ref="iref" />
+        <xs:element ref="cref" />
+        <xs:element ref="spanx" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="city">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="code">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="country">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="cref">
+    <xs:complexType mixed="true">
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="source" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="date">
+    <xs:complexType>
+      <xs:attribute name="day" type="xs:string" use="optional" />
+      <xs:attribute name="year" type="xs:string" use="optional" />
+      <xs:attribute name="month" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="email">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="eref">
+    <xs:complexType mixed="true">
+      <xs:attribute name="target" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="facsimile">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="figure">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="preamble" minOccurs="0" />
+        <xs:element ref="artwork" />
+        <xs:element ref="postamble" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="height" type="xs:string" use="optional" />
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="width" type="xs:string" use="optional" />
+      <xs:attribute name="alt" type="xs:string" use="optional" />
+      <xs:attribute name="src" type="xs:string" use="optional" />
+      <xs:attribute name="title" type="xs:string" use="optional" />
+      <xs:attribute name="align" use="optional" default="left">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="left" />
+            <xs:enumeration value="center" />
+            <xs:enumeration value="right" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="format">
+    <xs:complexType>
+      <xs:attribute name="octets" type="xs:string" use="optional" />
+      <xs:attribute name="type" type="xs:string" use="required" />
+      <xs:attribute name="target" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="front">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="title" />
+        <xs:element ref="author" maxOccurs="unbounded" />
+        <xs:element ref="date" />
+        <xs:element ref="area" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="workgroup" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="keyword" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="abstract" minOccurs="0" />
+        <xs:element ref="note" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="iref">
+    <xs:complexType>
+      <xs:attribute name="subitem" type="xs:string" use="optional" />
+      <xs:attribute name="primary" use="optional" default="false">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="true" />
+            <xs:enumeration value="false" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="item" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="keyword">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="list">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="t" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="counter" type="xs:string" use="optional" />
+      <xs:attribute name="hangIndent" type="xs:string" use="optional" />
+      <xs:attribute name="style" type="xs:string" use="optional" default="empty" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="middle">
+    <xs:complexType>
+      <xs:sequence>
+        <!--
+        <xs:element ref="section" maxOccurs="unbounded" />
+        -->
+        <xs:element ref="appendix" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="section" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="note">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="t" />
+      </xs:sequence>
+      <xs:attribute name="title" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="organization">
+    <xs:complexType mixed="true">
+      <xs:attribute name="abbrev" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="phone">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="postal">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="street" maxOccurs="unbounded" />
+        <xs:choice>
+          <xs:element ref="city" />
+          <xs:element ref="region" />
+          <xs:element ref="code" />
+          <xs:element ref="country" />
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="postamble">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:element ref="xref" />
+        <xs:element ref="eref" />
+        <xs:element ref="iref" />
+        <xs:element ref="cref" />
+        <xs:element ref="spanx" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="preamble">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:element ref="xref" />
+        <xs:element ref="eref" />
+        <xs:element ref="iref" />
+        <xs:element ref="cref" />
+        <xs:element ref="spanx" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="reference">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="front" />
+        <xs:element ref="seriesInfo" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="format" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="annotation" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="target" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="references">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="reference" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="title" type="xs:string" use="optional" default="References" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="region">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="rfc" xml:lang="en">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="front" />
+        <xs:element ref="middle" />
+        <xs:element ref="back" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="docName" type="xs:string" use="optional" />
+      <xs:attribute name="iprExtract" type="xs:ID" use="optional" />
+      <xs:attribute name="category" use="optional" default="info">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="std" />
+            <xs:enumeration value="bcp" />
+            <xs:enumeration value="info" />
+            <xs:enumeration value="exp" />
+            <xs:enumeration value="historic" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="obsoletes" type="xs:string" use="optional" />
+      <xs:attribute name="number" type="xs:string" use="optional" />
+      <xs:attribute name="seriesNo" type="xs:string" use="optional" />
+      <xs:attribute name="updates" type="xs:string" use="optional" />
+      <xs:attribute name="ipr" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="full2026" />
+            <xs:enumeration value="noDerivativeWorks2026" />
+            <xs:enumeration value="none" />
+            <xs:enumeration value="full3667" />
+            <xs:enumeration value="noModification3667" />
+            <xs:enumeration value="noDerivatives3667" />
+            <xs:enumeration value="full3978" />
+            <xs:enumeration value="noModification3978" />
+            <xs:enumeration value="noDerivatives3978" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="section">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element ref="t" />
+        <xs:element ref="figure" />
+        <xs:element ref="texttable" />
+        <xs:element ref="iref" />
+        <xs:element ref="section" />
+      </xs:choice>
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="title" type="xs:string" use="required" />
+      <xs:attribute name="toc" use="optional" default="default">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="include" />
+            <xs:enumeration value="exclude" />
+            <xs:enumeration value="default" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="seriesInfo">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:attribute name="value" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="spanx">
+    <xs:complexType mixed="true">
+      <xs:attribute name="style" type="xs:string" use="optional" default="emph" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="street">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="t">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:element ref="list" />
+        <xs:element ref="figure" />
+        <xs:element ref="xref" />
+        <xs:element ref="eref" />
+        <xs:element ref="iref" />
+        <xs:element ref="cref" />
+        <xs:element ref="spanx" />
+        <xs:element ref="vspace" />
+      </xs:choice>
+      <xs:attribute name="hangText" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="texttable">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="preamble" minOccurs="0" />
+        <xs:element ref="ttcol" maxOccurs="unbounded" />
+        <xs:element ref="c" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="postamble" minOccurs="0" />
+      </xs:sequence>
+      <xs:attribute name="anchor" type="xs:ID" use="optional" />
+      <xs:attribute name="title" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="title">
+    <xs:complexType mixed="true">
+      <xs:attribute name="abbrev" type="xs:string" use="optional" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ttcol">
+    <xs:complexType mixed="true">
+      <xs:attribute name="width" type="xs:string" use="optional" />
+      <xs:attribute name="align" use="optional" default="left">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="left" />
+            <xs:enumeration value="center" />
+            <xs:enumeration value="right" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="uri">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="vspace">
+    <xs:complexType>
+      <xs:attribute name="blankLines" type="xs:string" use="optional" default="0" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="workgroup">
+    <xs:complexType mixed="true" />
+  </xs:element>
+
+  <xs:element name="xref">
+    <xs:complexType mixed="true">
+      <xs:attribute name="format" use="optional" default="default">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="counter" />
+            <xs:enumeration value="title" />
+            <xs:enumeration value="default" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="target" type="xs:IDREF" use="required" />
+      <xs:attribute name="pageno" use="optional" default="false">
+        <xs:simpleType>
+          <xs:restriction base="xs:NMTOKEN">
+            <xs:enumeration value="true" />
+            <xs:enumeration value="false" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
