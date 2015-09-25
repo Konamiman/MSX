@@ -10,6 +10,8 @@ The source code for [Nextor](http://www.konamiman.com#nextor) is not published s
 
 The `MSX.sln` file is just a Visual Studio solution that opens the whole repository as a web site, I use it to easily browse and manage the files locally. You can just ignore this file if you want.
 
+If you have something to say, head to the [discussion site](http://konamiman.bitbucket.org/MSX)!
+
 Oh, and last but not least: if you like these rusty pieces of code **[please consider donating!](http://www.konamiman.com#donate)** My kids need moar shoes!
 
 Enjoy!
