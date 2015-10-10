@@ -1,1 +1,1 @@
-This folder contains the slides used in the talks that I gave in past editions of RetroMallorca and MallorcaGame. The talks themselves are available at YouTube and Vimeo, see [my StackOverflow Careers profile page](http://careers.stackoverflow.com/konamiman) for the URLs.
+This folder contains the slides used in the talks that I gave in past editions of RetroMallorca and MallorcaGame. The talks themselves are available at YouTube, see [my StackOverflow Careers profile page](http://careers.stackoverflow.com/konamiman) for the URLs.
