@@ -1,0 +1,1 @@
+@imdisk -a -f "Nextor.dsk" -m Y: -o rem
