@@ -10,60 +10,6 @@
 IDNES:	equ	#22	;ID para la BIOS extendida
 IDNFS:	equ	4
 
-; Estas son un invento mio. (-v-)v
-
-jri:	macro	@a
-	jr	z,@a
-	endm
-
-jrni:	macro	@a
-	jr	nz,@a
-	endm
-
-jrmn:	macro	@a
-	jr	c,@a
-	endm
-
-jrmy:	macro	@a
-	jr	z,$+4
-	jr	nc,@a
-	endm
-
-jrmni:	macro	@a
-	jr	c,@a
-	jr	z,@a
-	endm
-
-jrmyi:	macro	@a
-	jr	nc,@a
-	endm
-
-jpi:	macro	@a
-	jp	z,@a
-	endm
-
-jpni:	macro	@a
-	jp	nz,@a
-	endm
-
-jpmn:	macro	@a
-	jp	c,@a
-	endm
-
-jpmy:	macro	@a
-	jr	z,$+5
-	jp	nc,@a
-	endm
-
-jpmni:	macro	@a
-	jr	c,@a
-	jp	z,@a
-	endm
-
-jpmyi:	macro	@a
-	jp	nc,@a
-	endm
-
 dos:	macro
 	call	5
 	endm
@@ -118,7 +64,7 @@ _TERM:	equ	#62
 	dos
 	ld	a,b
 	cp	2
-	jrmyi	OKDOS2
+	jr	nc,OKDOS2
 
 NODOS2:	ld	de,NOD2STR
 	ld	c,_STROUT
@@ -159,7 +105,7 @@ OKTPA:	;
 	ld	de,IDNFS+256*IDNES
 	call	EXTBIO
 	cp	IDNES
-	jpi	DESINST
+	jp	z,DESINST
 
 ;--- Comienza la instalacion: reservamos un segmento de RAM
 
@@ -280,7 +226,7 @@ DESINST:	ld	hl,#0081	;Linea de comando: vamos pasando espacios
 BUSCAU:	ld	a,(hl)
 	inc	hl
 	cp	32
-	jri	BUSCAU
+	jr   z,	BUSCAU
 	or	a
 	jr	nz,CHKU
 
