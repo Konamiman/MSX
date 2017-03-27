@@ -95,9 +95,9 @@ H_BDOS: equ #F252
 
 	;*** FUNCIONES DEL DOS
 
-DOSVER:	equ	#6F
-STROUT:	equ	#09
-TERM:	equ	#62
+_DOSVER:	equ	#6F
+_STROUT:	equ	#09
+_TERM:	equ	#62
 
 
 ;******************************************************
@@ -108,19 +108,23 @@ TERM:	equ	#62
 
 	org	#100
 
+	ld	de,PRESENT_s
+	ld	c,_STROUT
+	dos
+
 ;--- Comprobamos presencia del DOS 2
 
-	ld	c,DOSVER	;DOS 2?
+	ld	c,_DOSVER	;DOS 2?
 	dos
 	ld	a,b
 	cp	2
 	jrmyi	OKDOS2
 
 NODOS2:	ld	de,NOD2STR
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	ret
-NOD2STR:	db	13,10,"NestorFilesystem - DOS 2 required!",13,10,"$"
+NOD2STR:	db	13,10,"*** MSX-DOS 2 required",13,10,"$"
 OKDOS2:	;
 
 ;--- Comprobamos que hay suficiente TPA (#0006 >= #C200)
@@ -130,11 +134,10 @@ OKDOS2:	;
 	jr	nc,OKTPA
 
 	ld	de,NOTPAS
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	jp	FIN
-NOTPAS:	db	13,10,"ERROR: too small TPA (end of TPA must be at least #C200).",13,10
-	db	"NestorFilesystem not installed.",13,10,"$"
+NOTPAS:	db	13,10,"*** TPA is too small (end of TPA must be at least #C200).",13,10,"$"
 OKTPA:	;
 
 
@@ -153,8 +156,7 @@ OKTPA:	;
 ;--- Comprobamos si NFS ya esta instalado,
 ;    en ese caso pasamos a desinstalar si el parametro es "U"
 
-	ld	de,256*IDNES
-	xor	a
+	ld	de,IDNFS+256*IDNES
 	call	EXTBIO
 	cp	IDNES
 	jpi	DESINST
@@ -166,16 +168,15 @@ OKTPA:	;
 	call	ALL_SEG
 	jp	nc,OKRESEG
 	ld	de,NOFSTR
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 
 FIN:	ld	b,0
-	ld	c,TERM
+	ld	c,_TERM
 	dos
 	ret
 
-NOFSTR:	db	13,10,"ERROR: no free segment on primary mapper.",13,10
-	db	"NestorFilesystem not installed.",13,10,"$"
+NOFSTR:	db	13,10,"*** No free RAM segments on primary mapper.",13,10,"$"
 
 OKRESEG:	ld	(RESCODE1+12),a
 	ld	(RESCODE2+12),a
@@ -250,7 +251,11 @@ OKRESEG:	ld	(RESCODE1+12),a
 	di
 
 	ld	hl,(HIGHMEM)
-	ld	bc,23
+	ld	de,EXTBIO
+	ld	bc,5
+	ldir
+
+	ld	bc,23-5
 	add	hl,bc
 	ld	a,#C3
 	ld	(H_BDOS),a
@@ -261,13 +266,13 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ei
 
 	ld	de,INSSTR
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	ld	hl,#0081
 	jp	CALSYS
 
-INSSTR:	db	13,10,"NestorFilesystem - by Konamiman, 4/2017",13,10
-	db	"Installed - have fun!",13,10,"$"
+INSSTR:	
+	db	"Installed. Have fun!",13,10,"$"
 
 ;--- Desinstalacion si el parametro es "U"
 
@@ -281,19 +286,18 @@ BUSCAU:	ld	a,(hl)
 
 NODES:
 	ld	de,YAINSTR	;Si encontramos un 0: no hay parametros
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	jp	FIN
 
-YAINSTR:	db	13,10,"NestorAcentos #1.12 already installed.",13,10
-	db	"NESTAC U to uninstall.",13,10,"$"
+YAINSTR:	db	"*** Already installed. Run with U to uninstall.",13,10,"$"
 
 CHKU:	and	%11011111	;Si encontramos algo tiene que ser "U"
 	cp	"U"
 	jr	nz,NODES
 	ld	(POS2COM),hl	;Guardamos posicion posterior a la "U"
 
-	ld	de,IDNES*256	;Comprobamos que HIGHMEM actual es igual
+	ld	de,IDNFS+IDNES*256	;Comprobamos que HIGHMEM actual es igual
 	call	EXTBIO	;al HIGHMEM cuando instalamos NestAc.
 	ld	de,(HIGHMEM)	;Si no, no podemos desinstalar.
 	or	a
@@ -303,19 +307,19 @@ CHKU:	and	%11011111	;Si encontramos algo tiene que ser "U"
 	jp	z,OKHMEM
 
 	ld	de,NOKHMEMS
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	jp	FIN
 
-NOKHMEMS:	db	13,10,"ERROR: Other resident program was installed after NestorFilesystem.",13,10
-	db	"Please remove it and try again to uninstall NestorFilesystem.",13,10,"$"
+NOKHMEMS:	db	"*** Other resident program was installed after I was.",13,10
+	db	"Please remove it and try again.",13,10,"$"
 
 OKHMEM:	push	ix
 	ld	a,c	;Liberamos el segmento
 	call	FRE_SEG
 
 	ld	hl,(HIGHMEM)
-	ld	bc,8
+	ld	bc,3
 	add	hl,bc
 	di
 
@@ -330,12 +334,12 @@ OKHMEM:	push	ix
 	ld	(HIGHMEM),ix
 
 	ld	de,DESSTR	;Terminamos!
-	ld	c,STROUT
+	ld	c,_STROUT
 	dos
 	ld	hl,(POS2COM)
 	jp	CALSYS
 
-DESSTR:	db	13,10,"NestorFilesystem uninstalled.",13,10,"$"
+DESSTR:	db	"Uninstalled, please come back!",13,10,"$"
 POS2COM:	dw	0
 
 RESTHOOK:	ldir
@@ -485,6 +489,14 @@ GET_P2:	ds	3
 PUT_P3:	ds	3
 GET_P3:	ds	3
 
+;--- Strings
+
+PRESENT_s:
+	db	"NestorFilesystem 1.0",13,10
+	db	"By Konamiman 3/2017",13,10
+	db	13,10
+	db	"$"
+
 
 ;******************************************************
 ;*                                                    *
@@ -511,6 +523,18 @@ _NEWBDOS@sym:	;+23
 	push  iy
 
 	ex	af,af
+	ld	a,d
+	cp	0Dh	;if < SELDSK skip 
+	jr	c,POPEXRET@sym
+
+	cp	60h+1	;if >= _FORK skip
+	jr	nc,OKGO@sym
+
+POPEXRET@sym:
+	ex	af,af
+	jr	POPRET@sym
+
+OKGO@sym:
 	call	GETSLOT1@sym
 	push	af
 	call	GET_P1@sym
@@ -541,6 +565,7 @@ ENDPROC@sym:
 	call	ENASLT
 	pop	ix,hl,de,bc,af
 
+POPRET@sym:
 	pop	iy
 	ei
 	jp	OLDHBDOS@sym
@@ -642,15 +667,80 @@ PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 RESBDOS:
 	ex	af,af
 	ld	a,c
-	cp	0Ch		;_CPMVER
+	cp	1Bh	;_ALLOC
+	jr	nz,NOALLOC
+
+	ld	a,e
+	cp	6
+	jp	c,DONOTHING
+
+	ld	c,2	;/2 sec/clus
+	ld	de,60000
+	ld	hl,34
+	ld	ix,0
+	
+	jp	DONEOK
+
+NOALLOC:
+	cp	5Fh
+	jr	nz,NOFLUSH
+
+	ld	a,b
+	cp	0FFh
+	jr	z,DONOTHING
+	cp	6
+	jr	z,DONOTHING
+
+	jr	DONEOK
+
+NOFLUSH:
+	cp	40h		;_FFIRST/_FNEXT
+	jr	nz,NOFFIRST
+
+	ld	a,(de)
+	cp	0FFh
+	jr	z,DONOTHING
+	or	32
+	cp	"g"
+	jr	nz,DONOTHING
+	inc	de
+	ld	a,(de)
+	dec	de
+	cp	":"
+	jr	nz,DONOTHING
+
+	ld	(ix),0FFh
+	ld	(ix+1),"M"
+	ld	(ix+2),"O"
+	ld	(ix+3),"L"
+	ld	(ix+4),"A"
+	ld	(ix+5),"!"
+	ld	(ix+6),0
+	ld	(ix+21),34
+	ld	(ix+22),0
+	ld	(ix+23),0
+	ld	(ix+24),0
+	ld	(ix+25),6
+
+	jr	DONEOK
+
+NOFFIRST:
+	ld	a,c
+	cp	41h
+	jr	nz,DONOTHING
+
+	ld	a,(ix+25)
+	cp	6
 	jr	nz,DONOTHING
 
 	ex	af,af
-	ld	a,23h
-	ld	l,a
-	ld	b,01h
-	ld	h,b
+	ld	a,0D7h	;.NOFIL
+	ld	iy,1
+	ret
 
+DONEOK:
+	ex	af,af
+	xor	a
 	ld	iy,1
 	ret
 
