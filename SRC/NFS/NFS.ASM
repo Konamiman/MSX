@@ -10,6 +10,12 @@
 IDNES:	equ	#22	;ID para la BIOS extendida
 IDNFS:	equ	4
 
+;Min and max function calls that will be hooked,
+;apart from some that will be treated as special cases
+
+MINFN: equ 40h	;_FFIRST
+MAXFN: equ 5Ah	;_CHDIR
+
 dos:	macro
 	call	5
 	endm
@@ -36,14 +42,31 @@ WRPSG:	equ	#0093
 RDPSG:	equ	#0096
 EXPTBL:	equ	#FCC1
 SETWRT:	equ	#0053
+CUR_DRV:	equ	0F23Ch
 
 H_BDOS: equ #F252
 
 	;*** FUNCIONES DEL DOS
 
-_DOSVER:	equ	#6F
-_STROUT:	equ	#09
-_TERM:	equ	#62
+_STROUT:	equ	09h
+_CPMVER:	equ	0Ch
+_DSKRST:	equ	0DH
+_SELDSK:	equ	0EH
+_ALLOC:		equ	1Bh
+_CURDRV:	equ	19h
+_FFIRST:    equ	40h
+_FNEXT:     equ	41h
+_GETCD:		equ	59h
+_CHDIR:		equ	5Ah
+_WPATH:		equ	5Eh
+_FLUSH:		equ	5FH
+_TERM:	equ	62h
+_DOSVER:	equ	6Fh
+
+;*** DOS error codes
+
+__DISK:	equ 0FDh
+__IFORM:	equ 0F0h	;Used for testing
 
 
 ;******************************************************
@@ -189,6 +212,7 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ld	de,#4000
 	ld	bc,PARTRE2!-#4000
 	ldir
+
 	pop	af
 	call	PUT_P1
 
@@ -443,6 +467,7 @@ PRESENT_s:
 	db	13,10
 	db	"$"
 
+TEMP:	ds	5
 
 ;******************************************************
 ;*                                                    *
@@ -469,12 +494,24 @@ _NEWBDOS@sym:	;+23
 	push  iy
 
 	ex	af,af
-	ld	a,d
-	cp	0Dh	;if < SELDSK skip 
+	ld	a,c
+	cp	_DSKRST
+	jr	z,OKGO@sym
+	cp	_SELDSK
+	jr	z,OKGO@sym
+	;cp	_CURDRV
+	;jr	z,OKGO@sym
+	cp	_ALLOC
+	jr	z,OKGO@sym
+	cp	_WPATH
+	jr	z,OKGO@sym
+	cp	_FLUSH
+	jr	z,OKGO@sym
+	cp	MINFN
 	jr	c,POPEXRET@sym
 
-	cp	60h+1	;if >= _FORK skip
-	jr	nc,OKGO@sym
+	cp	MAXFN+1
+	jr	c,OKGO@sym
 
 POPEXRET@sym:
 	ex	af,af
@@ -494,7 +531,7 @@ OKGO@sym:
 	call	PUT_P1@sym
 	pop	ix,hl,de,bc,af
 
-	call	#4000
+	call	DOSENTRY
 
 	ex	af,af
 	ld	a,iyl
@@ -604,15 +641,426 @@ RESCODE2:	PARTRES
 
 PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 
-	jp	RESBDOS
+	db	"NestorFS",0
+	ds	16-($-#4000)
+
+JMP_ALLOC:	jp	IMPL_ALLOC
+JMP_FFIRST:	jp	IMPL_FFIRST
+JMP_FLUSH:	jp	IMPL_FLUSH
+JMP_GETCD:	jp	IMPL_GETCD
+JMP_CHDIR:	jp	IMPL_CHDIR
+
+INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
+CUR_IS_MINE:	db	0	;Is my drive the current drive?
+INDRIVE1:	db	7	;Drive in which the filesystem acts (1=A:)
+
+
+;-----------------
+;--- Functions ---
+;-----------------
+
+;DISK RESET (0DH)
+;Parameters:    C = 0DH (_DSKRST)
+;Results:       None
+
+DO_DSKRST:
+	ex	af,af
+	ld	b,0FFh
+	ld	d,0FFh
+	jp	DO_FLUSH
+
+
+;SELECT DISK (0EH)
+;Parameters:    C = 0EH (_SELDSK)
+;               E = Drive number.  0=A: 1=B:   etc.
+;Results:     L=A = Number of drives (1...8)
+
+DO_SELDSK:
+	ex	af,af
+	ld	a,e
+	and	%11111000
+	ld	iy,0
+	ret	nz	;Bad drive number
+
+	ld	a,(INDRIVE0)	;Setting my drive as current?
+	cp	e
+	jr	z,SELDSK_ISMINE
+
+	xor	a
+	ld	(CUR_IS_MINE),a	;No: CUR_IS_MINE=false and let DOS handle it
+	ret
+
+SELDSK_ISMINE:
+	ld	a,e
+	inc	a
+	ld	(CUR_DRV),a
+	ld	a,0FFh
+	ld	(CUR_IS_MINE),a	;Yes: CUR_IS_MINE=false and DON'T let DOS handle it
+	inc	iy				;(since that could cause "Invalid drive" error)
+	ld	a,8	;!!! TODO: should be number of drives
+	ld	l,a
+	ret
+	
+
+;GET CURRENT DRIVE (19H)
+;Parameters:    C = 19H (_CURDRV)
+;Results:     L=A = Current drive (0=A: etc)
+
+DO_CURDRV:
+	ex	af,af
+	ld	a,(CUR_IS_MINE)
+	ld	iy,0
+	or	a
+	ret	z
+
+	ld	a,(INDRIVE0)
+	ld	l,a
+	inc	iy
+	ret
+
+
+;GET ALLOCATION INFORMATION (1BH)
+;Parameters:    C = 1BH (_ALLOC)
+;               E = drive number (0=default)
+;Results:       A = Error code
+;               C = Sectors/cluster (0FFh if any error)
+;               DE = Total number of clusters
+;               HL = Number of free clusters
+;               IX = Pointer to MSX-DOS 1.0 compatible DPB (NO!)
+;               IY = Pointer to first FAT sector in a page-3 buffer (NO!)
+
+DO_ALLOC:
+	ex	af,af
+	ld	a,e
+	call	ISMYDRIVE
+	ld	iy,0
+	ret	nz
+
+	call JMP_ALLOC
+	ld	iy,1
+	ret
+
+	;Is A my drive? (being 0=default drive) Z=1 if yes
+	;Corrupts H
+ISMYDRIVE:
+	or	a
+	jr	z,ISMYDR_DEF
+
+	ld	h,a
+	ld	a,(INDRIVE1)
+	cp	h
+	ld	a,h
+	ret
+
+ISMYDR_DEF:
+	ld	h,a
+	ld	a,(CUR_IS_MINE)
+	cpl
+	ld	a,h
+	ret
+
+
+;FIND FIRST ENTRY (40H)
+;Parameters:    C = 40H (_FFIRST) 
+;              DE = Drive/path/file ASCIIZ string
+;                   or fileinfo block pointer
+;              HL = filename ASCIIZ string (only if
+;              DE = fileinfo pointer)
+;               B = Search attributes
+;              IX = Pointer to new fileinfo block
+;Results:       A = Error
+;            (IX) = Filled in with matching entry
+
+DO_FFIRST:
+	ex	af,af
+	ld	a,(de)
+	cp	0FFh
+	jr	z,FFIRST_FIB
+
+	call DRV_IN_PATH
+	or a
+	jr	z,FFIRST_CURDRV
+
+	ld	h,a
+	ld	a,(INDRIVE1)
+	cp	h
+	ld	iy,0
+	ret	nz
+
+	call	JMP_FFIRST
+	ld	iy,1
+	ret
+
+FFIRST_CURDRV:
+	ld	a,(CUR_IS_MINE)
+	or	a
+	ld	iy,0
+	ret	z
+	
+	call	JMP_FFIRST
+	ld	iy,1
+	ret
+
+FFIRST_FIB:
+	push	de
+	pop	iy
+	ld	a,(INDRIVE0)
+	cp	(iy+25)
+	ld	iy,0
+	ret	nz
+
+	call	JMP_FFIRST
+	ld	iy,1
+	ret
+
+
+;Return in A the drive in the pathname passed in DE
+;A: = 1, if no drive in pathanme returns 0 (so default drive)
+
+DRV_IN_PATH:
+	ld	a,(de)
+	or	a
+	ret	z	;Empty string?
+
+	inc	de
+	ld	a,(de)
+	or	a
+	dec	de
+	ret z  ;String has only one char?
+
+	cp ":"
+	ld a,0
+	ret nz  ;Second char in string is not ":"?
+
+	ld a,(de)
+	or 32
+	sub "a"-1
+	ret
+
+;Same as DRV_IN_PATH but if not defualt drive
+;increment DE by two (so it points past the drive letter)
+
+DRV_IN_PATH_INC:
+	call DRV_IN_PATH
+	or a
+	ret z
+
+	dec de
+	dec de
+	ret
+
+
+;GET CURRENT DIRECTORY (59H)
+;Parameters:    C = 59H (_GETCD) 
+;               B = Drive number (0=current, 1=A: etc)
+;              DE = Pointer to 64 byte buffer
+;Results:       A = Error
+;              DE = Filled in with current path
+
+DO_GETCD:
+	ex	af,af
+	ld	a,b
+	call  ISMYDRIVE
+	ld	iy,0
+	ret	nz
+
+	call JMP_GETCD
+	ld	iy,1
+	ret
+
+
+;CHANGE CURRENT DIRECTORY (5AH)
+;Parameters:    C = 5AH (_CHDIR) 
+;              DE = Drive/path/file ASCIIZ string
+;Results:       A = Error
+
+DO_CHDIR:
+	ex	af,af
+	call DRV_IN_PATH
+	ld b,a
+	call ISMYDRIVE
+	ld	iy,0
+	ret	nz
+
+	ld	a,b
+	or	a
+	jr	z,CHDIR_OKDRV2
+	inc	de
+	inc	de
+
+CHDIR_OKDRV2:
+	call JMP_CHDIR
+	ld	iy,1
+	ret
+
+
+;FLUSH DISK BUFFERS (5FH)
+;Parameters:    C = 5FH (_FLUSH) 
+;               B = Drive number (0=current, FFH=all)
+;               D = 00H => Flush only
+;                 = FFH => Flush and invalidate
+;Results:       A = Error
+
+DO_FLUSH:
+	ex	af,af
+	ld	a,b
+	cp	0FFh
+	jr	z,DO_FLUSH_ALL
+
+	ld	a,b
+	call	ISMYDRIVE
+	ld	iy,0
+	ret	nz
+
+DO_FLUSH_ISMINE:
+	call JMP_FLUSH
+	ld	iy,1
+	xor	a
+	ret
+
+DO_FLUSH_ALL:
+	push	bc,de
+	call JMP_FLUSH
+	pop		de,bc
+	ld	iy,0
+	ret
+
+
+;--------------------------------
+;--- Function implementations ---
+;--------------------------------
+
+;Get allocation information
+;Input:  -
+;Output: A = Error code
+;        C = Sectors/cluster (0FFh if any error)
+;        DE = Total number of clusters
+;        HL = Number of free clusters
+
+IMPL_ALLOC:
+	ld	c,2
+	ld	de,60000
+	ld	hl,34
+	xor	a
+	ret
+
+	ld	a,__DISK
+	ret
+
+
+;Find first entry
+;Input:   DE = Drive/path/file ASCIIZ string or fileinfo block pointer
+;         HL = filename ASCIIZ string (only if DE = fileinfo pointer)
+;         B = Search attributes
+;         IX = Pointer to new fileinfo block
+;Output:  A = Error
+;        (IX) = Filled in with matching entry
+
+IMPL_FFIRST:
+	ld	(ix),0FFh
+	ld	(ix+1),"M"
+	ld	(ix+2),"O"
+	ld	(ix+3),"L"
+	ld	(ix+4),"A"
+	ld	(ix+5),"!"
+	ld	(ix+6),0
+	ld	(ix+21),34
+	ld	(ix+22),0
+	ld	(ix+23),0
+	ld	(ix+24),0
+	ld	a,(INDRIVE0)
+	ld	(ix+25),a
+
+	xor	a
+	ret
+
+
+;Get current directory
+;Input:   DE = Pointer to 64 byte buffer
+;Output:  A = Error
+;         DE preserved
+
+IMPL_GETCD:
+	push de
+	ld	hl,CURDIR
+	ld	bc,64
+	ldir
+	pop de
+	xor a
+	ret
+
+	push	de
+	pop	ix
+	ld	(ix),"U"
+	ld	(ix+1),"N"
+	ld	(ix+2),"D"
+	ld	(ix+3),"I"
+	ld	(ix+4),"R"
+	ld	(ix+5),0
+	xor	a
+	ret
+
+
+;Change current directory
+;Input:    DE = Drive/path/file ASCIIZ string
+;Output:   A = Error
+
+IMPL_CHDIR:
+IMPL_CHDIR2:
+	ld	a,(de)
+	or	a
+	jr	z,IMPLCHDIR_OK
+	cp  "\\"
+	jr	nz,IMPLCHDIR_OK
+	inc	de
+	jr	IMPL_CHDIR2
+
+IMPLCHDIR_OK:
+	ex de,hl
+	ld	de,CURDIR
+	ld	bc,64
+	ldir
+
+	xor	a
+	ret
+
+
+;Flush buffers
+;Input:  D=FFh to also invalidate
+;Output: A = error code
+
+IMPL_FLUSH:
+	xor	a
+	ret
 
 ;---------------------
 ;--- Gancho H_BDOS ---
 ;---------------------
 
-RESBDOS:
+DOSENTRY:
 	ex	af,af
 	ld	a,c
+
+	cp	_DSKRST
+	jp	z,DO_DSKRST
+	cp	_SELDSK
+	jp	z,DO_SELDSK
+	;cp	_CURDRV
+	;jp	z,DO_CURDRV
+	cp	_ALLOC
+	jp	z,DO_ALLOC
+	cp	_FFIRST
+	jp	z,DO_FFIRST
+	cp	_FLUSH
+	jp	z,DO_FLUSH
+	cp	_GETCD
+	jp	z,DO_GETCD
+	cp	_CHDIR
+	jp  z,DO_CHDIR
+
+	jp	NOFLUSH
+
+
 	cp	1Bh	;_ALLOC
 	jr	nz,NOALLOC
 
@@ -646,6 +1094,21 @@ NOFLUSH:
 	ld	a,(de)
 	cp	0FFh
 	jr	z,DONOTHING
+
+	inc	de
+	ld	a,(de)
+	cp	":"
+	dec	de
+	jr	z,HASDRIVE
+
+	ld	a,(CUR_IS_MINE)
+	or	a
+	ld	iy,0
+	ret	z
+	jr	FFIRSTMINE
+
+HASDRIVE:
+	ld	a,(de)
 	or	32
 	cp	"g"
 	jr	nz,DONOTHING
@@ -655,6 +1118,7 @@ NOFLUSH:
 	cp	":"
 	jr	nz,DONOTHING
 
+FFIRSTMINE:
 	ld	(ix),0FFh
 	ld	(ix+1),"M"
 	ld	(ix+2),"O"
@@ -675,8 +1139,8 @@ NOFFIRST:
 	cp	41h
 	jr	nz,DONOTHING
 
-	ld	a,(ix+25)
-	cp	6
+	ld	a,(INDRIVE0)
+	cp	(ix+25)
 	jr	nz,DONOTHING
 
 	ex	af,af
@@ -694,6 +1158,8 @@ DONOTHING:
 	ex	af,af
 	ld	iy,0
 	ret
+
+CURDIR:	ds	64
 
 PARTRE2!:	;
 
