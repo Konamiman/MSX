@@ -1,5 +1,14 @@
 ;NestorFilesystem
 
+;TODO:
+;Get rid of buffers
+;Choose drive at startup
+;Extra space for FFIRST and FNEXT (with MAX_FIBS and EXTRA_FIB_SIZE constants)
+;WPATH
+;DSPACE (and infer ALLOC)
+;Init/deinit
+;Translate/TODOize
+
 
 ;******************************************************
 ;*                                                    *
@@ -7,7 +16,7 @@
 ;*                                                    *
 ;******************************************************
 
-IDNES:	equ	#22	;ID para la BIOS extendida
+IDNES:	equ	22h	;ID para la BIOS extendida
 IDNFS:	equ	4
 
 ;Min and max function calls that will be hooked,
@@ -24,7 +33,7 @@ dos:	macro
 
 ENDTPA:	equ	#0006
 HIGHMEM:	equ	#F349
-H_TIMI:	equ	#FD9F
+H_TIMI:	equ	0FD9Fh
 H_STKE:	equ	#FEDA
 EXTBIO:	equ	#FFCA
 CALSLT:	equ	#001C
@@ -52,6 +61,7 @@ _STROUT:	equ	09h
 _CPMVER:	equ	0Ch
 _DSKRST:	equ	0DH
 _SELDSK:	equ	0EH
+_LOGIN:		equ	18h
 _ALLOC:		equ	1Bh
 _CURDRV:	equ	19h
 _FFIRST:    equ	40h
@@ -65,6 +75,7 @@ _DOSVER:	equ	6Fh
 
 ;*** DOS error codes
 
+__NOFIL:	equ 0D7h
 __DISK:	equ 0FDh
 __IFORM:	equ 0F0h	;Used for testing
 
@@ -227,7 +238,7 @@ OKRESEG:	ld	(RESCODE1+12),a
 
 	ld	bc,23-5
 	add	hl,bc
-	ld	a,#C3
+	ld	a,0C3h
 	ld	(H_BDOS),a
 	ld	(H_BDOS+1),hl
 	
@@ -491,9 +502,23 @@ OLDHM@sym:	dw	0			;+21
 ;--- Nuevo gancho H_BDOS
 
 _NEWBDOS@sym:	;+23
+	ex	af,af
+	ld	a,c
+	cp	_LOGIN
+	jr	nz,NOLOGIN@sym
+	
+	pop	hl
+	ld	de,NEXTLOGIN@sym
+	push	de
+	jp	(hl)
+	
+NEXTLOGIN@sym:
+	set	6,l	;TODO: Depends on drive letter!
+	ret
+	
+NOLOGIN@sym:
 	push  iy
 
-	ex	af,af
 	ld	a,c
 	cp	_DSKRST
 	jr	z,OKGO@sym
@@ -646,7 +671,7 @@ PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 
 JMP_ALLOC:	jp	IMPL_ALLOC
 JMP_FFIRST:	jp	IMPL_FFIRST
-JMP_FLUSH:	jp	IMPL_FLUSH
+JMP_FNEXT:	jp	IMPL_FNEXT
 JMP_GETCD:	jp	IMPL_GETCD
 JMP_CHDIR:	jp	IMPL_CHDIR
 
@@ -659,21 +684,12 @@ INDRIVE1:	db	7	;Drive in which the filesystem acts (1=A:)
 ;--- Functions ---
 ;-----------------
 
-;DISK RESET (0DH)
-;Parameters:    C = 0DH (_DSKRST)
-;Results:       None
-
-DO_DSKRST:
-	ex	af,af
-	ld	b,0FFh
-	ld	d,0FFh
-	jp	DO_FLUSH
-
 
 ;SELECT DISK (0EH)
 ;Parameters:    C = 0EH (_SELDSK)
 ;               E = Drive number.  0=A: 1=B:   etc.
-;Results:     L=A = Number of drives (1...8)
+;Results:       A = Error code
+;               L = Number of drives (1...8)
 
 DO_SELDSK:
 	ex	af,af
@@ -697,14 +713,16 @@ SELDSK_ISMINE:
 	ld	a,0FFh
 	ld	(CUR_IS_MINE),a	;Yes: CUR_IS_MINE=false and DON'T let DOS handle it
 	inc	iy				;(since that could cause "Invalid drive" error)
-	ld	a,8	;!!! TODO: should be number of drives
-	ld	l,a
+	ld	hl,(0F347h)	;!!! TODO: may not include our drive
+	xor	a
+	ld	h,a
 	ret
 	
 
 ;GET CURRENT DRIVE (19H)
 ;Parameters:    C = 19H (_CURDRV)
-;Results:     L=A = Current drive (0=A: etc)
+;Results:       A = Error code
+;               L = Current drive (0=A: etc)
 
 DO_CURDRV:
 	ex	af,af
@@ -713,7 +731,8 @@ DO_CURDRV:
 	or	a
 	ret	z
 
-	ld	a,(INDRIVE0)
+	ld	hl,(INDRIVE0)
+	xor	a
 	ld	l,a
 	inc	iy
 	ret
@@ -756,6 +775,7 @@ ISMYDR_DEF:
 	ld	h,a
 	ld	a,(CUR_IS_MINE)
 	cpl
+	or a
 	ld	a,h
 	ret
 
@@ -849,6 +869,24 @@ DRV_IN_PATH_INC:
 	dec de
 	ret
 
+	
+;FIND NEXT ENTRY (41H)
+;Parameters:    C = 41H (_FNEXT) 
+;              IX = Pointer to fileinfo block from
+;                   previous find first function.
+;Results:       A = Error
+;            (IX) = Filled in with next matching entry
+
+DO_FNEXT:
+	ld	a,(INDRIVE0)
+	cp	(ix+25)
+	ld	iy,0
+	ret	nz
+
+	call	JMP_FNEXT
+	ld	iy,1
+	ret
+			
 
 ;GET CURRENT DIRECTORY (59H)
 ;Parameters:    C = 59H (_GETCD) 
@@ -876,8 +914,9 @@ DO_GETCD:
 
 DO_CHDIR:
 	ex	af,af
+	
 	call DRV_IN_PATH
-	ld b,a
+	ld  b,a
 	call ISMYDRIVE
 	ld	iy,0
 	ret	nz
@@ -891,38 +930,6 @@ DO_CHDIR:
 CHDIR_OKDRV2:
 	call JMP_CHDIR
 	ld	iy,1
-	ret
-
-
-;FLUSH DISK BUFFERS (5FH)
-;Parameters:    C = 5FH (_FLUSH) 
-;               B = Drive number (0=current, FFH=all)
-;               D = 00H => Flush only
-;                 = FFH => Flush and invalidate
-;Results:       A = Error
-
-DO_FLUSH:
-	ex	af,af
-	ld	a,b
-	cp	0FFh
-	jr	z,DO_FLUSH_ALL
-
-	ld	a,b
-	call	ISMYDRIVE
-	ld	iy,0
-	ret	nz
-
-DO_FLUSH_ISMINE:
-	call JMP_FLUSH
-	ld	iy,1
-	xor	a
-	ret
-
-DO_FLUSH_ALL:
-	push	bc,de
-	call JMP_FLUSH
-	pop		de,bc
-	ld	iy,0
 	ret
 
 
@@ -949,12 +956,15 @@ IMPL_ALLOC:
 
 
 ;Find first entry
-;Input:   DE = Drive/path/file ASCIIZ string or fileinfo block pointer
+;Input:   DE = Drive/path/file ASCIIZ string 
+;              or fileinfo block pointer for the directory
 ;         HL = filename ASCIIZ string (only if DE = fileinfo pointer)
 ;         B = Search attributes
 ;         IX = Pointer to new fileinfo block
 ;Output:  A = Error
 ;        (IX) = Filled in with matching entry
+;
+;Supplied DE, HL and IX will always be in page 3
 
 IMPL_FFIRST:
 	ld	(ix),0FFh
@@ -974,6 +984,17 @@ IMPL_FFIRST:
 	xor	a
 	ret
 
+	
+;Find next entry
+;Input:     IX = Pointer to fileinfo block from
+;                previous find first function.
+;Output:    A = Error
+;           (IX) = Filled in with next matching entry
+
+IMPL_FNEXT:
+	ld	a,__NOFIL
+	ret
+	
 
 ;Get current directory
 ;Input:   DE = Pointer to 64 byte buffer
@@ -1025,14 +1046,6 @@ IMPLCHDIR_OK:
 	ret
 
 
-;Flush buffers
-;Input:  D=FFh to also invalidate
-;Output: A = error code
-
-IMPL_FLUSH:
-	xor	a
-	ret
-
 ;---------------------
 ;--- Gancho H_BDOS ---
 ;---------------------
@@ -1041,8 +1054,6 @@ DOSENTRY:
 	ex	af,af
 	ld	a,c
 
-	cp	_DSKRST
-	jp	z,DO_DSKRST
 	cp	_SELDSK
 	jp	z,DO_SELDSK
 	;cp	_CURDRV
@@ -1051,108 +1062,12 @@ DOSENTRY:
 	jp	z,DO_ALLOC
 	cp	_FFIRST
 	jp	z,DO_FFIRST
-	cp	_FLUSH
-	jp	z,DO_FLUSH
+	cp	_FNEXT
+	jp	z,DO_FNEXT
 	cp	_GETCD
 	jp	z,DO_GETCD
 	cp	_CHDIR
 	jp  z,DO_CHDIR
-
-	jp	NOFLUSH
-
-
-	cp	1Bh	;_ALLOC
-	jr	nz,NOALLOC
-
-	ld	a,e
-	cp	6
-	jp	c,DONOTHING
-
-	ld	c,2	;/2 sec/clus
-	ld	de,60000
-	ld	hl,34
-	ld	ix,0
-	
-	jp	DONEOK
-
-NOALLOC:
-	cp	5Fh
-	jr	nz,NOFLUSH
-
-	ld	a,b
-	cp	0FFh
-	jr	z,DONOTHING
-	cp	6
-	jr	z,DONOTHING
-
-	jr	DONEOK
-
-NOFLUSH:
-	cp	40h		;_FFIRST/_FNEXT
-	jr	nz,NOFFIRST
-
-	ld	a,(de)
-	cp	0FFh
-	jr	z,DONOTHING
-
-	inc	de
-	ld	a,(de)
-	cp	":"
-	dec	de
-	jr	z,HASDRIVE
-
-	ld	a,(CUR_IS_MINE)
-	or	a
-	ld	iy,0
-	ret	z
-	jr	FFIRSTMINE
-
-HASDRIVE:
-	ld	a,(de)
-	or	32
-	cp	"g"
-	jr	nz,DONOTHING
-	inc	de
-	ld	a,(de)
-	dec	de
-	cp	":"
-	jr	nz,DONOTHING
-
-FFIRSTMINE:
-	ld	(ix),0FFh
-	ld	(ix+1),"M"
-	ld	(ix+2),"O"
-	ld	(ix+3),"L"
-	ld	(ix+4),"A"
-	ld	(ix+5),"!"
-	ld	(ix+6),0
-	ld	(ix+21),34
-	ld	(ix+22),0
-	ld	(ix+23),0
-	ld	(ix+24),0
-	ld	(ix+25),6
-
-	jr	DONEOK
-
-NOFFIRST:
-	ld	a,c
-	cp	41h
-	jr	nz,DONOTHING
-
-	ld	a,(INDRIVE0)
-	cp	(ix+25)
-	jr	nz,DONOTHING
-
-	ex	af,af
-	ld	a,0D7h	;.NOFIL
-	ld	iy,1
-	ret
-
-DONEOK:
-	ex	af,af
-	xor	a
-	ld	iy,1
-	ret
 
 DONOTHING:
 	ex	af,af
