@@ -1,7 +1,6 @@
 ;NestorFilesystem
 
 ;TODO:
-;Get rid of buffers
 ;Choose drive at startup
 ;Extra space for FFIRST and FNEXT (with MAX_FIBS and EXTRA_FIB_SIZE constants)
 ;WPATH
@@ -25,10 +24,16 @@ IDNFS:	equ	4
 MINFN: equ 40h	;_FFIRST
 MAXFN: equ 5Ah	;_CHDIR
 
+MAX_PATH_LEN: equ 63
+
 dos:	macro
 	call	5
 	endm
 
+breakp: macro
+	db 0EDh,0
+	endm
+	
 	;*** GANCHOS Y VARIABLES DEL SISTEMA
 
 ENDTPA:	equ	#0006
@@ -76,6 +81,7 @@ _DOSVER:	equ	6Fh
 ;*** DOS error codes
 
 __NOFIL:	equ 0D7h
+__PLONG:	equ 0D8h
 __DISK:	equ 0FDh
 __IFORM:	equ 0F0h	;Used for testing
 
@@ -141,6 +147,20 @@ OKTPA:	;
 	cp	IDNES
 	jp	z,DESINST
 
+;--- TODO: check if the required hardware/device is present
+;    and abort install if not, e.g.
+
+	;call	CHECK_DEVICE
+	;jr	nc,OKDEVICE
+	;ld	de,NODEVICE
+	;ld	c,_STROUT
+	;dos
+	;jp	FIN
+	
+;NODEVICE:	db	"*** Device not found!",13,10,"$"	
+	
+OKDEVICE:
+	
 ;--- Comienza la instalacion: reservamos un segmento de RAM
 
 	ld	b,0	;Reservamos un segmento de sistema
@@ -672,8 +692,8 @@ PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 JMP_ALLOC:	jp	IMPL_ALLOC
 JMP_FFIRST:	jp	IMPL_FFIRST
 JMP_FNEXT:	jp	IMPL_FNEXT
-JMP_GETCD:	jp	IMPL_GETCD
 JMP_CHDIR:	jp	IMPL_CHDIR
+JMP_GETCD:  jp  IMPL_GETCD
 
 INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
 CUR_IS_MINE:	db	0	;Is my drive the current drive?
@@ -759,26 +779,6 @@ DO_ALLOC:
 	ld	iy,1
 	ret
 
-	;Is A my drive? (being 0=default drive) Z=1 if yes
-	;Corrupts H
-ISMYDRIVE:
-	or	a
-	jr	z,ISMYDR_DEF
-
-	ld	h,a
-	ld	a,(INDRIVE1)
-	cp	h
-	ld	a,h
-	ret
-
-ISMYDR_DEF:
-	ld	h,a
-	ld	a,(CUR_IS_MINE)
-	cpl
-	or a
-	ld	a,h
-	ret
-
 
 ;FIND FIRST ENTRY (40H)
 ;Parameters:    C = 40H (_FFIRST) 
@@ -797,7 +797,7 @@ DO_FFIRST:
 	cp	0FFh
 	jr	z,FFIRST_FIB
 
-	call DRV_IN_PATH
+	call DRV_IN_PATH_INC
 	or a
 	jr	z,FFIRST_CURDRV
 
@@ -806,21 +806,47 @@ DO_FFIRST:
 	cp	h
 	ld	iy,0
 	ret	nz
-
-	call	JMP_FFIRST
-	ld	iy,1
-	ret
+	jr kk
+	jr FFIRST_PATH
 
 FFIRST_CURDRV:
 	ld	a,(CUR_IS_MINE)
 	or	a
 	ld	iy,0
 	ret	z
+	jr kk
 	
+	;--- Path/file based search, DE points past the drive if any
+	
+FFIRST_PATH:
+	ld a,(de)
+	cp "\\"
+	inc de
+	jr z,FFIRST_PATH_ABS
+	dec de
+	
+	push de
+	ld hl,CURDIR
+	;ld de,;WIP...
+	
+	
+FFIRST_PATH_ABS:
+	push de
+	call STRLEN
+	pop de
+	ld a,b
+	cp MAX_PATH_LEN+1
+	jr nc,PLONG_END
+	
+	
+	
+kk:
 	call	JMP_FFIRST
 	ld	iy,1
 	ret
-
+	
+	;--- FIB based search
+	
 FFIRST_FIB:
 	push	de
 	pop	iy
@@ -832,44 +858,13 @@ FFIRST_FIB:
 	call	JMP_FFIRST
 	ld	iy,1
 	ret
-
-
-;Return in A the drive in the pathname passed in DE
-;A: = 1, if no drive in pathanme returns 0 (so default drive)
-
-DRV_IN_PATH:
-	ld	a,(de)
-	or	a
-	ret	z	;Empty string?
-
-	inc	de
-	ld	a,(de)
-	or	a
-	dec	de
-	ret z  ;String has only one char?
-
-	cp ":"
-	ld a,0
-	ret nz  ;Second char in string is not ":"?
-
-	ld a,(de)
-	or 32
-	sub "a"-1
-	ret
-
-;Same as DRV_IN_PATH but if not defualt drive
-;increment DE by two (so it points past the drive letter)
-
-DRV_IN_PATH_INC:
-	call DRV_IN_PATH
-	or a
-	ret z
-
-	dec de
-	dec de
-	ret
-
 	
+PLONG_END:
+	ld a,__PLONG
+	ld iy,1
+	ret
+
+
 ;FIND NEXT ENTRY (41H)
 ;Parameters:    C = 41H (_FNEXT) 
 ;              IX = Pointer to fileinfo block from
@@ -902,11 +897,52 @@ DO_GETCD:
 	ld	iy,0
 	ret	nz
 
+	ld a,(CURDIR_IS_CACHED)
+	or a
+	jr z,GETCD_NOT_CACHED
+
+	inc iy
+	push de
+	ld hl,CURDIR
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	pop de
+	;ld a,"!"	;!!!
+	;ld (de),a	;!!!
+	xor a
+	ret
+	
+GETCD_NOT_CACHED:
+	ld hl,MYCURDIR
+	push de
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	pop de
+	ld iy,1
+
+	breakp
+	
+	push de
 	call JMP_GETCD
-	ld	iy,1
+	pop de
+	ld iy,1
+	ret nc
+
+	breakp
+	
+	push de
+	ld h,d
+	ld l,e
+	ld de,CURDIR
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	pop de
+	ld a,0FFh
+	ld (CURDIR_IS_CACHED),a
+	cpl
 	ret
 
-
+	
 ;CHANGE CURRENT DIRECTORY (5AH)
 ;Parameters:    C = 5AH (_CHDIR) 
 ;              DE = Drive/path/file ASCIIZ string
@@ -915,21 +951,72 @@ DO_GETCD:
 DO_CHDIR:
 	ex	af,af
 	
-	call DRV_IN_PATH
+	call DRV_IN_PATH_INC
 	ld  b,a
 	call ISMYDRIVE
 	ld	iy,0
 	ret	nz
 
-	ld	a,b
-	or	a
-	jr	z,CHDIR_OKDRV2
-	inc	de
-	inc	de
-
-CHDIR_OKDRV2:
+	;If path is absolute, do an upfront check for length
+	
+	ld a,(de)
+	cp 5Ch ;"\"
+	jr nz,CHDIR_NOABS
+	push de
+	inc de
+	call STRLEN
+	pop de
+	ld a,__PLONG
+	inc iy
+	ret c
+	
+CHDIR_NOABS:	
+	ld a,(CURDIR_IS_CACHED)
+	rra
+	ld hl,CURDIR
 	call JMP_CHDIR
-	ld	iy,1
+	ex af,af
+	xor a
+	ld (CURDIR_IS_CACHED),a
+	ex af,af
+	ld iy,1
+	ret
+	
+	
+;GET WHOLE PATH STRING (5EH)
+;Parameters:    C = 5EH (_WPATH) 
+;              DE = Pointer to 64 byte buffer
+;Results:       A = Error
+;              DE = Filled in with whole path string
+;              HL = Pointer to start of last item	
+
+DO_WPATH:
+	ex af,af
+	
+	ld a,(FIND_STAT)
+	or a
+	ld iy,0
+	ret z
+	
+	inc iy
+	dec a
+	ld a,__PLONG
+	ret nz
+	
+	;Last FFIRST/FNEW was for us & successful
+
+	push de
+	ld hl,WPATH_BUF
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	
+	pop de
+	ld h,d
+	ld l,e
+	ld bc,(WPATH_PATH_LEN)
+	add hl,bc
+	
+	xor a
 	ret
 
 
@@ -996,55 +1083,43 @@ IMPL_FNEXT:
 	ret
 	
 
-;Get current directory
-;Input:   DE = Pointer to 64 byte buffer
-;Output:  A = Error
-;         DE preserved
-
-IMPL_GETCD:
-	push de
-	ld	hl,CURDIR
-	ld	bc,64
-	ldir
-	pop de
-	xor a
-	ret
-
-	push	de
-	pop	ix
-	ld	(ix),"U"
-	ld	(ix+1),"N"
-	ld	(ix+2),"D"
-	ld	(ix+3),"I"
-	ld	(ix+4),"R"
-	ld	(ix+5),0
-	xor	a
-	ret
-
-
 ;Change current directory
-;Input:    DE = Drive/path/file ASCIIZ string
-;Output:   A = Error
+;Input:    DE = Path/file ASCIIZ string
+;          Cy = 1 if a cached version is available
+;          HL = Pointer to cached version (if Cy = 1)
+;Output:   A  = Error
 
 IMPL_CHDIR:
+	ld a,(de)
+	cp 5Ch ;"\"
+	jr nz,IMPL_CHDIR2
+	inc de
 IMPL_CHDIR2:
-	ld	a,(de)
-	or	a
-	jr	z,IMPLCHDIR_OK
-	cp  "\\"
-	jr	nz,IMPLCHDIR_OK
-	inc	de
-	jr	IMPL_CHDIR2
-
-IMPLCHDIR_OK:
 	ex de,hl
-	ld	de,CURDIR
-	ld	bc,64
+	ld de,MYCURDIR
+	ld bc,MAX_PATH_LEN+1
 	ldir
-
-	xor	a
+	xor a
 	ret
+	
 
+;Get current directory
+;Input:    DE = Path/file ASCIIZ string
+;Output:   A  = Error
+;          Cy = 1 if the result can be cached
+;		   Cy MUST be 0 if there is an error
+
+IMPL_GETCD:
+	ld hl,MYCURDIR
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	
+	xor	a
+	scf
+	ret	
+
+MYCURDIR: ds MAX_PATH_LEN+1	
+	
 
 ;---------------------
 ;--- Gancho H_BDOS ---
@@ -1068,13 +1143,359 @@ DOSENTRY:
 	jp	z,DO_GETCD
 	cp	_CHDIR
 	jp  z,DO_CHDIR
+	cp  _WPATH
+	jp  z,DO_WPATH
 
 DONOTHING:
 	ex	af,af
 	ld	iy,0
 	ret
 
-CURDIR:	ds	64
+	
+;--------------------------
+;--- Auxiliary routines ---
+;--------------------------
+
+;Return in A the drive in the pathname passed in DE
+;A: = 1, if no drive in pathanme returns 0 (so default drive)
+
+DRV_IN_PATH:
+	ld	a,(de)
+	or	a
+	ret	z	;Empty string?
+
+	inc	de
+	ld	a,(de)
+	or	a
+	dec	de
+	ret z  ;String has only one char?
+
+	cp ":"
+	ld a,0
+	ret nz  ;Second char in string is not ":"?
+
+	ld a,(de)
+	or 32
+	sub "a"-1
+	ret
+
+	
+;Same as DRV_IN_PATH but if not defualt drive
+;increment DE by two (so it points past the drive letter)
+
+DRV_IN_PATH_INC:
+	call DRV_IN_PATH
+	or a
+	ret z
+
+	inc de
+	inc de
+	ret
+
+
+
+;Is A my drive? (being 0=default drive) Z=1 if yes
+;Corrupts H
+
+ISMYDRIVE:
+	or	a
+	jr	z,ISMYDR_DEF
+
+	ld	h,a
+	ld	a,(INDRIVE1)
+	cp	h
+	ld	a,h
+	ret
+
+ISMYDR_DEF:
+	ld	h,a
+	ld	a,(CUR_IS_MINE)
+	cpl
+	or a
+	ld	a,h
+	ret
+	
+	
+;Get the length of a zero-terminated string
+;Input:  DE = string	
+;Output: BC = length
+;        Cy = 1 if length > MAX_PATH_LEN
+;Corrupts AF, DE
+
+STRLEN:
+	ld bc,0
+STRLEN_L:
+	ld a,(de)
+	or a
+	jr z,STRLEN_END
+	inc bc
+	inc de
+	jr STRLEN_L
+	
+STRLEN_END:
+	ld a,b
+	scf
+	ret nz
+	ld a,c
+	cp MAX_PATH_LEN+1
+	ccf
+	ret
+
+	
+;In-place uppercase a string
+;Input: DE = string
+;Corrupts AF, DE
+
+TOUPPER:
+	ld	a,(de)
+	or a
+	ret z
+	
+	cp "a"
+	jr	c,TOUP_NEXT
+	cp "z"+1
+	jr nc,TOUP_NEXT
+	
+	and 223
+	ld (de),a
+	
+TOUP_NEXT:
+	inc de
+	jr TOUPPER
+
+	
+;Expand wildcards of a filename:
+;* in name/extension is converted to a series of ?s
+;If no extension is provided it is assumed to be .*
+;If filename/extension is too long it is truncated
+;
+; Input: HL=source, DE=destination
+; Corrupts AF, BC, HL, DE
+;
+;e.g.:
+;ABCD.FG  -->  ABCD.FG
+;ABCDEFGHIJK.LMNOP  -->  ABCDEFGH.LMN
+;ABC*.D*  -->  ABC?????.D??
+;ABCDE    -->  ABCDE.???
+;ABCDE.   -->  ABCDE.
+;ABC*DE.F*G  -->  ABC?????.F??
+;*.*      -->  ????????.???
+;(empty)  -->  ????????.???
+	
+EXPAND:	ld	b,8
+
+	ld	a,(hl)
+	or	a
+	jr	nz,EXPAND_L1
+	ld	hl,EXPA_EMPTY
+	ld	bc,13
+	ldir
+	ret
+EXPA_EMPTY:	db	"????????.???",0
+
+	;--- Expand name
+
+EXPAND_L1:
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jr	z,EXPAND_END
+
+	cp	"*"
+	jr	z,EXPA_GOTASK
+
+	cp	"."
+	jr	z,EXPA_GOTDOT
+
+	ld	(de),a
+	inc	de
+	djnz	EXPAND_L1
+
+	;8 name chars processed already, skip rest
+
+EXPAND_L2:
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jr	z,EXPAND_END
+	cp	"."
+	jr	z,EXPA_GOTDOT
+	jr	EXPAND_L2
+
+	;Found asterisk, replace with ?s...
+
+EXPA_GOTASK:
+	ld	a,"?"
+	ld	(de),a
+	inc	de
+	djnz	EXPA_GOTASK
+
+	;...and skip everything else before the dot
+EXPAND_L3:
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jr	z,EXPAND_END
+	cp	"."
+	jr	z,EXPA_GOTDOT
+	jr	EXPAND_L3
+
+	;Found the dot
+
+EXPA_GOTDOT:
+	ld	(de),a
+	inc	de
+EXPA_GOTDOT2:
+	ld	b,3
+
+	;Expand extension
+
+EXPAND_L4:
+	ld	a,(hl)
+	inc	hl
+	or	a
+	jr	z,EXPAND_END2
+
+	cp	"*"
+	jr	z,EXPA_GOTASK2
+
+	ld	(de),a
+	inc	de
+	djnz	EXPAND_L4
+
+	inc	de
+	xor	a
+	jr	EXPAND_END2
+
+	;Got asterisk in extension
+
+EXPA_GOTASK2:
+	ld	a,"?"
+	ld	(de),a
+	inc	de
+	djnz	EXPA_GOTASK2
+
+	xor	a
+	jr	EXPAND_END2
+
+	;No extension specified, assume .*
+
+EXPAND_END:
+	ld	a,"."
+	ld	(de),a
+	inc	de
+	ld	a,"?"
+	ld	(de),a
+	inc	de
+	ld	(de),a
+	inc	de
+	ld	(de),a
+	inc	de
+	xor	a
+
+	;End of everything
+
+EXPAND_END2:	ld	(de),a
+	ret	
+	
+	
+;Get the last item of a path/filename string
+;Input:  DE = string
+;Output: HL = path to last item
+;Corrupts AF, DE, B
+;
+;e.g:
+;A:  --> terminator
+;A:\ --> terminator
+;A:\foo     --> foo
+;A:\foo\bar --> bar
+;A:foo\bar  --> bar
+;foo\bar    --> bar
+;(empty)    --> terminator
+
+GLAST:
+	ld	a,(de)
+	or	a
+	jr	z,GLAST_END2
+
+	inc	de
+	ld	a,(de)
+	cp	5Ch ;"\"
+	jr	z,GLAST_END2	;just "\" -> no last item
+
+	cp	":"
+	inc	de
+	jr	z,GLAST_DO
+
+	dec	de
+	dec	de
+
+	;START HERE (consider current DE = start of string)
+
+GLAST_DO:
+	ld	b,0
+GLAST_LEN_L:
+	ld	a,(de)
+	or	a
+	jr	z,GLAST_LEN_END
+	inc	de
+	inc	b
+	jr	GLAST_LEN_L
+
+GLAST_LEN_END:	;Now B=string length and DE points to terminator
+
+GLAST_SRCH_L:
+	dec	de
+	ld	a,(de)
+	cp	5Ch ;"\"
+	jr	z,GLAST_END
+	cp	":"
+	jr	z,GLAST_END
+	djnz	GLAST_SRCH_L
+	jr	GLAST_END2
+
+GLAST_END:
+	inc	de
+GLAST_END2:
+	ex	de,hl
+	ret	
+	
+
+;------------------------
+;--- Buffers and data ---
+;------------------------
+	
+;Is current directory cached?
+CURDIR_IS_CACHED: db 0	
+	
+;Current directory cache
+CURDIR:	db "fofito",0
+	ds	MAX_PATH_LEN + 1
+
+;Value to be returned by _WPATH
+WPATH_BUF: ds	MAX_PATH_LEN + 1
+
+;Length of value in WPATH_BUF
+WPATH_LEN:	db 0
+
+;Path to terminator item in WPATH_BUF
+WPATH_END_PNT: dw WPATH_BUF
+
+;Length of value in WPATH_BUF except last item (it's DW on purpose)
+WPATH_PATH_LEN:	dw 0
+
+;Status of last FFIRST/FNEXT call:
+;0: It was not for me, or it was for me and resulted in error (except .PLONG)
+;1: It was for me and finished successfully
+;2: It was for me and finished with .PLONG
+FIND_STAT: db 0
+
+	db 5Ch ;"\"
+;Temporary buffer for path/filenames
+PATHFILEBUF: ds (MAX_PATH_LEN*2)+1
+
+
+
 
 PARTRE2!:	;
 

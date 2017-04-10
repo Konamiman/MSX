@@ -1,7 +1,7 @@
 @echo off
 
 echo --- Building...
-sjasm -c NFS.asm NFS.COM
+sjasm -c -s NFS.asm NFS.COM
 if errorlevel 1 goto :end
 
 echo --- Mounting disk image file...
