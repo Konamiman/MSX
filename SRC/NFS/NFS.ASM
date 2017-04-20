@@ -26,6 +26,8 @@ MAXFN: equ 5Ah	;_CHDIR
 
 MAX_PATH_LEN: equ 63
 
+SLASH: equ 5Ch
+
 dos:	macro
 	call	5
 	endm
@@ -80,8 +82,10 @@ _DOSVER:	equ	6Fh
 
 ;*** DOS error codes
 
+__NODIR: equ 0D6h
 __NOFIL:	equ 0D7h
 __PLONG:	equ 0D8h
+__IPATH:	equ	0D9h
 __DISK:	equ 0FDh
 __IFORM:	equ 0F0h	;Used for testing
 
@@ -889,6 +893,7 @@ DO_FNEXT:
 ;              DE = Pointer to 64 byte buffer
 ;Results:       A = Error
 ;              DE = Filled in with current path
+;              BC = Length of string in DE
 
 DO_GETCD:
 	ex	af,af
@@ -896,7 +901,8 @@ DO_GETCD:
 	call  ISMYDRIVE
 	ld	iy,0
 	ret	nz
-
+	
+DO_GETCD2:
 	ld a,(CURDIR_IS_CACHED)
 	or a
 	jr z,GETCD_NOT_CACHED
@@ -904,38 +910,41 @@ DO_GETCD:
 	inc iy
 	push de
 	ld hl,CURDIR
-	ld bc,MAX_PATH_LEN+1
-	ldir
+	ld bc,(CURDIR_LEN)
+	push bc
+	call DO_LDIR
+	pop bc
 	pop de
-	;ld a,"!"	;!!!
-	;ld (de),a	;!!!
 	xor a
 	ret
 	
 GETCD_NOT_CACHED:
-	ld hl,MYCURDIR
-	push de
-	ld bc,MAX_PATH_LEN+1
-	ldir
-	pop de
-	ld iy,1
-
-	breakp
-	
 	push de
 	call JMP_GETCD
 	pop de
 	ld iy,1
-	ret nc
-
-	breakp
+	jr c,GETCD_CAN_CACHE
 	
+	or a
+	ret nz
+	push de
+	call STRLEN
+	pop de
+	xor a
+	ret
+	
+GETCD_CAN_CACHE:
 	push de
 	ld h,d
 	ld l,e
 	ld de,CURDIR
 	ld bc,MAX_PATH_LEN+1
 	ldir
+	
+	ld de,CURDIR
+	call STRLEN
+	ld (CURDIR_LEN),bc
+	
 	pop de
 	ld a,0FFh
 	ld (CURDIR_IS_CACHED),a
@@ -957,23 +966,61 @@ DO_CHDIR:
 	ld	iy,0
 	ret	nz
 
-	;If path is absolute, do an upfront check for length
-	
-	ld a,(de)
-	cp 5Ch ;"\"
-	jr nz,CHDIR_NOABS
+	ld hl,CHDIR_BUF
 	push de
-	inc de
+	call PROCESS
+	pop de
+	ld iy,1
+	or a
+	ret nz
+	
+	;If dir ends with \ or \., suppress it
+	push de
+	ld de,CHDIR_BUF
 	call STRLEN
 	pop de
-	ld a,__PLONG
-	inc iy
-	ret c
+	ld ix,CHDIR_BUF
+	add ix,bc
+	dec ix	;IX points before terminator
 	
-CHDIR_NOABS:	
+	ld a,(ix)
+	cp 0FFh
+	jr z,DO_CHDIR_OK	;Is empty string
+	cp "."
+	jr nz,DO_CHDIR_NODOT
+	ld a,(ix-1)
+	cp 0FFh
+	ld h,a
+	ld a,__NODIR	;"." alone is illegal
+	ret z
+	ld a,h
+	cp SLASH
+	jr nz,DO_CHDIR_NODOT
+	
+	ld (ix),0	;Suppress terminating dot
+	dec ix
+	ld a,(ix)
+DO_CHDIR_NODOT:
+	cp SLASH
+	jr nz,DO_CHDIR_OK
+	ld (ix),0	;Suppress terminating slash
+	
+	;End of \ or \. processing
+	
+DO_CHDIR_OK:
+	;ld hl,CHDIR_BUF
+	;push de
+	;call JMP_CHDIR
+	;pop de
+	;jr c,CHDIR_DOCACHE
+	;ld iy,1
+	;ret nz
+	
+CHDIR_DOCACHE:	
 	ld a,(CURDIR_IS_CACHED)
 	rra
-	ld hl,CURDIR
+	ld ix,CURDIR
+	ld hl,CHDIR_BUF
 	call JMP_CHDIR
 	ex af,af
 	xor a
@@ -981,6 +1028,9 @@ CHDIR_NOABS:
 	ex af,af
 	ld iy,1
 	ret
+	
+	db 0FFh
+CHDIR_BUF: ds MAX_PATH_LEN+1	
 	
 	
 ;GET WHOLE PATH STRING (5EH)
@@ -1086,16 +1136,11 @@ IMPL_FNEXT:
 ;Change current directory
 ;Input:    DE = Path/file ASCIIZ string
 ;          Cy = 1 if a cached version is available
-;          HL = Pointer to cached version (if Cy = 1)
+;          IX = Pointer to cached version (if Cy = 1)
+;          HL = Pointer to processed version
 ;Output:   A  = Error
 
 IMPL_CHDIR:
-	ld a,(de)
-	cp 5Ch ;"\"
-	jr nz,IMPL_CHDIR2
-	inc de
-IMPL_CHDIR2:
-	ex de,hl
 	ld de,MYCURDIR
 	ld bc,MAX_PATH_LEN+1
 	ldir
@@ -1115,7 +1160,7 @@ IMPL_GETCD:
 	ldir
 	
 	xor	a
-	scf
+	;scf
 	ret	
 
 MYCURDIR: ds MAX_PATH_LEN+1	
@@ -1420,7 +1465,7 @@ GLAST:
 
 	inc	de
 	ld	a,(de)
-	cp	5Ch ;"\"
+	cp	SLASH
 	jr	z,GLAST_END2	;just "\" -> no last item
 
 	cp	":"
@@ -1447,7 +1492,7 @@ GLAST_LEN_END:	;Now B=string length and DE points to terminator
 GLAST_SRCH_L:
 	dec	de
 	ld	a,(de)
-	cp	5Ch ;"\"
+	cp	SLASH
 	jr	z,GLAST_END
 	cp	":"
 	jr	z,GLAST_END
@@ -1460,17 +1505,240 @@ GLAST_END2:
 	ex	de,hl
 	ret	
 	
+	
+;--- Do LDIR only if BC <> 0
+;    Modifies AF (and HL, DE), makes BC=0
+
+DO_LDIR:
+	ld a,b
+	or c
+	ret z
+	ldir
+	ret
+	
+	
+;In: DE = string to process (without drive)
+;    HL = destination
+;Out: A = Error
+;     DE points to terminator
+;Changes: AF, BC, DE, HL, IX
+
+PROCESS:
+	ld	a,(de)
+	or	a
+	ex de,hl
+	jp z,DO_GETCD2
+
+	;ex	de,hl	;Now HL=source, DE=destination
+
+	;Start by generating the full path
+
+	push	de
+
+	ld	de,PROCESS_BUF
+	ld	a,(hl)
+	cp	SLASH
+	inc	hl
+	jr	z,PROC_DOCOPY	;Absolute path? Just copy it as is
+	dec	hl
+
+	push hl
+	;ex de,hl
+	ld de,PROCESS_BUF
+	call DO_GETCD2
+	pop hl
+	pop de
+	or a
+	ret nz
+	
+	push de,hl
+	
+	ld ix,PROCESS_BUF
+	ld a,b
+	or c
+	jr z,PROCESS_2
+	add ix,bc
+	ld (ix),SLASH
+	inc ix
+PROCESS_2:
+	push ix
+	pop de
+	
+	pop hl
+	;ld de,PROCESS_BUF
+		
+PROC_DOCOPY:
+	ld	bc,MAX_PATH_LEN+1
+	ldir
+
+PROC_COPIED:
+	pop	de
+
+	;Copy to destination while it's not . or ..
+	;IX = source
+	;DE = destination
+	;B = accumulated output length
+	;C = accumulated output length of current item
+	;H = length of string before current item
+
+	ld	ix,PROCESS_BUF
+	ld	bc,0
+	ld	h,0
+
+PROC_LOOP:
+	ld	a,b
+	cp	MAX_PATH_LEN+1
+	ld	a,__PLONG
+	ret	nc
+
+	ld	a,(ix)
+	cp	"."
+	jp	z,PROC_LOOP_DOT
+	cp	SLASH
+	jp	z,PROC_LOOP_SLASH
+	or	a
+	jp	z,PROC_LOOP_TERM
+
+PROC_LOOP2:
+	ld	(de),a
+	inc	b
+	inc	c
+
+	inc	de
+PROC_LOOP3:
+	inc	ix
+	jr	PROC_LOOP
+
+	;Found a dot
+
+PROC_LOOP_DOT:
+	ld	l,a
+	ld	a,c
+	or	a
+	ld	a,l
+	jr	nz,PROC_LOOP2	;Not at the beginning of current item: assume extension
+
+	ld	a,(ix+1)
+	or	a
+	jr	z,PROC_SDOT_TERM
+	cp	SLASH
+	jr	z,PROC_SINGLEDOT
+	cp	"."
+	ld	a,l
+	jr	nz,PROC_LOOP2	;".xyz" --> assume extension alone
+
+PROC_DBLDOT:
+
+	;It's a double dot entry
+
+	ld a,b
+	or a
+	ld a,__NODIR
+	ret z
+	
+	dec	de	;Go to the last char of previous level
+	dec	de
+	dec b	;For the slash
+	dec b
+	
+PROC_GOBACK:
+	ld a,b
+	or a ;Start of string reached?
+	jr	z,PROC_BACK_END
+	ld	a,(de)
+	cp	SLASH
+	jr	z,PROC_BACK_END
+	dec	b
+	dec	de
+	jr	PROC_GOBACK
+
+PROC_BACK_END2:
+	inc	de
+PROC_BACK_END:
+	inc	ix
+	inc	ix
+	ld	c,0
+	jr	PROC_LOOP
+
+PROC_SINGLEDOT:
+
+	;It's a single dot entry: just ignore it
+
+	inc	ix
+	ld	a,(ix+1)	;Followed by terminating slash
+	or	a
+	jr	z,PROC_LOOP
+	inc	ix
+	jr	PROC_LOOP
+
+PROC_SDOT_TERM:
+
+	;It's a single dot entry followed by a terminator:
+	;just output it
+
+	ld	a,"."
+	ld	(de),a
+	inc	de
+	xor	a
+	ld	(de),a
+	ret
+
+	;It's a slash
+
+PROC_LOOP_SLASH:
+	ld a,b
+	or a
+	jr nz,PROC_SLASH2	;Is at the beginning? (after "..")
+
+	inc ix
+	jr PROC_LOOP
+	
+PROC_SLASH2:
+	inc	ix
+	ld	a,(ix)
+	or	a	;Slash is the last char?
+	jr	nz,PROC_NOSSLASH
+
+	ld (de),a
+	inc de
+	xor	a
+	ld	(de),a
+	ret
+
+PROC_NOSSLASH:
+	cp	SLASH
+	ld	a,__IPATH	;A double slash is illegal
+	ret	z
+
+PROC_SLASHNXT:
+	ld	a,SLASH
+	ld	(de),a
+	inc	de
+	inc	b
+	ld	c,0
+	jp	PROC_LOOP
+
+	;It's the string terminator
+
+PROC_LOOP_TERM:
+PROC_TERM2:
+	xor	a
+	ld	(de),a
+	ret
+	
 
 ;------------------------
 ;--- Buffers and data ---
 ;------------------------
-	
+
+AST_DOT_AST:	db	"/*.*"	,0
+
 ;Is current directory cached?
 CURDIR_IS_CACHED: db 0	
 	
 ;Current directory cache
-CURDIR:	db "fofito",0
-	ds	MAX_PATH_LEN + 1
+CURDIR:	ds	MAX_PATH_LEN + 1
+CURDIR_LEN:	dw 0
 
 ;Value to be returned by _WPATH
 WPATH_BUF: ds	MAX_PATH_LEN + 1
@@ -1490,9 +1758,13 @@ WPATH_PATH_LEN:	dw 0
 ;2: It was for me and finished with .PLONG
 FIND_STAT: db 0
 
-	db 5Ch ;"\"
+	db SLASH
 ;Temporary buffer for path/filenames
 PATHFILEBUF: ds (MAX_PATH_LEN*2)+1
+
+
+;Bufer for PROCESS_PATH
+PROCESS_BUF:	ds	128
 
 
 
