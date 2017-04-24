@@ -82,6 +82,7 @@ _DOSVER:	equ	6Fh
 
 ;*** DOS error codes
 
+__IATTR:    equ 0CFh
 __NODIR: equ 0D6h
 __NOFIL:	equ 0D7h
 __PLONG:	equ 0D8h
@@ -690,14 +691,15 @@ RESCODE2:	PARTRES
 
 PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 
-	db	"NestorFS",0
-	ds	16-($-#4000)
+	db	"FileSysDriver",0
+	db 0,1	;Specification version complied
 
 JMP_ALLOC:	jp	IMPL_ALLOC
 JMP_FFIRST:	jp	IMPL_FFIRST
 JMP_FNEXT:	jp	IMPL_FNEXT
 JMP_CHDIR:	jp	IMPL_CHDIR
 JMP_GETCD:  jp  IMPL_GETCD
+JMP_GETVOL: jp  IMPL_GETVOL
 
 INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
 CUR_IS_MINE:	db	0	;Is my drive the current drive?
@@ -797,57 +799,55 @@ DO_ALLOC:
 
 DO_FFIRST:
 	ex	af,af
+	xor a
+	ld (FIND_STAT),a	;Assume not for me, or error, to start with
+	
 	ld	a,(de)
 	cp	0FFh
 	jr	z,FFIRST_FIB
-
-	call DRV_IN_PATH_INC
-	or a
-	jr	z,FFIRST_CURDRV
-
-	ld	h,a
-	ld	a,(INDRIVE1)
-	cp	h
-	ld	iy,0
-	ret	nz
-	jr kk
-	jr FFIRST_PATH
-
-FFIRST_CURDRV:
-	ld	a,(CUR_IS_MINE)
-	or	a
-	ld	iy,0
-	ret	z
-	jr kk
 	
 	;--- Path/file based search, DE points past the drive if any
 	
+	call DRV_IN_PATH_INC
+	push bc,hl
+	call ISMYDRIVE
+	pop hl,bc
+	ld	iy,0
+	ret	nz
+	
+	bit 3,b
+	jp nz,FFIRST_GETVOL
+	
 FFIRST_PATH:
-	ld a,(de)
-	cp "\\"
-	inc de
-	jr z,FFIRST_PATH_ABS
-	dec de
+	ld hl,FFIRST_BUF
+	push de,bc,ix
+	call PROCESS
+	pop ix,bc,de
+	or a
+	ret nz
 	
-	push de
-	ld hl,CURDIR
-	;ld de,;WIP...
-	
-	
-FFIRST_PATH_ABS:
-	push de
-	call STRLEN
-	pop de
-	ld a,b
-	cp MAX_PATH_LEN+1
-	jr nc,PLONG_END
-	
-	
-	
-kk:
+	ld hl,FFIRST_BUF
+	push ix
 	call	JMP_FFIRST
-	ld	iy,1
+	pop ix
+	ld iy,1
+	or a
+	jr z,FFIRST_PATH_OK
+	
+	cp __PLONG
+	ret nz
+	ld b,a
+	ld a,2
+	ld (FIND_STAT),a
+	ld a,b
 	ret
+	
+FFIRST_PATH_OK:	
+	ld de,WPATH_BUF
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	
+	jr FFIRST_END
 	
 	;--- FIB based search
 	
@@ -856,17 +856,112 @@ FFIRST_FIB:
 	pop	iy
 	ld	a,(INDRIVE0)
 	cp	(iy+25)
+	ld c,(iy+14)
 	ld	iy,0
 	ret	nz
-
+	
+	bit 4,c	;FIB must specify a directory
+	ld a,__IATTR
+	ret z
+	bit 3,c	;FIB can't specify a volume name
+	ret nz
+	
+	push ix
 	call	JMP_FFIRST
+	pop ix
 	ld	iy,1
+	or a
+	ret nz
+	
+	ld hl,WPATH_BUF
+	ld bc,(WPATH_LEN)
+	add hl,bc
+	ld (hl),SLASH
+	inc hl
+
+FFIRST_FIB_OK1:
+	ex de,hl
+	push ix
+	pop hl
+	inc hl
+	ld bc,13
+	ldir	;append filename to WPATH
+	
+	;--- Common wrapup
+	
+FFIRST_END:	
+	ld d,a
+	ld de,WPATH_BUF
+	call STRLEN
+	ld a,__PLONG
+	ret c
+	ld a,d
+	ld (WPATH_LEN),bc
+	
+	ld de,WPATH_BUF
+	call GLAST
+	ld de,WPATH_BUF
+	or a
+	sbc hl,de
+	ld (WPATH_PATH_LEN),hl
+
+FFIRST_END2:	
+	ld	a,(INDRIVE0)
+	ld (ix+25),a
+	ld a,1
+	ld (FIND_STAT),a
+	dec a
+	ld (ix),0FFh
+	ld (ix+19),a	;start cluster
+	ld (ix+20),a
 	ret
 	
-PLONG_END:
-	ld a,__PLONG
+	;--- Get volume label
+	
+FFIRST_GETVOL:
+	push ix
+	pop de
+	inc de	;DE=destination
+
+	ld a,(VOLABEL_IS_CACHED)
+	or a
+	jr z,FFIRST_GETVOL2
+	
+	ld hl,VOLABEL_CACHE
+	ld bc,11
+	ldir
+	or a
+	jr FFIRST_GETVOL3
+	
+FFIRST_GETVOL2:	
+	push de
+	call JMP_GETVOL
+	pop de
+	jr c,FFIRST_CACHEVOL
+	or a
+	ld iy,1
+	ret nz
+	jr FFIRST_GETVOL3
+	
+FFIRST_CACHEVOL:	
+	ex de,hl
+	ld de,VOLABEL_CACHE
+	ld bc,11
+	ldir
+	ld a,0FFh
+	ld (VOLABEL_IS_CACHED),a
+
+FFIRST_GETVOL3:	
+	ld (ix),0xFF
+	ld	a,(INDRIVE0)
+	ld (ix+25),a
+	ld (ix+14),%1000 ;Volume label attribute
+
+	xor a
 	ld iy,1
 	ret
+	
+FFIRST_BUF: ds MAX_PATH_LEN + 1
 
 
 ;FIND NEXT ENTRY (41H)
@@ -1008,14 +1103,6 @@ DO_CHDIR_NODOT:
 	;End of \ or \. processing
 	
 DO_CHDIR_OK:
-	;ld hl,CHDIR_BUF
-	;push de
-	;call JMP_CHDIR
-	;pop de
-	;jr c,CHDIR_DOCACHE
-	;ld iy,1
-	;ret nz
-	
 CHDIR_DOCACHE:	
 	ld a,(CURDIR_IS_CACHED)
 	rra
@@ -1095,30 +1182,51 @@ IMPL_ALLOC:
 ;Find first entry
 ;Input:   DE = Drive/path/file ASCIIZ string 
 ;              or fileinfo block pointer for the directory
-;         HL = filename ASCIIZ string (only if DE = fileinfo pointer)
+;         HL = filename ASCIIZ string (if DE = fileinfo pointer)
+;         HL = processed path (if DE = pathname)
 ;         B = Search attributes
 ;         IX = Pointer to new fileinfo block
 ;Output:  A = Error
 ;        (IX) = Filled in with matching entry
+;         HL = Pointer to full path of found file (for _WPATH)
 ;
 ;Supplied DE, HL and IX will always be in page 3
 
 IMPL_FFIRST:
-	ld	(ix),0FFh
-	ld	(ix+1),"M"
-	ld	(ix+2),"O"
-	ld	(ix+3),"L"
-	ld	(ix+4),"A"
-	ld	(ix+5),"!"
-	ld	(ix+6),0
+	;ld	(ix),0FFh
+	ld a,(de)
+	ld  (ix+1),a
+	ld  (ix+2),"-"
+	ld	(ix+3),"M"
+	ld	(ix+4),"O"
+	ld	(ix+5),"L"
+	ld	(ix+6),"A"
+	ld	(ix+7),"!"
+	ld	(ix+8),0
+	ld	(ix+14),0
 	ld	(ix+21),34
 	ld	(ix+22),0
 	ld	(ix+23),0
 	ld	(ix+24),0
-	ld	a,(INDRIVE0)
-	ld	(ix+25),a
+	;ld	a,(INDRIVE0)
+	;ld	(ix+25),a
 
-	xor	a
+	;search pattern starts with "d" -> simulate a dir
+	
+	ld a,(de)
+	cp 0FFh
+	ld a,0
+	ret z
+	
+	ld a,(de)
+	or 32
+	cp "d"
+	ld a,0
+	ret nz
+	
+	ld a,%10000
+	ld (ix+14),a
+	xor a
 	ret
 
 	
@@ -1166,11 +1274,31 @@ IMPL_GETCD:
 MYCURDIR: ds MAX_PATH_LEN+1	
 	
 
+;Get volume label
+;Input:     DE = 11 byte buffer
+;Output:    A  = Error code
+;           Cy = 1 if volume label can be cached
+	
+IMPL_GETVOL:
+	ld hl,FAKEVOL
+	ld bc,11
+	ldir
+	
+	xor a
+	scf
+	ret
+	
+FAKEVOL:	db "THEVOL",0
+
+
 ;---------------------
 ;--- Gancho H_BDOS ---
 ;---------------------
 
 DOSENTRY:
+	ld iy,DOESNTRY_END
+	push iy
+
 	ex	af,af
 	ld	a,c
 
@@ -1191,9 +1319,35 @@ DOSENTRY:
 	cp  _WPATH
 	jp  z,DO_WPATH
 
+	pop iy
 DONOTHING:
-	ex	af,af
 	ld	iy,0
+EX_AND_RET:
+	ex	af,af
+	ret
+	
+DOESNTRY_END:
+	ex af,af
+	ld a,iyl
+	or a
+	jr z,EX_AND_RET
+
+	;In case of disk error (A >= F0h), clear caches
+
+	ex af,af
+	exx
+	ld d,a
+	and 0F0h
+	cp 0F0h
+	ld a,d
+	exx
+	ret nz
+
+	ex af,af
+	xor a
+	ld (CURDIR_IS_CACHED),a
+	ld (VOLABEL_IS_CACHED),a
+	ex af,af
 	ret
 
 	
@@ -1462,11 +1616,14 @@ GLAST:
 	ld	a,(de)
 	or	a
 	jr	z,GLAST_END2
-
 	inc	de
-	ld	a,(de)
 	cp	SLASH
+	jr	nz,GLAST_NOSSLASH
+
+	ld	a,(de)
+	or	a
 	jr	z,GLAST_END2	;just "\" -> no last item
+GLAST_NOSSLASH:
 
 	cp	":"
 	inc	de
@@ -1741,10 +1898,10 @@ CURDIR:	ds	MAX_PATH_LEN + 1
 CURDIR_LEN:	dw 0
 
 ;Value to be returned by _WPATH
-WPATH_BUF: ds	MAX_PATH_LEN + 1
+WPATH_BUF: ds	MAX_PATH_LEN + 1 + 13 ;Leave room in case FFIRST with FIB produces a too long path
 
 ;Length of value in WPATH_BUF
-WPATH_LEN:	db 0
+WPATH_LEN:	dw 0
 
 ;Path to terminator item in WPATH_BUF
 WPATH_END_PNT: dw WPATH_BUF
@@ -1762,10 +1919,14 @@ FIND_STAT: db 0
 ;Temporary buffer for path/filenames
 PATHFILEBUF: ds (MAX_PATH_LEN*2)+1
 
-
 ;Bufer for PROCESS_PATH
 PROCESS_BUF:	ds	128
 
+;Is volume label cached?
+VOLABEL_IS_CACHED: db 0
+
+;Volume label cache
+VOLABEL_CACHE: ds 12
 
 
 
