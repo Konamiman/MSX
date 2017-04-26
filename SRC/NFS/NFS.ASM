@@ -694,6 +694,8 @@ PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
 	db	"FileSysDriver",0
 	db 0,1	;Specification version complied
 
+	ds 32
+	
 JMP_ALLOC:	jp	IMPL_ALLOC
 JMP_FFIRST:	jp	IMPL_FFIRST
 JMP_FNEXT:	jp	IMPL_FNEXT
@@ -808,10 +810,9 @@ DO_FFIRST:
 	
 	;--- Path/file based search, DE points past the drive if any
 	
-	call DRV_IN_PATH_INC
-	push bc,hl
-	call ISMYDRIVE
-	pop hl,bc
+	push hl
+	call DRV_IN_PATH_MINE
+	pop hl
 	ld	iy,0
 	ret	nz
 	
@@ -826,7 +827,13 @@ FFIRST_PATH:
 	or a
 	ret nz
 	
+	push de
 	ld hl,FFIRST_BUF
+	ld de,WPATH_BUF
+	ld bc,MAX_PATH_LEN+1
+	ldir
+	pop de
+	ld iy,FFIRST_BUF
 	push ix
 	call	JMP_FFIRST
 	pop ix
@@ -843,10 +850,6 @@ FFIRST_PATH:
 	ret
 	
 FFIRST_PATH_OK:	
-	ld de,WPATH_BUF
-	ld bc,MAX_PATH_LEN+1
-	ldir
-	
 	jr FFIRST_END
 	
 	;--- FIB based search
@@ -854,38 +857,45 @@ FFIRST_PATH_OK:
 FFIRST_FIB:
 	push	de
 	pop	iy
-	ld	a,(INDRIVE0)
+	ld	a,(INDRIVE1)
 	cp	(iy+25)
-	ld c,(iy+14)
+	ld a,(iy+14)
 	ld	iy,0
 	ret	nz
 	
+	ld c,a
 	bit 4,c	;FIB must specify a directory
 	ld a,__IATTR
 	ret z
 	bit 3,c	;FIB can't specify a volume name
 	ret nz
-	
-	push ix
-	call	JMP_FFIRST
-	pop ix
-	ld	iy,1
-	or a
-	ret nz
-	
+
+	push de,hl
 	ld hl,WPATH_BUF
 	ld bc,(WPATH_LEN)
 	add hl,bc
 	ld (hl),SLASH
 	inc hl
+	ex de,hl ;HL = filename, DE = end of WPATH
 
-FFIRST_FIB_OK1:
-	ex de,hl
-	push ix
 	pop hl
-	inc hl
+	ld a,(hl)
+	or a
+	jr nz,FFIRST_NOEMP
+	ld hl,AST_DOT_AST
+FFIRST_NOEMP:	
+	push hl
 	ld bc,13
 	ldir	;append filename to WPATH
+	pop hl,de
+	
+	push ix
+	ld iy,WPATH_BUF
+	call	JMP_FFIRST
+	pop ix
+	ld	iy,1
+	or a
+	ret nz
 	
 	;--- Common wrapup
 	
@@ -906,7 +916,7 @@ FFIRST_END:
 	ld (WPATH_PATH_LEN),hl
 
 FFIRST_END2:	
-	ld	a,(INDRIVE0)
+	ld	a,(INDRIVE1)
 	ld (ix+25),a
 	ld a,1
 	ld (FIND_STAT),a
@@ -914,6 +924,8 @@ FFIRST_END2:
 	ld (ix),0FFh
 	ld (ix+19),a	;start cluster
 	ld (ix+20),a
+	ld (ix+26),a	;entry index
+	ld (ix+27),a	;entry index
 	ret
 	
 	;--- Get volume label
@@ -934,9 +946,9 @@ FFIRST_GETVOL:
 	jr FFIRST_GETVOL3
 	
 FFIRST_GETVOL2:	
-	push de
+	push de,ix
 	call JMP_GETVOL
-	pop de
+	pop ix,de
 	jr c,FFIRST_CACHEVOL
 	or a
 	ld iy,1
@@ -953,7 +965,7 @@ FFIRST_CACHEVOL:
 
 FFIRST_GETVOL3:	
 	ld (ix),0xFF
-	ld	a,(INDRIVE0)
+	ld	a,(INDRIVE1)
 	ld (ix+25),a
 	ld (ix+14),%1000 ;Volume label attribute
 
@@ -972,13 +984,23 @@ FFIRST_BUF: ds MAX_PATH_LEN + 1
 ;            (IX) = Filled in with next matching entry
 
 DO_FNEXT:
-	ld	a,(INDRIVE0)
+	ld	a,(INDRIVE1)
 	cp	(ix+25)
 	ld	iy,0
 	ret	nz
 
+	push ix
 	call	JMP_FNEXT
+	pop ix
 	ld	iy,1
+	or a
+	ret nz
+	
+	ld l,(ix+26)
+	ld h,(ix+27)
+	inc hl
+	ld (ix+26),l
+	ld (ix+27),h
 	ret
 			
 
@@ -1055,9 +1077,9 @@ GETCD_CAN_CACHE:
 DO_CHDIR:
 	ex	af,af
 	
-	call DRV_IN_PATH_INC
-	ld  b,a
-	call ISMYDRIVE
+	call DRV_IN_PATH_MINE
+	;ld  b,a
+	;call ISMYDRIVE
 	ld	iy,0
 	ret	nz
 
@@ -1183,7 +1205,7 @@ IMPL_ALLOC:
 ;Input:   DE = Drive/path/file ASCIIZ string 
 ;              or fileinfo block pointer for the directory
 ;         HL = filename ASCIIZ string (if DE = fileinfo pointer)
-;         HL = processed path (if DE = pathname)
+;         IY = processed full path
 ;         B = Search attributes
 ;         IX = Pointer to new fileinfo block
 ;Output:  A = Error
@@ -1298,7 +1320,6 @@ FAKEVOL:	db "THEVOL",0
 DOSENTRY:
 	ld iy,DOESNTRY_END
 	push iy
-
 	ex	af,af
 	ld	a,c
 
@@ -1379,18 +1400,20 @@ DRV_IN_PATH:
 	ret
 
 	
-;Same as DRV_IN_PATH but if not defualt drive
-;increment DE by two (so it points past the drive letter)
+;Is the drive in path pointed by DE my drive?
+;Output: Z=1 and DE+=2 if yes
+;Corrupts H
 
-DRV_IN_PATH_INC:
+DRV_IN_PATH_MINE:
 	call DRV_IN_PATH
 	or a
-	ret z
-
+	jp z,ISMYDRIVE
+	
+	call ISMYDRIVE
+	ret nz
 	inc de
 	inc de
 	ret
-
 
 
 ;Is A my drive? (being 0=default drive) Z=1 if yes
@@ -1888,7 +1911,7 @@ PROC_TERM2:
 ;--- Buffers and data ---
 ;------------------------
 
-AST_DOT_AST:	db	"/*.*"	,0
+AST_DOT_AST:	db	"*.*"	,0
 
 ;Is current directory cached?
 CURDIR_IS_CACHED: db 0	
