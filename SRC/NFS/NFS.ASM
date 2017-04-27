@@ -1,21 +1,33 @@
-;NestorFilesystem
+;Filesystem driver infrastructure AKA NestorFilesystem
+;By Konamiman, 5-2017
 
-;TODO:
-;Choose drive at startup
-;Extra space for FFIRST and FNEXT (with MAX_FIBS and EXTRA_FIB_SIZE constants)
-;WPATH
-;DSPACE (and infer ALLOC)
-;Init/deinit
-;Translate/TODOize
+;This is the skeleton of a resident program that installs
+;in page 3 + one RAM segment and uses the H_BDOS (#F252) hook
+;to intercept the file access related MSX-DOS function calls.
+;This allows to develop a custom filesystem driver, that is,
+;a program that supplies custom implementations for
+;file search/open/read/write/create/rename/delete functions.
+;
+;Search TODO: comments for instructions on how to converted
+;this skeleton into a working implementation for your
+;device/hardware.
+;
+;This is a very early version that:
+;- Installs the driver on drive G: always
+;- Doesn't allow installing more than one driver
+;- Implments the file search functions only
+;
+;Assemble with Compass or with Sjasm v0.39h
+;(https://github.com/Konamiman/Sjasm/releases/tag/v0.39h)
+;
+;Works on MSX-DOS 2 and Nextor.
 
 
-;******************************************************
-;*                                                    *
-;*                 MACROS, CONSTANTES                 *
-;*                                                    *
-;******************************************************
+;***************************************
+;---  BEGIN of macros and constants  ---
+;***************************************
 
-IDNES:	equ	22h	;ID para la BIOS extendida
+IDNES:	equ	22h	;ID for extended BIOS
 IDNFS:	equ	4
 
 ;Min and max function calls that will be hooked,
@@ -31,42 +43,22 @@ SLASH: equ 5Ch
 dos:	macro
 	call	5
 	endm
-
-breakp: macro
-	db 0EDh,0
-	endm
 	
-	;*** GANCHOS Y VARIABLES DEL SISTEMA
+;*** Hooks and system variables
 
 ENDTPA:	equ	#0006
 HIGHMEM:	equ	#F349
-H_TIMI:	equ	0FD9Fh
-H_STKE:	equ	#FEDA
 EXTBIO:	equ	#FFCA
 CALSLT:	equ	#001C
-CGPBAS:	equ	#F924	;Actual dir. gen. de caracteres (VRAM)
-LDIRMV:	equ	#005C	;Copia de memoria a VRAM
 ENASLT:	equ	#0024
-KANAST:	equ	#FCAC
-NEWKEY:	equ	#FBE5
-CAPST:	equ	#FCAB
-CHGCAP:	equ	#0132
-MODE:	equ	#FAFC
-CHPUT:	equ	#00A2
-RDSLT:	equ	#000C
-WRPSG:	equ	#0093
-RDPSG:	equ	#0096
 EXPTBL:	equ	#FCC1
-SETWRT:	equ	#0053
-CUR_DRV:	equ	0F23Ch
+CUR_DRV:	equ	#F23C
 
 H_BDOS: equ #F252
 
-	;*** FUNCIONES DEL DOS
+;*** MSX-DOS functions
 
 _STROUT:	equ	09h
-_CPMVER:	equ	0Ch
-_DSKRST:	equ	0DH
 _SELDSK:	equ	0EH
 _LOGIN:		equ	18h
 _ALLOC:		equ	1Bh
@@ -76,11 +68,10 @@ _FNEXT:     equ	41h
 _GETCD:		equ	59h
 _CHDIR:		equ	5Ah
 _WPATH:		equ	5Eh
-_FLUSH:		equ	5FH
 _TERM:	equ	62h
 _DOSVER:	equ	6Fh
 
-;*** DOS error codes
+;*** MSX-DOS error codes
 
 __IATTR:    equ 0CFh
 __NODIR: equ 0D6h
@@ -90,12 +81,14 @@ __IPATH:	equ	0D9h
 __DISK:	equ 0FDh
 __IFORM:	equ 0F0h	;Used for testing
 
+;*************************************
+;---  END of macros and constants  ---
+;*************************************
 
-;******************************************************
-;*                                                    *
-;*                 INSTALACION                        *
-;*                                                    *
-;******************************************************
+
+;****************************
+;---  BEGIN of installer  ---
+;****************************
 
 	org	#100
 
@@ -103,7 +96,7 @@ __IFORM:	equ 0F0h	;Used for testing
 	ld	c,_STROUT
 	dos
 
-;--- Comprobamos presencia del DOS 2
+;--- Check DOS 2 or Nextor
 
 	ld	c,_DOSVER	;DOS 2?
 	dos
@@ -118,7 +111,7 @@ NODOS2:	ld	de,NOD2STR
 NOD2STR:	db	13,10,"*** MSX-DOS 2 required",13,10,"$"
 OKDOS2:	;
 
-;--- Comprobamos que hay suficiente TPA (#0006 >= #C200)
+;--- Check for enough TPA (#0006 >= #C200)
 
 	ld	a,(ENDTPA+1)
 	cp	#C2
@@ -132,20 +125,19 @@ NOTPAS:	db	13,10,"*** TPA is too small (end of TPA must be at least #C200).",13,
 OKTPA:	;
 
 
-;--- Obtencion de la tabla de rutinas de soporte del mapeador de memoria
+;--- Get mapper support routines
 
 	ld	de,#0402
 	call	EXTBIO
-	ld	a,b	;de paso establecemos el slot en la
-	and	%10001111	;futura rutina de salto de pag. 3
+	ld	a,b	;also set mapper slot for page 3 code
+	and	%10001111
 	ld	(RESCODE1+11),a
 	ld	(RESCODE2+11),a
 	ld	de,ALL_SEG
 	ld	bc,#30
 	ldir
 
-;--- Comprobamos si NFS ya esta instalado,
-;    en ese caso pasamos a desinstalar si el parametro es "U"
+;--- Check if already installed, if so and parameter is U, go to uninstall
 
 	ld	de,IDNFS+256*IDNES
 	call	EXTBIO
@@ -166,10 +158,10 @@ OKTPA:	;
 	
 OKDEVICE:
 	
-;--- Comienza la instalacion: reservamos un segmento de RAM
+;--- So let's install: start by allocating a RAM segment
 
-	ld	b,0	;Reservamos un segmento de sistema
-	ld	a,1	;en el mapeador primario
+	ld	b,0
+	ld	a,1
 	call	ALL_SEG
 	jp	nc,OKRESEG
 	ld	de,NOFSTR
@@ -186,7 +178,7 @@ NOFSTR:	db	13,10,"*** No free RAM segments on primary mapper.",13,10,"$"
 OKRESEG:	ld	(RESCODE1+12),a
 	ld	(RESCODE2+12),a
 
-;--- Copiamos los antiguos ganchos en la futura rutina de salto
+;--- Backup existing hooks into page 3 code
 
 	di
 
@@ -210,10 +202,10 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ld	bc,5
 	ldir
 
-;--- Reservamos memoria en la pagina 3 para la rutina de salto y la copiamos
+;--- Allocate page 3 space and copy page 3 code
 
-	ld	hl,(HIGHMEM)	;Guardamos antiguo HIGHMEM,
-	ld	(RESCODE1+21),hl	;y establecemos el nuevo
+	ld	hl,(HIGHMEM)
+	ld	(RESCODE1+21),hl
 	ld	(RESCODE2+21),hl
 	ld	bc,RESCODE2-RESCODE1
 	or	a
@@ -222,7 +214,7 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ld	(RESCODE1+19),hl
 	ld	(RESCODE2+19),hl
 
-	ld	hl,PUT_P1	;Copiamos entrada a PUT_P1 + GET_P1
+	ld	hl,PUT_P1	;PUT_P1 + GET_P1
 	push	hl
 	ld	de,RESCODE1+13
 	ld	bc,6
@@ -232,16 +224,16 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ld	bc,6
 	ldir
 
-	ld	hl,RESCODE1	;Copiamos la rutina de salto a pag. 3 !!
+	ld	hl,RESCODE1
 	ld	de,RESCODE2
 	ld	ix,(RESCODE1+19)
 	ld	bc,RESCODE2-RESCODE1
 	call	REUBICA
 
-;--- Copiamos la parte residente en el segmento que acabamos de reservar
+;--- Copy segment code into the allocated segment
 
-	call	GET_P1	;Copiamos la parte residente
-	push	af	;en el segmento
+	call	GET_P1
+	push	af
 	ld	a,(RESCODE1+12)
 	call	PUT_P1
 	ld	hl,PARTRE2
@@ -252,7 +244,7 @@ OKRESEG:	ld	(RESCODE1+12),a
 	pop	af
 	call	PUT_P1
 
-;--- Establecemos los nuevos ganchos
+;--- Set the new hooks
 
 	di
 
@@ -267,7 +259,7 @@ OKRESEG:	ld	(RESCODE1+12),a
 	ld	(H_BDOS),a
 	ld	(H_BDOS+1),hl
 	
-;--- Finalizacion de la instalacion
+;--- Install done, do a BASIC + CALL SYSTEM
 
 	ei
 
@@ -280,32 +272,32 @@ OKRESEG:	ld	(RESCODE1+12),a
 INSSTR:	
 	db	"Installed. Have fun!",13,10,"$"
 
-;--- Desinstalacion si el parametro es "U"
+;--- Uninstall if parameter is "U"
 
-DESINST:	ld	hl,#0081	;Linea de comando: vamos pasando espacios
-BUSCAU:	ld	a,(hl)
+DESINST:	ld	hl,#0081
+SRCH_U:	ld	a,(hl)
 	inc	hl
-	cp	32
-	jr   z,	BUSCAU
+	cp	32	;Skip spaces
+	jr   z,	SRCH_U
 	or	a
 	jr	nz,CHKU
 
 NODES:
-	ld	de,YAINSTR	;Si encontramos un 0: no hay parametros
+	ld	de,YAINSTR	;0 found: no parameters
 	ld	c,_STROUT
 	dos
 	jp	FIN
 
 YAINSTR:	db	"*** Already installed. Run with U to uninstall.",13,10,"$"
 
-CHKU:	and	%11011111	;Si encontramos algo tiene que ser "U"
+CHKU:	and	%11011111	;If something is found, it must be U
 	cp	"U"
 	jr	nz,NODES
-	ld	(POS2COM),hl	;Guardamos posicion posterior a la "U"
+	ld	(POS2COM),hl	;Save position after "U"
 
-	ld	de,IDNFS+IDNES*256	;Comprobamos que HIGHMEM actual es igual
-	call	EXTBIO	;al HIGHMEM cuando instalamos NestAc.
-	ld	de,(HIGHMEM)	;Si no, no podemos desinstalar.
+	ld	de,IDNFS+IDNES*256	;Check if current HIGHMEM is the same
+	call	EXTBIO	;as HIGHMEM when we were installed,
+	ld	de,(HIGHMEM)	;otherwise uninstall is not possible.
 	or	a
 	sbc	hl,de
 	ld	a,h
@@ -321,7 +313,7 @@ NOKHMEMS:	db	"*** Other resident program was installed after I was.",13,10
 	db	"Please remove it and try again.",13,10,"$"
 
 OKHMEM:	push	ix
-	ld	a,c	;Liberamos el segmento
+	ld	a,c
 	call	FRE_SEG
 
 	ld	hl,(HIGHMEM)
@@ -339,7 +331,7 @@ OKHMEM:	push	ix
 	pop	ix
 	ld	(HIGHMEM),ix
 
-	ld	de,DESSTR	;Terminamos!
+	ld	de,DESSTR
 	ld	c,_STROUT
 	dos
 	ld	hl,(POS2COM)
@@ -352,20 +344,21 @@ RESTHOOK:	ldir
 	ld	bc,5
 	ret
 
-;--- Subrutina de reubicacion de un codigo
-;    Entrada: HL = Primera copia
-;             DE = Segunda copia
-;             IX = Destino
-;             BC = Longitud
+	
+;--- Code reallocation routine
+;    Input: HL = First copy of code
+;           DE = Second copy of code
+;           IX = Destination address
+;           BC = Code length
 
-REUBICA:	push	bc,de,hl	;Primero copiamos el codigo tal cual
-	push	ix	;(HL a IX, lon. BC)
+REUBICA:	push	bc,de,hl	;First copy code unchanged
+	push	ix	;(HL->IX, length BC)
 	pop	de
 	ldir
 	pop	hl,de
 
 	push	de
-	pop	iy	;IY = Segunda copia
+	pop	iy	;IY = Second copy
 	ld	b,h
 	ld	c,l
 	push	ix
@@ -373,53 +366,53 @@ REUBICA:	push	bc,de,hl	;Primero copiamos el codigo tal cual
 	or	a
 	sbc	hl,bc
 	ld	b,h
-	ld	c,l	;BC = Distancia a sumar (IX - HL)
+	ld	c,l	;BC = Distance to sum (IX - HL)
 
 	exx
 	pop	bc
 	exx
 
-	;En este punto: IX = Destino
-	;               IY = Segunda copia
-	;               BC = Distancia a sumar (nueva dir - 1a copia)
-	;               BC'= Longitud
+	;In this point: IX = Destination
+	;               IY = Second copy
+	;               BC = Distance to sum (new address - the copy)
+	;               BC'= Length
 
 BUCLE:	ld	a,(ix)
 	cp	(iy)
-	jr	z,NEXT	;Si no hay diferencias pasamos al siguiente byte
+	jr	z,NEXT	;If no differences go to next byte
 
 	ld	l,a
-	ld	h,(ix+1)	;HL = Dato a cambiar
-	add	hl,bc	;HL = Dato cambiado
-	ld	(ix),l	;IX = Direccion del dato a cambiar
+	ld	h,(ix+1)	;HL = Data to change
+	add	hl,bc	;HL = Changed data
+	ld	(ix),l	;IX = Address of data to change
 	ld	(ix+1),h
 
 	call	CHKCOMP
-	jr	z,FINREUB	;Si: sacabo!
+	jr	z,FINREUB
 
 	inc	ix
 	inc	iy
-NEXT:	inc	ix	;Siguiente byte a comparar
-	inc	iy	;(si hemos sutituido, hay que incrementar dos veces)
+NEXT:	inc	ix	;Next byte to compare
+	inc	iy	;(if we have replaced, we need to increment by 2)
 	call	CHKCOMP
 	jr	nz,BUCLE
 
 FINREUB	ret
 
 CHKCOMP:	exx
-	dec	bc	;Decrementamos contador, y si llega a 0
-	ld	a,b	;volvemos con Z=1
+	dec	bc	;Decrementcounter, and if 0
+	ld	a,b	;return with Z=1
 	or	c
 	exx
 	ret
+	
 
-;--- Rutina de salto al BASIC y CALL SYSTEM.
-;    Previamente se copia el comando a ser ejecutado tras el _SYSTEM,
-;    a partir de la posicion de la linea de comando entrada en HL.
+;--- BASIC + CALL SYSTEM
+;    Input: HL = command to be executed after CALL SYSTEM
 
 CALSYS:	ld	ix,SysCom
 
-BUCSYSCOM:	ld	a,(hl)	;Buscamos el primer caracter, o el 0
+BUCSYSCOM:	ld	a,(hl)	;Search first character or terminating 0
 	inc	hl
 	or	a
 	jr	z,OKBSC
@@ -427,8 +420,8 @@ BUCSYSCOM:	ld	a,(hl)	;Buscamos el primer caracter, o el 0
 	jr	z,BUCSYSCOM
 	dec	hl
 
-BUCSYS2:	ld	(ix),a	;Copiamos caracteres hasta encontrar
-	inc	ix	;el 0
+BUCSYS2:	ld	(ix),a	;Copy characters until we find 0
+	inc	ix
 	inc	hl
 	ld	a,(hl)
 	cp	"&"
@@ -442,7 +435,7 @@ NOANGLUNO:	or	a
 	ld	(ix+2),0
 OKBSC:	;
 
-	;CALL SYSTEM propiamente dicho
+	;Do the CALL SYSTEM
 
 	ld	hl,SystemProg
 	ld	de,08000h
@@ -476,7 +469,8 @@ SysTxT:	defb	03Ah,0CAh
 SysCom:	db	34,")"
 	defb	0,01Ah
 
-;--- Tabla de salto para las rutinas del mapeador
+	
+;--- Mapper support routines
 
 ALL_SEG:	ds	3
 FRE_SEG:	ds	3
@@ -495,21 +489,28 @@ GET_P2:	ds	3
 PUT_P3:	ds	3
 GET_P3:	ds	3
 
+
 ;--- Strings
 
+;TODO: Put your thing name here and get some credit!
+
 PRESENT_s:
-	db	"NestorFilesystem 1.0",13,10
-	db	"By Konamiman 3/2017",13,10
+	db	"Filesystem driver for (YOUR HARDWARE/DEVICE HERE) 1.0",13,10
+	db	"By (YOUR NAME HERE) and Konamiman, 5/2017",13,10
 	db	13,10
 	db	"$"
 
 TEMP:	ds	5
 
-;******************************************************
-;*                                                    *
-;*            PARTE RESIDENTE EN PAG. 3               *
-;*                                                    *
-;******************************************************
+
+;**************************
+;---  END of installer  ---
+;**************************
+
+
+;******************************
+;---  BEGIN of page 3 code  ---
+;******************************
 
 PARTRES:	macro
 
@@ -524,7 +525,7 @@ GET_P1@sym:	jp	#0000		;+16
 NEWHM@sym:	dw	0			;+19
 OLDHM@sym:	dw	0			;+21
 
-;--- Nuevo gancho H_BDOS
+;--- New H_BDOS hook
 
 _NEWBDOS@sym:	;+23
 	ex	af,af
@@ -538,15 +539,13 @@ _NEWBDOS@sym:	;+23
 	jp	(hl)
 	
 NEXTLOGIN@sym:
-	set	6,l	;TODO: Depends on drive letter!
+	set	6,l	;WARNING: This depends on drive letter!
 	ret
 	
 NOLOGIN@sym:
 	push  iy
 
 	ld	a,c
-	cp	_DSKRST
-	jr	z,OKGO@sym
 	cp	_SELDSK
 	jr	z,OKGO@sym
 	;cp	_CURDRV
@@ -554,8 +553,6 @@ NOLOGIN@sym:
 	cp	_ALLOC
 	jr	z,OKGO@sym
 	cp	_WPATH
-	jr	z,OKGO@sym
-	cp	_FLUSH
 	jr	z,OKGO@sym
 	cp	MINFN
 	jr	c,POPEXRET@sym
@@ -619,18 +616,19 @@ PROCESSED@sym:
 	jp	ENDPROC@sym
 
 
-;--- Nuevo EXTBIO:
-;    Entrada: D = IDNES
-;             E = 0
-;    Salida:  HL= NewHIGHMEM
-;             IX= OldHIGHMEM
-;             B = Slot del segmento reservado
-;             C = Segmento reservado
+;--- New EXTBIO hook
+;    Input:   D = IDNES
+;             E = IDNFS
+;    Output:  HL= New HIGHMEM
+;             IX= Old HIGHMEM
+;             B = Slot of allocated segment
+;             C = Allocated segment number
 ;             A = IDNES
+;    Modifiess: IX, IY, alternate regs
 
-_NEWBIO@sym:	push	af	;BIOS extendida. Identificador: IDNES
-	ld	a,d	;Modifica IX, IY y alternativos.
-	cp	IDNES	;Nunca modifica DE.
+_NEWBIO@sym:	push	af
+	ld	a,d
+	cp	IDNES
 	jr	nz,NOBIOS@sym
 	ld	a,e
 	cp	IDNFS
@@ -648,7 +646,8 @@ OKBIOS@sym:	pop	af
 	ld	a,IDNES
 	ret
 
-;--- Subrutina para la obtencion del slot conectado en pagina 2
+	
+;--- Get slot in page 1
 
 GETSLOT1@sym:	;di
 	exx
@@ -676,23 +675,31 @@ NOEXP@sym:	ld	a,c
 	exx
 	ret
 
-ENDRES@sym:	;                        ;Fin de la parte residente en pagina 3
+ENDRES@sym:
 	endm
 
 RESCODE1:	PARTRES
 RESCODE2:	PARTRES
 
 
-;******************************************************
-;*                                                    *
-;*          PARTE RESIDENTE EN UN SEGMENTO            *
-;*                                                    *
-;******************************************************
+;******************************
+;---  END of page 3 code  ---
+;******************************
 
-PARTRE2:	org	#4000	;Se ejecutara en la pagina 1
+
+;*******************************
+;---  BEGIN of segment code  ---
+;*******************************
+
+PARTRE2:	org	#4000
+
+
+;---------------------------------------------------------------
+;>>>>>>>  HEADER - do NOT change as emulators hook here  <<<<<<<
+;---------------------------------------------------------------
 
 	db	"FileSysDriver",0
-	db 0,1	;Specification version complied
+	db 0,1	;Specification version complied, main+sec
 
 	ds 32
 	
@@ -703,21 +710,87 @@ JMP_CHDIR:	jp	IMPL_CHDIR
 JMP_GETCD:  jp  IMPL_GETCD
 JMP_GETVOL: jp  IMPL_GETVOL
 
-INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
-CUR_IS_MINE:	db	0	;Is my drive the current drive?
-INDRIVE1:	db	7	;Drive in which the filesystem acts (1=A:)
+
+;----------------------------------
+;>>>>>>>  H_BDOS hook code  <<<<<<<
+;----------------------------------
+	
+DOSENTRY:
+	ld iy,DOESNTRY_END
+	push iy
+	ex	af,af
+	ld	a,c
+
+	cp	_SELDSK
+	jp	z,DO_SELDSK
+	;cp	_CURDRV
+	;jp	z,DO_CURDRV
+	cp	_ALLOC
+	jp	z,DO_ALLOC
+	cp	_FFIRST
+	jp	z,DO_FFIRST
+	cp	_FNEXT
+	jp	z,DO_FNEXT
+	cp	_GETCD
+	jp	z,DO_GETCD
+	cp	_CHDIR
+	jp  z,DO_CHDIR
+	cp  _WPATH
+	jp  z,DO_WPATH
+
+	pop iy
+DONOTHING:	;Non-hooked function: do nothing
+	ld	iy,0
+EX_AND_RET:
+	ex	af,af
+	ret
+	
+DOESNTRY_END:
+	ex af,af
+	ld a,iyl
+	or a
+	jr z,EX_AND_RET
+
+	;In case of disk error (A >= F0h), clear caches
+
+	ex af,af
+	exx
+	ld d,a
+	and 0F0h
+	cp 0F0h
+	ld a,d
+	exx
+	ret nz
+
+	ex af,af
+	xor a
+	ld (CURDIR_IS_CACHED),a
+	ld (VOLABEL_IS_CACHED),a
+	ex af,af
+	ret
+
+	
+;-------------------------------------------
+;>>>>>>>  DOS function replacements  <<<<<<<
+;-------------------------------------------
+
+;These are executed INSTEAD OF the original DOS functions implementations.
+;Input/output is similar, but not always identical, to the public API
+;(DOS does some processing before calling the hook).
+
+;Code in this section is device/hardware independent,
+;so you do NOT need to change it.
+	
+;They all return IY=0 if the function was not processed
+;(so DOS needs to handle it) or IY=1 if the function
+;was processed (so DOS must skip it).
 
 
-;-----------------
-;--- Functions ---
-;-----------------
-
-
-;SELECT DISK (0EH)
-;Parameters:    C = 0EH (_SELDSK)
-;               E = Drive number.  0=A: 1=B:   etc.
-;Results:       A = Error code
-;               L = Number of drives (1...8)
+;--- SELECT DISK (0EH)
+;    Parameters:    C = 0EH (_SELDSK)
+;                   E = Drive number.  0=A: 1=B:   etc.
+;    Results:       A = Error code
+;                   L = Number of drives (1...8)
 
 DO_SELDSK:
 	ex	af,af
@@ -741,16 +814,16 @@ SELDSK_ISMINE:
 	ld	a,0FFh
 	ld	(CUR_IS_MINE),a	;Yes: CUR_IS_MINE=false and DON'T let DOS handle it
 	inc	iy				;(since that could cause "Invalid drive" error)
-	ld	hl,(0F347h)	;!!! TODO: may not include our drive
+	ld	hl,(0F347h)
 	xor	a
 	ld	h,a
 	ret
-	
+		
 
-;GET CURRENT DRIVE (19H)
-;Parameters:    C = 19H (_CURDRV)
-;Results:       A = Error code
-;               L = Current drive (0=A: etc)
+;--- GET CURRENT DRIVE (19H)
+;    Parameters:    C = 19H (_CURDRV)
+;    Results:       A = Error code
+;                   L = Current drive (0=A: etc)
 
 DO_CURDRV:
 	ex	af,af
@@ -766,15 +839,15 @@ DO_CURDRV:
 	ret
 
 
-;GET ALLOCATION INFORMATION (1BH)
-;Parameters:    C = 1BH (_ALLOC)
-;               E = drive number (0=default)
-;Results:       A = Error code
-;               C = Sectors/cluster (0FFh if any error)
-;               DE = Total number of clusters
-;               HL = Number of free clusters
-;               IX = Pointer to MSX-DOS 1.0 compatible DPB (NO!)
-;               IY = Pointer to first FAT sector in a page-3 buffer (NO!)
+;--- GET ALLOCATION INFORMATION (1BH)
+;    Parameters:    C = 1BH (_ALLOC)
+;                   E = drive number (0=default)
+;    Results:       A = Error code
+;                   C = Sectors/cluster (0FFh if any error)
+;                   DE = Total number of clusters
+;                   HL = Number of free clusters
+;                   IX = Pointer to MSX-DOS 1.0 compatible DPB (NO!)
+;                   IY = Pointer to first FAT sector in a page-3 buffer (NO!)
 
 DO_ALLOC:
 	ex	af,af
@@ -788,16 +861,16 @@ DO_ALLOC:
 	ret
 
 
-;FIND FIRST ENTRY (40H)
-;Parameters:    C = 40H (_FFIRST) 
-;              DE = Drive/path/file ASCIIZ string
-;                   or fileinfo block pointer
-;              HL = filename ASCIIZ string (only if
-;              DE = fileinfo pointer)
-;               B = Search attributes
-;              IX = Pointer to new fileinfo block
-;Results:       A = Error
-;            (IX) = Filled in with matching entry
+;--- FIND FIRST ENTRY (40H)
+;    Parameters:   C = 40H (_FFIRST) 
+;                 DE = Drive/path/file ASCIIZ string
+;                      or fileinfo block pointer
+;                 HL = filename ASCIIZ string (only if
+;                 DE = fileinfo pointer)
+;                 B = Search attributes
+;                 IX = Pointer to new fileinfo block
+;    Results:      A = Error
+;               (IX) = Filled in with matching entry
 
 DO_FFIRST:
 	ex	af,af
@@ -976,12 +1049,12 @@ FFIRST_GETVOL3:
 FFIRST_BUF: ds MAX_PATH_LEN + 1
 
 
-;FIND NEXT ENTRY (41H)
-;Parameters:    C = 41H (_FNEXT) 
-;              IX = Pointer to fileinfo block from
-;                   previous find first function.
-;Results:       A = Error
-;            (IX) = Filled in with next matching entry
+;--- FIND NEXT ENTRY (41H)
+;    Parameters:    C = 41H (_FNEXT) 
+;                  IX = Pointer to fileinfo block from
+;                       previous find first function.
+;    Results:       A = Error
+;                (IX) = Filled in with next matching entry
 
 DO_FNEXT:
 	ld	a,(INDRIVE1)
@@ -1004,13 +1077,13 @@ DO_FNEXT:
 	ret
 			
 
-;GET CURRENT DIRECTORY (59H)
-;Parameters:    C = 59H (_GETCD) 
-;               B = Drive number (0=current, 1=A: etc)
-;              DE = Pointer to 64 byte buffer
-;Results:       A = Error
-;              DE = Filled in with current path
-;              BC = Length of string in DE
+;--- GET CURRENT DIRECTORY (59H)
+;    Parameters:    C = 59H (_GETCD) 
+;                   B = Drive number (0=current, 1=A: etc)
+;                  DE = Pointer to 64 byte buffer
+;    Results:       A = Error
+;                  DE = Filled in with current path
+;                  BC = Length of string in DE
 
 DO_GETCD:
 	ex	af,af
@@ -1069,17 +1142,15 @@ GETCD_CAN_CACHE:
 	ret
 
 	
-;CHANGE CURRENT DIRECTORY (5AH)
-;Parameters:    C = 5AH (_CHDIR) 
-;              DE = Drive/path/file ASCIIZ string
-;Results:       A = Error
+;--- CHANGE CURRENT DIRECTORY (5AH)
+;    Parameters:    C = 5AH (_CHDIR) 
+;                  DE = Drive/path/file ASCIIZ string
+;    Results:       A = Error
 
 DO_CHDIR:
 	ex	af,af
 	
 	call DRV_IN_PATH_MINE
-	;ld  b,a
-	;call ISMYDRIVE
 	ld	iy,0
 	ret	nz
 
@@ -1142,12 +1213,12 @@ CHDIR_DOCACHE:
 CHDIR_BUF: ds MAX_PATH_LEN+1	
 	
 	
-;GET WHOLE PATH STRING (5EH)
-;Parameters:    C = 5EH (_WPATH) 
-;              DE = Pointer to 64 byte buffer
-;Results:       A = Error
-;              DE = Filled in with whole path string
-;              HL = Pointer to start of last item	
+;--- GET WHOLE PATH STRING (5EH)
+;    Parameters:    C = 5EH (_WPATH) 
+;                  DE = Pointer to 64 byte buffer
+;    Results:       A = Error
+;                  DE = Filled in with whole path string
+;                  HL = Pointer to start of last item	
 
 DO_WPATH:
 	ex af,af
@@ -1178,7 +1249,9 @@ DO_WPATH:
 	xor a
 	ret
 
-
+;WIP cleanup...
+	
+	
 ;--------------------------------
 ;--- Function implementations ---
 ;--------------------------------
@@ -1317,59 +1390,7 @@ FAKEVOL:	db "THEVOL",0
 ;--- Gancho H_BDOS ---
 ;---------------------
 
-DOSENTRY:
-	ld iy,DOESNTRY_END
-	push iy
-	ex	af,af
-	ld	a,c
 
-	cp	_SELDSK
-	jp	z,DO_SELDSK
-	;cp	_CURDRV
-	;jp	z,DO_CURDRV
-	cp	_ALLOC
-	jp	z,DO_ALLOC
-	cp	_FFIRST
-	jp	z,DO_FFIRST
-	cp	_FNEXT
-	jp	z,DO_FNEXT
-	cp	_GETCD
-	jp	z,DO_GETCD
-	cp	_CHDIR
-	jp  z,DO_CHDIR
-	cp  _WPATH
-	jp  z,DO_WPATH
-
-	pop iy
-DONOTHING:
-	ld	iy,0
-EX_AND_RET:
-	ex	af,af
-	ret
-	
-DOESNTRY_END:
-	ex af,af
-	ld a,iyl
-	or a
-	jr z,EX_AND_RET
-
-	;In case of disk error (A >= F0h), clear caches
-
-	ex af,af
-	exx
-	ld d,a
-	and 0F0h
-	cp 0F0h
-	ld a,d
-	exx
-	ret nz
-
-	ex af,af
-	xor a
-	ld (CURDIR_IS_CACHED),a
-	ld (VOLABEL_IS_CACHED),a
-	ex af,af
-	ret
 
 	
 ;--------------------------
@@ -1910,6 +1931,10 @@ PROC_TERM2:
 ;------------------------
 ;--- Buffers and data ---
 ;------------------------
+
+INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
+CUR_IS_MINE:	db	0	;Is my drive the current drive?
+INDRIVE1:	db	7	;Drive in which the filesystem acts (1=A:)
 
 AST_DOT_AST:	db	"*.*"	,0
 
