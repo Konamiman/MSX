@@ -96,9 +96,9 @@ __IFORM:	equ 0F0h	;Used for testing
 	ld	c,_STROUT
 	dos
 
-;--- Check DOS 2 or Nextor
+;--- Check if DOS 2 or Nextor
 
-	ld	c,_DOSVER	;DOS 2?
+	ld	c,_DOSVER
 	dos
 	ld	a,b
 	cp	2
@@ -111,7 +111,7 @@ NODOS2:	ld	de,NOD2STR
 NOD2STR:	db	13,10,"*** MSX-DOS 2 required",13,10,"$"
 OKDOS2:	;
 
-;--- Check for enough TPA (#0006 >= #C200)
+;--- Check for enough TPA ((#0006) >= #C200)
 
 	ld	a,(ENDTPA+1)
 	cp	#C2
@@ -400,7 +400,7 @@ NEXT:	inc	ix	;Next byte to compare
 FINREUB	ret
 
 CHKCOMP:	exx
-	dec	bc	;Decrementcounter, and if 0
+	dec	bc	;Decrement counter, and if 0
 	ld	a,b	;return with Z=1
 	or	c
 	exx
@@ -433,7 +433,7 @@ NOANGLUNO:	or	a
 	ld	(ix),34
 	ld	(ix+1),")"
 	ld	(ix+2),0
-OKBSC:	;
+OKBSC:
 
 	;Do the CALL SYSTEM
 
@@ -514,7 +514,7 @@ TEMP:	ds	5
 
 PARTRES:	macro
 
-INIRES@sym:	;
+INIRES@sym:
 NEWBIO@sym:	jp	_NEWBIO@sym	;+0
 OLDBIO@sym:	ds	5			;+3
 OLDHBDOS@sym:	ds 3		;+8
@@ -649,7 +649,7 @@ OKBIOS@sym:	pop	af
 	
 ;--- Get slot in page 1
 
-GETSLOT1@sym:	;di
+GETSLOT1@sym:
 	exx
 	in	a,(#A8)
 	ld	e,a
@@ -701,7 +701,7 @@ PARTRE2:	org	#4000
 	db	"FileSysDriver",0
 	db 0,1	;Specification version complied, main+sec
 
-	ds 32
+	ds 16
 	
 JMP_ALLOC:	jp	IMPL_ALLOC
 JMP_FFIRST:	jp	IMPL_FFIRST
@@ -1259,7 +1259,7 @@ DO_WPATH:
 ;    Input: DE = Pathname, possibly with a drive
 ;    Output: Z=1 if the drive in path is our assigned drive
 ;                (or if the path has no drive and default drive is ours)
-;            DE=DE+1 if Z=1 and the path had a drive
+;            DE=DE+2 if Z=1 and the path had a drive
 ;    Modifies: H
 
 DRV_IN_PATH_MINE:
@@ -1803,7 +1803,7 @@ INDRIVE1:	db	7
 ;Is my drive the current drive?
 CUR_IS_MINE:	db	0
 
-AST_DOT_AST:	db	"*.*"	,0
+AST_DOT_AST:	db	"*.*",0
 
 ;Is current directory cached?
 CURDIR_IS_CACHED: db 0	
@@ -1844,9 +1844,9 @@ VOLABEL_IS_CACHED: db 0
 VOLABEL_CACHE: ds 12
 	
 	
-;-----------------------------------------
-;>>>  Hardware/device - specific code  <<<
-;-----------------------------------------
+;-------------------------------------------------
+;>>>>>>>  Hardware/device - specific code  <<<<<<<
+;-------------------------------------------------
 
 ;TODO: Implement these according to how your specific hardware/device works.
 
@@ -1863,7 +1863,8 @@ VOLABEL_CACHE: ds 12
 ;- All registers that don't return data can be freely modified.
 
 ;- The list of possible error codes is not exhaustive, the routines can return
-;  any of the error codes defined in "MSX-DOS Program Interface Specification".
+;  any of the error codes defined in "MSX-DOS Program Interface Specification"
+;  as they find appripriate.
 
 
 ;--- Get allocation information
@@ -1886,8 +1887,8 @@ IMPL_ALLOC:
 	ret
 
 
-;---Find first entry
-;Input:   DE = Drive/path/file ASCIIZ string 
+;---Find first entry (search files)
+;Input:   DE = Drive/path/file ASCIIZ string to search
 ;              or fileinfo block pointer for the directory
 ;         HL = filename ASCIIZ string (if DE = fileinfo pointer)
 ;         IY = full processed path of the file
@@ -1937,7 +1938,7 @@ IMPL_FFIRST:
 	ret
 
 	
-;--- Find next entry
+;--- Find next entry (search files)
 ;Input:     IX = Pointer to fileinfo block from
 ;                previous FFIRST or FNEXT function
 ;Output:    A = Error
@@ -2012,5 +2013,7 @@ IMPL_GETVOL:
 	ld a,__NOFIL
 	ret
 
+	
+IMPL_END: ;TODO: verify that IMPL_END is <8000h
 
 PARTRE2!:
