@@ -8,14 +8,14 @@
 ;a program that supplies custom implementations for
 ;file search/open/read/write/create/rename/delete functions.
 ;
-;Search TODO: comments for instructions on how to converted
+;Search TODO: comments for instructions on how to convert
 ;this skeleton into a working implementation for your
 ;device/hardware.
 ;
 ;This is a very early version that:
 ;- Installs the driver on drive G: always
 ;- Doesn't allow installing more than one driver
-;- Implments the file search functions only
+;- Implements the file search and current directory functions only
 ;
 ;Assemble with Compass or with Sjasm v0.39h
 ;(https://github.com/Konamiman/Sjasm/releases/tag/v0.39h)
@@ -1249,156 +1249,33 @@ DO_WPATH:
 	xor a
 	ret
 
-;WIP cleanup...
 	
+;------------------------------------
+;>>>>>>>  Auxiliary routines  <<<<<<<
+;------------------------------------
+
+
+;--- Check drive in path
+;    Input: DE = Pathname, possibly with a drive
+;    Output: Z=1 if the drive in path is our assigned drive
+;                (or if the path has no drive and default drive is ours)
+;            DE=DE+1 if Z=1 and the path had a drive
+;    Modifies: H
+
+DRV_IN_PATH_MINE:
+	call DRV_IN_PATH
+	or a
+	jp z,ISMYDRIVE
 	
-;--------------------------------
-;--- Function implementations ---
-;--------------------------------
-
-;Get allocation information
-;Input:  -
-;Output: A = Error code
-;        C = Sectors/cluster (0FFh if any error)
-;        DE = Total number of clusters
-;        HL = Number of free clusters
-
-IMPL_ALLOC:
-	ld	c,2
-	ld	de,60000
-	ld	hl,34
-	xor	a
-	ret
-
-	ld	a,__DISK
-	ret
-
-
-;Find first entry
-;Input:   DE = Drive/path/file ASCIIZ string 
-;              or fileinfo block pointer for the directory
-;         HL = filename ASCIIZ string (if DE = fileinfo pointer)
-;         IY = processed full path
-;         B = Search attributes
-;         IX = Pointer to new fileinfo block
-;Output:  A = Error
-;        (IX) = Filled in with matching entry
-;         HL = Pointer to full path of found file (for _WPATH)
-;
-;Supplied DE, HL and IX will always be in page 3
-
-IMPL_FFIRST:
-	;ld	(ix),0FFh
-	ld a,(de)
-	ld  (ix+1),a
-	ld  (ix+2),"-"
-	ld	(ix+3),"M"
-	ld	(ix+4),"O"
-	ld	(ix+5),"L"
-	ld	(ix+6),"A"
-	ld	(ix+7),"!"
-	ld	(ix+8),0
-	ld	(ix+14),0
-	ld	(ix+21),34
-	ld	(ix+22),0
-	ld	(ix+23),0
-	ld	(ix+24),0
-	;ld	a,(INDRIVE0)
-	;ld	(ix+25),a
-
-	;search pattern starts with "d" -> simulate a dir
-	
-	ld a,(de)
-	cp 0FFh
-	ld a,0
-	ret z
-	
-	ld a,(de)
-	or 32
-	cp "d"
-	ld a,0
+	call ISMYDRIVE
 	ret nz
-	
-	ld a,%10000
-	ld (ix+14),a
-	xor a
-	ret
-
-	
-;Find next entry
-;Input:     IX = Pointer to fileinfo block from
-;                previous find first function.
-;Output:    A = Error
-;           (IX) = Filled in with next matching entry
-
-IMPL_FNEXT:
-	ld	a,__NOFIL
+	inc de
+	inc de
 	ret
 	
 
-;Change current directory
-;Input:    DE = Path/file ASCIIZ string
-;          Cy = 1 if a cached version is available
-;          IX = Pointer to cached version (if Cy = 1)
-;          HL = Pointer to processed version
-;Output:   A  = Error
-
-IMPL_CHDIR:
-	ld de,MYCURDIR
-	ld bc,MAX_PATH_LEN+1
-	ldir
-	xor a
-	ret
-	
-
-;Get current directory
-;Input:    DE = Path/file ASCIIZ string
-;Output:   A  = Error
-;          Cy = 1 if the result can be cached
-;		   Cy MUST be 0 if there is an error
-
-IMPL_GETCD:
-	ld hl,MYCURDIR
-	ld bc,MAX_PATH_LEN+1
-	ldir
-	
-	xor	a
-	;scf
-	ret	
-
-MYCURDIR: ds MAX_PATH_LEN+1	
-	
-
-;Get volume label
-;Input:     DE = 11 byte buffer
-;Output:    A  = Error code
-;           Cy = 1 if volume label can be cached
-	
-IMPL_GETVOL:
-	ld hl,FAKEVOL
-	ld bc,11
-	ldir
-	
-	xor a
-	scf
-	ret
-	
-FAKEVOL:	db "THEVOL",0
-
-
-;---------------------
-;--- Gancho H_BDOS ---
-;---------------------
-
-
-
-	
-;--------------------------
-;--- Auxiliary routines ---
-;--------------------------
-
-;Return in A the drive in the pathname passed in DE
-;A: = 1, if no drive in pathanme returns 0 (so default drive)
+    ;Return in A the drive in the pathname passed in DE
+    ;A: = 1, if no drive in pathanme returns 0 (so default drive)
 
 DRV_IN_PATH:
 	ld	a,(de)
@@ -1419,26 +1296,10 @@ DRV_IN_PATH:
 	or 32
 	sub "a"-1
 	ret
-
 	
-;Is the drive in path pointed by DE my drive?
-;Output: Z=1 and DE+=2 if yes
-;Corrupts H
 
-DRV_IN_PATH_MINE:
-	call DRV_IN_PATH
-	or a
-	jp z,ISMYDRIVE
-	
-	call ISMYDRIVE
-	ret nz
-	inc de
-	inc de
-	ret
-
-
-;Is A my drive? (being 0=default drive) Z=1 if yes
-;Corrupts H
+    ;Is A my drive? (being 0=default drive) Z=1 if yes
+    ;Corrupts H
 
 ISMYDRIVE:
 	or	a
@@ -1459,11 +1320,11 @@ ISMYDR_DEF:
 	ret
 	
 	
-;Get the length of a zero-terminated string
-;Input:  DE = string	
-;Output: BC = length
-;        Cy = 1 if length > MAX_PATH_LEN
-;Corrupts AF, DE
+;--- Get the length of a zero-terminated string
+;    Input:  DE = string	
+;    Output: BC = length
+;            Cy = 1 if length > MAX_PATH_LEN
+;    Corrupts AF, DE
 
 STRLEN:
 	ld bc,0
@@ -1485,9 +1346,9 @@ STRLEN_END:
 	ret
 
 	
-;In-place uppercase a string
-;Input: DE = string
-;Corrupts AF, DE
+;--- In-place uppercase a string
+;    Input: DE = string
+;    Corrupts AF, DE
 
 TOUPPER:
 	ld	a,(de)
@@ -1507,13 +1368,13 @@ TOUP_NEXT:
 	jr TOUPPER
 
 	
-;Expand wildcards of a filename:
-;* in name/extension is converted to a series of ?s
-;If no extension is provided it is assumed to be .*
-;If filename/extension is too long it is truncated
+;--- Expand wildcards of a filename:
+;    * in name/extension is converted to a series of ?s
+;    If no extension is provided it is assumed to be .*
+;    If filename/extension is too long it is truncated
 ;
-; Input: HL=source, DE=destination
-; Corrupts AF, BC, HL, DE
+;    Input: HL=source, DE=destination
+;    Modifies: AF, BC, HL, DE
 ;
 ;e.g.:
 ;ABCD.FG  -->  ABCD.FG
@@ -1642,10 +1503,10 @@ EXPAND_END2:	ld	(de),a
 	ret	
 	
 	
-;Get the last item of a path/filename string
-;Input:  DE = string
-;Output: HL = path to last item
-;Corrupts AF, DE, B
+;--- Get the last item of a path/filename string
+;    Input:  DE = string
+;    Output: HL = path to last item
+;    Modifies: AF, DE, B
 ;
 ;e.g:
 ;A:  --> terminator
@@ -1718,19 +1579,21 @@ DO_LDIR:
 	ret
 	
 	
-;In: DE = string to process (without drive)
-;    HL = destination
-;Out: A = Error
-;     DE points to terminator
-;Changes: AF, BC, DE, HL, IX
+;--- Process a pathname:
+;    - It is converted to an absolute path
+;    - .. and . are appropriately unrolled	
+;
+;    Input:  DE = string to process (without drive)
+;            HL = destination
+;    Output: A = Error
+;            DE points to terminator
+;    Modifies: AF, BC, DE, HL, IX
 
 PROCESS:
 	ld	a,(de)
 	or	a
 	ex de,hl
 	jp z,DO_GETCD2
-
-	;ex	de,hl	;Now HL=source, DE=destination
 
 	;Start by generating the full path
 
@@ -1744,7 +1607,6 @@ PROCESS:
 	dec	hl
 
 	push hl
-	;ex de,hl
 	ld de,PROCESS_BUF
 	call DO_GETCD2
 	pop hl
@@ -1766,7 +1628,6 @@ PROCESS_2:
 	pop de
 	
 	pop hl
-	;ld de,PROCESS_BUF
 		
 PROC_DOCOPY:
 	ld	bc,MAX_PATH_LEN+1
@@ -1925,16 +1786,22 @@ PROC_LOOP_TERM:
 PROC_TERM2:
 	xor	a
 	ld	(de),a
-	ret
+	ret	
 	
+	
+;--------------------------
+;>>>  Buffers and data  <<<
+;--------------------------
 
-;------------------------
-;--- Buffers and data ---
-;------------------------
+;Drive in which the filesystem acts (0=A:) 
 
-INDRIVE0:	db	6	;Drive in which the filesystem acts (0=A:) - TODO: set from command line when installing
-CUR_IS_MINE:	db	0	;Is my drive the current drive?
-INDRIVE1:	db	7	;Drive in which the filesystem acts (1=A:)
+INDRIVE0:	db	6
+
+;Drive in which the filesystem acts (1=A:)
+INDRIVE1:	db	7	
+
+;Is my drive the current drive?
+CUR_IS_MINE:	db	0
 
 AST_DOT_AST:	db	"*.*"	,0
 
@@ -1975,8 +1842,175 @@ VOLABEL_IS_CACHED: db 0
 
 ;Volume label cache
 VOLABEL_CACHE: ds 12
+	
+	
+;-----------------------------------------
+;>>>  Hardware/device - specific code  <<<
+;-----------------------------------------
+
+;TODO: Implement these according to how your specific hardware/device works.
+
+;General considerations:
+
+;- All user data buffers (paths, FIBs) will be either in this same segment
+;  or in page 3, so don't worry about slot/segment paging.
+
+;- Pathname and FIB buffers are 64 bytes long.
+
+;- Supplied pathnames will never contain a drive letter (if it does originally,
+;  the supplied pointers will point past it)
+
+;- All registers that don't return data can be freely modified.
+
+;- The list of possible error codes is not exhaustive, the routines can return
+;  any of the error codes defined in "MSX-DOS Program Interface Specification".
 
 
+;--- Get allocation information
+;Input:  -
+;Output: A = Error code
+;        C = Sectors/cluster (0FFh if any error)
+;        DE = Total number of clusters
+;        HL = Number of free clusters
+;Error codes:
+;        __DISK: General error accessing the device
+;
+;NOTE: Don't spend too much time in this routine, since it will eventually
+;      be replaced with another one that returns the size directly in KB.
 
-PARTRE2!:	;
-
+IMPL_ALLOC:
+	ld	c,1
+	ld	de,0
+	ld	hl,0
+	xor	a
+	ret
+
+
+;---Find first entry
+;Input:   DE = Drive/path/file ASCIIZ string 
+;              or fileinfo block pointer for the directory
+;         HL = filename ASCIIZ string (if DE = fileinfo pointer)
+;         IY = full processed path of the file
+;         B = Search attributes:
+;             bit 1 set: include hidden files in results
+;             bit 2 set: include system files in results
+;             bit 4 set: include subdirectories in results
+;             (regular non-hidden non-system files must be always
+;              included in results)
+;         IX = Pointer to new fileinfo block
+;Output:  A = Error
+;         IX preserved
+;        (IX) = Filled in with matching entry
+;Error codes:
+;        __DISK:  General error accessing the device
+;        __NOFIL: File not found
+
+;DE will point to an existing fileinfo block if first byte is FFh.
+;You can either use DE or DE+HL as supplied by the caller,
+;or use IY as generated by PROCESS, or both.
+
+;FIB fields that this routine needs to fill:
+
+; 1..13 - Filename as an ASCIIZ string
+;    14 - File attributes byte:
+;         bit 0: read-only
+;         bit 1: hidden
+;         bit 2: system
+;         bit 4: directory
+;         bit 5: archive
+;15..16 - Time of last modification
+;17..18 - Date of last modification
+;21..24 - File size (little endian)
+
+;How to generate the date/time bytes:
+
+;+15 = ((minute & 7) << 5) | (second / 2)
+;+16 = (hour << 3) | (minute >> 3)
+;+17 = (month << 5) | day
+;+18 = ((year - 1980) << 1) | (month >> 3)
+
+;The fileinfo block is 64 bytes long. You can use the last 32 bytes
+;to store whatever information you need for FNEXT.
+
+IMPL_FFIRST:
+	ld a,__NOFIL
+	ret
+
+	
+;--- Find next entry
+;Input:     IX = Pointer to fileinfo block from
+;                previous FFIRST or FNEXT function
+;Output:    A = Error
+;           IX preserved
+;           (IX) = Filled in with next matching entry
+;Error codes:
+;        __DISK:  General error accessing the device
+;        __NOFIL: File not found
+
+;FIB fields that this routine needs to fill: same as FFIRST.
+;Also, again you can use the last 32 bytes of the FIB freely.
+
+;If this method returns no error, the two-byte value stored
+;at FIB+26 (which is set to 0 by FFIRST) will be incremented.
+;Thus it will be 0 the first time FNEXT is executed,
+;1 the next time, and so on.
+
+IMPL_FNEXT:
+	ld	a,__NOFIL
+	ret
+	
+
+;--- Change current directory
+;Input:    DE = Path/file ASCIIZ string
+;          Cy = 1 if a cached version of current directory is available
+;          IX = Pointer to cached current directory (if Cy = 1)
+;          HL = Pointer to full processed directory
+;Output:   A  = Error
+;Error codes:
+;        __DISK:  General error accessing the device
+;        __NODIR: Directory not found
+
+;You can use DE as supplied, or HL as generated by PROCESS, or both.
+
+IMPL_CHDIR:
+	ld a,__NODIR
+	ret
+	
+
+;--- Get current directory
+;Input:    DE = pointer to 64 byte buffer for copying the current directory
+;Output:   A  = Error
+;          Cy = 1 if the result can be cached
+;		   Cy MUST be 0 if there is an error
+;Error codes:
+;        __DISK:  General error accessing the device
+
+;The returned string must not start or end with a slash,
+;thus the root directory is represented as an empty string.
+
+;The cached value will be discarded if any of these routines
+;return a disk error (error code >= F0h) 
+
+IMPL_GETCD:
+	xor a
+	ld (de),a
+	ret
+	
+
+;--- Get the volume label
+;Input:     DE = pointer to 11 byte buffer for copying the volume label
+;Output:    A  = Error code
+;           Cy = 1 if volume label can be cached
+;Error codes:
+;        __DISK:  General error accessing the device
+;        __NOFIL: No volume label is available
+	
+;The cached value will be discarded if any of these routines
+;return a disk error (error code >= F0h) 	
+	
+IMPL_GETVOL:
+	ld a,__NOFIL
+	ret
+
+
+PARTRE2!:
