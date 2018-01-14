@@ -1,4 +1,3 @@
-
 #include "asm.h"
 
 void AsmCall(uint address, Z80_registers* regs, register_usage inRegistersDetail, register_usage outRegistersDetail) __naked
@@ -7,23 +6,27 @@ void AsmCall(uint address, Z80_registers* regs, register_usage inRegistersDetail
 	push    ix
     ld      ix,#4
     add     ix,sp
+
     ld      l,(ix)  ;HL=Routine address
     ld      h,1(ix)
     ld      e,2(ix) ;DE=regs address
     ld      d,3(ix)
-	ld  a,5(ix)
-	ld	(OUT_FLAGS),a
+	ld  a,5(ix) ;A=out registers detail
+	push    af
 	ld	a,4(ix)	;A=in registers detail
 
-	ld	(ASMRUT+1),hl
+    push    de
 
     push    de
+    pop     ix   ;IX=&Z80regs
+
+    ld  de,#CONT
+    push    de
+    push    hl
+
 	or	a
-	jr	z,ASMRUT
+	ret     z   ;Execute code, then CONT (both in stack)
 
-    push    de
-    pop     ix      ;IX=&Z80regs
-        
 	exx
 	ld	l,(ix)
 	ld	h,1(ix)	;AF
@@ -55,12 +58,13 @@ ASMRUT_DOAF:
 	pop	af
 	exx
 
-ASMRUT: call    0
+    ret  ;Execute code, then CONT (both in stack)
+CONT:
 
     ex      (sp),ix ;IX to stack, now IX=&Z80regs
 	ex	af,af	;Alternate AF
 
-	ld	a,(OUT_FLAGS)
+	pop     af  ;out registers detail
 	or	a
 	jr	z,CALL_END
 
@@ -104,6 +108,5 @@ CALL_END:
 	pop	ix
     ret
 
-OUT_FLAGS:	.db	#0
 	__endasm;
 }
