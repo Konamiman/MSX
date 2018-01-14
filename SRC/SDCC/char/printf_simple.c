@@ -12,19 +12,28 @@
 
    %d or %i: signed int
    %ud or %ui: unsigned int
-   %l: signed long
-   %ul: unsigned long
    %x: hexadecimal int
-   %lx: hexadecimal long
    %c: character
    %s: string
    %%: a % character
+
+   Also if SUPPORT_LONG is defined:
+
+   %l: signed long
+   %ul: unsigned long
+   %lx: hexadecimal long
 */
+
+//#define SUPPORT_LONG
 
 #include <stdarg.h>
 
+#ifdef SUPPORT_LONG
 extern void _ultoa(long val, char* buffer, char base);
 extern void _ltoa(long val, char* buffer, char base);
+#endif
+extern void _uitoa(int val, char* buffer, char base);
+extern void _itoa(int val, char* buffer, char base);
 extern void putchar(char* c);
 
 static int format_string(const char* buf, const char *fmt, va_list ap);
@@ -73,7 +82,9 @@ static int format_string(const char* buf, const char *fmt, va_list ap)
   char *fmtPnt;
   char *bufPnt;
   char base;
+#ifdef SUPPORT_LONG
   char isLong;
+#endif
   char isUnsigned;
   char *strPnt;
   long val;
@@ -86,7 +97,10 @@ static int format_string(const char* buf, const char *fmt, va_list ap)
 
   while((theChar = *fmtPnt)!=0)
   {
-    isLong = isUnsigned = 0;
+  #ifdef SUPPORT_LONG
+    isLong = 0;
+  #endif
+    isUnsigned = 0;
     base = 10;
 
     fmtPnt++;
@@ -116,12 +130,14 @@ static int format_string(const char* buf, const char *fmt, va_list ap)
       continue;
     } 
 
+#ifdef SUPPORT_LONG
     if(theChar == 'l')
     {
       isLong = 1;
       theChar = *fmtPnt;
       fmtPnt++;
     }
+#endif
 
     if(theChar == 'u') {
       isUnsigned = 1;
@@ -134,15 +150,28 @@ static int format_string(const char* buf, const char *fmt, va_list ap)
       continue;
     }
 
+#ifdef SUPPORT_LONG
     if(isLong)
       val = va_arg(ap, long);
     else
       val = va_arg(ap, int);
 
-    if(isUnsigned)
+    if(isUnsigned && isLong)
       _ultoa(val, buffer, base);
-    else
+    else if(isUnsigned)
+      _uitoa(val, buffer, base);
+    else if(isLong)
       _ltoa(val, buffer, base);
+    else
+      _itoa(val, buffer, base);
+#else
+    val = va_arg(ap, int);
+    
+    if(isUnsigned)
+      _uitoa(val, buffer, base);
+    else
+      _itoa(val, buffer, base);
+#endif
 
     strPnt = buffer;
     while((theChar = *strPnt++) != 0) 
