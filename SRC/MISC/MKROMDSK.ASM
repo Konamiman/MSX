@@ -4,6 +4,9 @@
 
 	;--- MKDROMDSK: Generador de ROM disk a partir de RAM disk
 	;               para cartuchos Flash (solo DOS 2)
+	;    v1.3: Corregido un fallo que hacía que las ROMS generadas
+	;          no funcionaran en DOS 1 (se estaba sobreescribiendo codigo
+	;          de inicializacion de la BIOS extendida)
 	;    v1.2: Corregido el error que impedia que las ROMs
 	;          generadas funcionaran en Turbo-R con
 	;          mapeador de RAM externo
@@ -820,30 +823,13 @@ LDIRCODE16_E:
 
 ;--- Nueva rutina de inicio para la ROM
 
-	;Primero comprueba si esta ROM ya esta en la tabla
-	;de Disk ROMs (si la rutina de inicializacion ya se ha
-	;ejecutado antes).
-	;Puede ocurrir si la pagina 1 esta replicada en la
-	;pagina 2 al arrancar (ocurre en las ROMs mapeadas).
+	;Asegura que el bloque 0 de ROM es visible,
+	;entonces salta a la rutina real.
 
-INIT:	call	GETSLT
-	ld	c,a	;C=Slot del DOS 2
-	ld	b,4
-	ld	hl,#FB21
-DRLOOP:	ld	a,(hl)
-	or	a
-	jr	z,INIT2	;No quedan mas entradas?
-	inc	hl
-	ld	a,(hl)
-	cp	c
-	ret	z	;Ya estamos en la tabla?
-	inc	hl
-	djnz	DRLOOP
-INIT2:
-
-	;Salta a la rutina de incializacion antigua
-
-	jp	#406A
+INIT:	
+	xor	a
+	call #4092
+	jp INIT_ROM
 INIT_END:
 
 
@@ -969,8 +955,8 @@ ROMDISK_S:	db	"ROMDISK.ROM",0
 
 ;*** Cadenas informativas
 
-PRESEN_S:	db	"ROM disk with DOS 2 kernel creator for Flash ROM cartridges 1.2",13,10
-	db	"By Konami Man, 9/2005",13,10,13,10,"$"
+PRESEN_S:	db	"ROM disk with DOS 2 kernel creator for Flash ROM cartridges 1.3",13,10
+	db	"By Konami Man, 5/2017",13,10,13,10,"$"
 
 INFO_S:	db	"Usage:",13,10
 	db	13,10
@@ -1287,6 +1273,34 @@ COMPROM:	ld	a,h
 	ld	a,l
 	cp	e
 	ret
+
+
+;--- Nueva rutina de inicio para la ROM
+
+	;Primero comprueba si esta ROM ya esta en la tabla
+	;de Disk ROMs (si la rutina de inicializacion ya se ha
+	;ejecutado antes).
+	;Puede ocurrir si la pagina 1 esta replicada en la
+	;pagina 2 al arrancar (ocurre en las ROMs mapeadas).
+
+INIT_ROM:	call	GETSLT
+	ld	c,a	;C=Slot del DOS 2
+	ld	b,4
+	ld	hl,#FB21
+DRLOOP:	ld	a,(hl)
+	or	a
+	jr	z,INIT2	;No quedan mas entradas?
+	inc	hl
+	ld	a,(hl)
+	cp	c
+	ret	z	;Ya estamos en la tabla?
+	inc	hl
+	djnz	DRLOOP
+INIT2:
+
+	;Salta a la rutina de incializacion antigua
+
+	jp	#406A
 
 SECTOR0:	;Aqui se copia el sector 0 del disco
 
