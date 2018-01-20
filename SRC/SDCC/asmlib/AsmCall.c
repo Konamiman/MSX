@@ -11,11 +11,10 @@ void AsmCall(uint address, Z80_registers* regs, register_usage inRegistersDetail
     ld      h,1(ix)
     ld      e,2(ix) ;DE=regs address
     ld      d,3(ix)
+    push    de
     ld      a,5(ix) ;A=out registers detail
     push    af
     ld	    a,4(ix)	;A=in registers detail
-
-    push    de
 
     push    de
     pop     ix   ;IX=&Z80regs
@@ -61,10 +60,10 @@ ASMRUT_DOAF:
     ret  ;Execute code, then CONT (both in stack)
 CONT:
 
-    ex      (sp),ix ;IX to stack, now IX=&Z80regs
     ex	    af,af	;Alternate AF
+    pop     af      ;out registers detail
+    ex      (sp),ix ;IX to stack, now IX=&Z80regs
 
-    pop     af  ;out registers detail
     or	    a
     jr	    z,CALL_END
 
