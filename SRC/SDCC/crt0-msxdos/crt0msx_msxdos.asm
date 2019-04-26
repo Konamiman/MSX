@@ -1,13 +1,16 @@
-	;--- crt0.asm for MSX-DOS - by Konami Man & Avelino, 11/2004
+	;--- crt0.asm for MSX-DOS - by Konamiman & Avelino, 11/2004
 	;    Simple version: allows "void main()" only.
-	;    Overhead: 6 bytes.
 	;
-	;    Compile programs with --code-loc 0x106 --data-loc X
+	;    Compile programs with --code-loc 0x108 --data-loc X
 	;    X=0  -> global vars will be placed immediately after code
 	;    X!=0 -> global vars will be placed at address X
 	;            (make sure that X>0x100+code size)
 
 	.globl	_main
+
+    .globl  l__INITIALIZER
+    .globl  s__INITIALIZED
+    .globl  s__INITIALIZER
 
 	.area _HEADER (ABS)
 
@@ -36,10 +39,18 @@ __pre_main:
 _heap_top::
 	.dw 0
 
-gsinit: .area   _GSINIT
-       
-	.area   _GSFINAL
-	ret
+        .area   _GSINIT
+gsinit::
+        ld	bc,#l__INITIALIZER
+        ld	a,b
+        or	a,c
+        jp	z,gsinext
+        ld	de,#s__INITIALIZED
+        ld	hl,#s__INITIALIZER
+        ldir
+gsinext:
+        .area   _GSFINAL
+        ret
 
 	;* These doesn't seem to be necessary... (?)
 
