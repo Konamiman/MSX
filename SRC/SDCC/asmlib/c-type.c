@@ -11,11 +11,9 @@
    
    To keep things simple it works on MSX-DOS 2 only.
   
-   Needs to be linked with ASM.LIB (available at www.konamiman.com)
-   and crt0msx_msxdos_advanced.s (available at Avelino Herrera's page,
-   http://msx.atlantes.org/index_en.html)
-   
-   Comments are welcome: konamiman@konamiman.com
+   Compilation command line:
+   sdcc --code-loc 0x180 --data-loc 0 -mz80 --disable-warning 196 --no-std-crt0 crt0msx_msxdos_advanced.rel asm.lib c-type.c
+   hex2bin -e com c-type.ihx
 */
 
 #include "asm.h"
