@@ -1,21 +1,20 @@
-; ObsoNET BIOS 1.2 with Ethernet UNAPI support.
+; ObsoNET BIOS 1.3 with Ethernet UNAPI support.
 
 ; Set GEN_DAT to 0 to generate a padded 16K ROM,
 ; set to 0 to generate the barebones 1.5K DAT file.
 
 ;==================================================
 
-;--- BOOT y BIOS ROM para ObsoNET
-;    Por Konami Man, 7-2004
+;--- BOOT and BIOS ROM para ObsoNET
+;    By Konamiman, 5-2019
 ;
-;    Se usa la pila para variables temporales,
-;    no se usa la zona de trabajo del sistema.
-;    El numero de pagina SRAM del RTL para la proxima extraccion
-;    de un paquete recibido se almacena en #45FF
-;    de la propia SRAM.
-;    Version 1.1: Compatible con la UNAPI Ethernet.
-;    Version 1.2: Corregido un fallo en la inicialización de EXTBIO
-;                 (DISINT y ENAINT deben rellenarse con RETs)
+;    Temporary variables are stored in stack, not in system work area.
+;    The number of the RTL SRAM page for the next retrieval of a received packet
+;    is stored a4 45FFh in the SRAM itself.
+;    Version 1.1: Compatible with Ethernet UNAPI.
+;    Version 1.2: Fix bug in EXTBIO initialization 
+;                 (wasn't filling DISINT and ENAINT with RETs)
+;    Version 1.3: Fix bug in UNAPI_0 (extra POP was causing hangs with external mappers)
 
 
 ;+++++++++++++++++++++++++++++
@@ -53,7 +52,7 @@ JMP_CNT:	equ	11
 ;*** Version de la ROM
 
 VER_P:	equ	1
-VER_S:	equ	2
+VER_S:	equ	3
 VER_R:	equ	0
 
 ;*** Variables del sistema
@@ -251,8 +250,8 @@ INIT_NEXT:	call	RTL_RESET
 	jp	INIT_UNAPI
 
 INITMSG:
-	db	13,10,"ObsoNET card BIOS 1.1",13,10
-	db	"(c) 2004,2007",13,10
+	db	13,10,"ObsoNET card BIOS 1.3",13,10
+	db	"(c) 2004-2019",13,10
 	db	"Daniel Berdugo (hardware)",13,10
 	db	"Nestor Soriano (BIOS)",13,10
 	db	13,10
@@ -1547,8 +1546,7 @@ UNAPI_TABLE:	dw	UNAPI_0
 ;            BC = This implementation version, B.C.
 
 UNAPI_0:
-	pop	af
-	ld	bc,#10
+	ld	bc,VER_S+256*VER_P
 	ld	de,#10
 	ld	hl,APIINFO
 	ret
@@ -1777,5 +1775,4 @@ ID7FD0:	db	"ObsoNET",0
 	db	VER_P,VER_S,VER_R
 ID_END:	ds	#8000-ID_END,0
 
-;El tamanyo final debe ser exactamente 16384 bytes (ROM) o 1536 bytes (DAT).
-
+;Final size must be 16384 bytes (ROM) or 1536 bytes (DAT).
