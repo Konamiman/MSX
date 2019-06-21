@@ -4,13 +4,15 @@ This is a compilation of all the MSX software that I have been developing since 
 
 While the newest sources have the code comments and identifiers in English, the oldest ones have them in Spanish. I'm sorry but I don't have the time to start translating it all, any contribution in this regard will be welcome.
 
-Most of the source code in this repository is in Z80 assembler. These files are intended to be assembled with Compass, other assemblers will probably not understand the macro syntax.  
+Most of the source code in this repository is in Z80 assembler. These files are intended to be assembled with Compass, other assemblers will probably not understand the macro syntax. To compile these from a modern machine you can use [Sjasm 0.39h](https://github.com/Konamiman/Sjasm/releases/tag/v0.39h).
 
-The source code for [Nextor](http://www.konamiman.com/msx/msx-e.html#nextor) is not published since it is based in the original MSX-DOS 2.31 source code and I dont know what is the current legal status of this code nor who should I ask about that. Any clue will be highly welcome.
+Some of my MSX projects have their own repository and are therefore not included in this one:
 
-The `MSX.sln` file is just a Visual Studio solution that opens the whole repository as a web site, I use it to easily browse and manage the files locally. You can just ignore this file if you want.
-
-If you have something to say, head to the [discussion site](http://konamiman.bitbucket.org/MSX)!
+* [Nextor](https://github.com/Konamiman/Nextor)
+* [MSX2 Technical Handbook](https://github.com/Konamiman/MSX2-Technical-Handbook)
+* [MSX UNAPI Specification](https://github.com/Konamiman/MSX-UNAPI-specification)
+* [Obsolete Procedure Call](https://github.com/Konamiman/OPC)
+* [Rookie Drive FDD ROM](https://github.com/Konamiman/RookieDrive-FDD-ROM)
 
 Oh, and last but not least: if you like these rusty pieces of code **[please consider donating!](http://www.konamiman.com/msx/msx-e.html#donate)** My kids need moar shoes!
 

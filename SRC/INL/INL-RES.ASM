@@ -38,14 +38,14 @@ LINK:	equ	1
 
 ;NOTE: Timer values are in 1/60 seconds unless otherwise stated
 
-	.label	20	;for Compass
+	;.label	20	;for Compass
 
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	0
+INL_VER2:	equ	1
 TCPIP_VER1:	equ	1
-TCPIP_VER2:	equ	0
+TCPIP_VER2:	equ	1
 
 ;--- UDP port for the DNS resolver
 
@@ -203,18 +203,10 @@ NEW_TIMI:	ds	5	;#4016
 
 	;--- Segment management routines
 
-PUT_P1:				;#401E
-	out	(#FD),a
-	ret
-GET_P1:
-	in	a,(#FD)
-	ret
-PUT_P2:
-	out	(#FE),a
-	ret
-GET_P2:
-	in	a,(#FE)
-	ret
+PUT_P1: ds 3				;#401E
+GET_P1: ds 3
+PUT_P2: ds 3
+GET_P2: ds 3
 
 	;--- RS232 access.
 	;    These entries are copied from Fossil work area at installation time.
@@ -10218,6 +10210,7 @@ IMPNAME:	db	"InterNestor Lite",0
 ;            1: Capabilities and features flags, link level protocol
 ;            2: Connection pool size and status
 ;            3: Maximum datagram size allowed
+;            4: Second set of capabilities flags
 ;Output: A = Error code
 ;        When information block 1 requested:
 ;            HL = Capabilities flags
@@ -10238,13 +10231,32 @@ TCPIP_GET_CAPAB:
 	ld	a,b
 	or	a
 	jp	z,END_INV_PAR
-	cp	4
+	cp	5
 	jp	nc,END_INV_PAR
 
 	dec	a
 	jr	z,GETCAP_1
 	dec	a
 	jr	z,GETCAP_2
+    dec a
+    jr  z,GETCAP_3
+
+	;--- Info block 4
+
+    ; Capability flags ENABLED:
+    ;
+    ; - Obtain all the IPs automatically
+    ; - Obtain all the IPs manually (except peer address unless we use PPP)
+
+    if LINK = 1
+    ld  hl,% 000000 0011110111
+    else
+    ld  hl,% 000000 0011111111
+    endif
+
+    ld  de,0
+    xor a
+    ret
 
 	;--- Info block 3
 
@@ -10326,23 +10338,24 @@ GETCAP_1:
 	; - Send urgent TCP data
 	; - DNS query via local database
 
-	ld	hl,% 0 111011010111101
+	ld	hl,% 1111011010111101
 
 	; Features flags ENABLED:
 	; - TCP user timeout is applied
 	; - Physical link is point to point (PPP version only)
 	; - Checking network state is expensive
+    ; - TTL can be specified in the parameters block of TCPIP_SEND_ECHO
 
 	if	LINK = 0
 
-	ld	de,% 0000000 100001001
+	ld	de,% 000 0001100001001
 	ld	b,2	;PPP protocol
 
 	endif
 
 	if	LINK=1
 
-	ld	de,% 0000000 100001000
+	ld	de,% 000 0001100001000
 	ld	b,3	;Ethernet protocol
 
 	endif
@@ -11444,11 +11457,17 @@ DNS_R_ERR:
 ;+10 (1): Flags:
 ;         bit 0: Set for passive connection
 ;         bit 1: Set for resident connection
+;         bit 2: Use TLS (not supported)
 
 TCPIP_TCP_OPEN:
 	ld	de,USER_DATA
 	ld	bc,11
 	ldir
+
+    ld	a,(USER_DATA+10)
+    and %100
+    ld  a,ERR_NOT_IMP
+    ret nz  ;Error if TLS requested
 
 	call	SETUP_P2
 
@@ -11456,7 +11475,7 @@ TCPIP_TCP_OPEN:
 
 	ld	a,(USER_DATA+10)
 	ld	b,a
-	and	%11111100
+	and	%11111000
 	ld	a,ERR_INV_PARAM
 	jp	nz,RESTORE_P2
 	ld	a,b

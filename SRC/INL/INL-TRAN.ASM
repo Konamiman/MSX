@@ -1,7 +1,7 @@
-;InterNestor Lite v2.0 - TCP/IP stack for MSX2 computers
+;InterNestor Lite v2.1 - TCP/IP stack for MSX2 computers
 ;Transient part (installer and control application)
 ;
-;Copyright (C) 2003-2010 Nestor Soriano (Konamiman)
+;Copyright (C) 2003-2019 Nestor Soriano (Konamiman)
 
 ;This code is prepared for the Compass MSX assembler.
 
@@ -31,7 +31,7 @@ LINK:	equ	1
 ;***                      ***
 ;****************************
 
-	.label	20	;For Compass
+	;.label	20	;For Compass
 
 ;When the following variable is 0, resident code is NOT attached
 ;to timer interrupt hook (for debugging)
@@ -236,48 +236,6 @@ EXEUNAPI:	equ	#402A	;Code to execute Ethernet UNAPI routines
 
 	org	#100
 
-	;--- These dummies are necessary due to the way Compass handles
-	;    labels inside macros.
-	;    If macro calls are added or removed, dummies may be needed
-	;    to be added or removed.
-
-	if	LINK=0
-
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-
-	endif
-
-	if	LINK=1
-
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-	dummy
-
-	endif
-
-
 	;--- Show welcome message
 
 	print	INIT_S
@@ -292,23 +250,29 @@ EXEUNAPI:	equ	#402A	;Code to execute Ethernet UNAPI routines
 	cp	2
 	jr	c,NODOS2
 
+    ld  a,0FFh
+    ld  (DOS2),a
+NODOS2:
+
 	ld	de,#0402
 	xor	a
 	call	EXTBIO
 	or	a
-	jr	z,NODOS2
+	jr	z,NOMAPPER
 	ld	a,#FF
-	ld	(DOS2),a
+	ld	(MAPPER_ROUTINES),a
 	ld	de,_ALL_SEG
 	ld	bc,#30
 	ldir
+NOMAPPER:
 
 	;--- Set program abort handler routine
 
+    ld  a,(DOS2)
+    or  a
 	ld	de,AB_HANDLER
 	ld	c,_DEFAB
-	call	5
-NODOS2:	;
+	call	nz,5
 
 	;--- Extract first parameter from command line,
 	;    if none available, show usage info and exit
@@ -322,7 +286,11 @@ NODOS2:	;
 	jp	FIN
 OKPAR1:
 
-	;--- Check if INL is already installed
+	;--- Check if INL is already installed, but only if mapper support routines are installed
+
+    ld  a,(MAPPER_ROUTINES)
+    or  a
+    jr  z,NOTINST
 
 	;> Get the number of TCP/IP UNAPI implementations
 
@@ -707,7 +675,15 @@ PAR_SIM_I:
 	or	a
 	jp	nz,NOFILE
 
-	;--- Check that the RAM helper is installed
+	;--- Check that the mapper support routines and the RAM helper are installed
+
+    ld  a,(MAPPER_ROUTINES)
+    or  a
+    jr  nz,OKMSR
+
+    print   NOMSR_S
+    jp  FIN
+OKMSR:
 
 	ld	a,#FF
 	ld	de,#2222
@@ -723,6 +699,19 @@ PAR_SIM_I:
 OKRAMHELP:
 	ld	(RAMHELPER),hl
 	ld	(MAPTAB),bc
+
+    ;--- If mapper table supplied by standard mapper support routines is present, use it
+
+    ld  de,0401h
+    xor  a
+    call  EXTBIO
+    or  a
+    ld  a,2
+    jr z,NOMAPTAB
+    ld  (MAPTAB),hl
+    ld  a,8
+NOMAPTAB:
+    ld  (MAPTAB_ENTRY_SIZE),a
 
 	if	LINK=0
 
@@ -965,107 +954,34 @@ OK_SHOWSEG:
 	endif
 
 
-	;============================
-	;===  Segments selection  ===
-	;============================
+	;=============================
+	;===  Segments allocation  ===
+	;=============================
 
-	;--- Check if option /s has been used
+	;--- Allocate two segments in system mode on primary mapper
 
-	ld	a,2
-	ld	de,TEMPBUF
-	call	EXTPAR
-	jr	c,AUTOSEG
-	ld	a,(TEMPBUF)
-	cp	"/"
-	jr	nz,AUTOSEG
-
-	ld	a,(TEMPBUF+1)
-	or	#20
-	cp	"s"
-	jr	nz,BADSEG
-	ld	a,(TEMPBUF+2)
-	cp	":"
-	jr	nz,BADSEG
-	ld	a,(TEMPBUF+3)
-	or	a
-	jr	nz,MANSEG
-
-BADSEG:	print	INVPAR_S
-	jp	FIN
-
-	;--- Manual selection: extract segment number
-
-MANSEG:	ld	a,3
-	ld	(NEXTPAR),a
-	ld	hl,TEMPBUF+3
-	call	EXTNUM8
-	jr	c,BADSEG
-	ld	(SEG1),a
-	inc	a
-	ld	(SEG2),a
-	jr	OKSELSEG
-
-	;--- Automatic selection: DOS 1 or DOS 2?
-
-AUTOSEG:
-	ld	a,2
-	ld	(NEXTPAR),a
-	ld	a,(DOS2)
-	or	a
-	jr	nz,RESEGDOS2
-
-	;--- DOS 1: Check memory size,
-	;    if not at least 128K terminate with error,
-	;    otherwise select the last two segments
-
-RESEGDOS1:
-	ld	de,#B000
-	call	MEMTEST1
-
-	cp	2	;No mapped RAM?
-	jr	nc,OKTEST1_1
-	print	NOMAP_S
-	jp	FIN
-
-OKTEST1_1:
-	cp	6	;Less than 96K?
-	jr	nc,OKTEST1_2
-	print	MAP64_S
-	jp	FIN
-
-OKTEST1_2:
-	dec	a
-	ld	(SEG2),a
-	dec	a
-	ld	(SEG1),a
-	jr	OKSELSEG
-
-	;--- DOS 2: Check if there are at least two free segments
-	;    on primary mapper, if this is the case allocate
-	;    two segments, otherwise terminate with error
-
-RESEGDOS2:
-	ld	de,#0401
-	call	EXTBIO
-	inc	hl
-	inc	hl
-	ld	a,(hl)	;How many free segments?
-	cp	2	;Less than 2: error
-	jr	nc,FRESEGS_OK
-
-	print	NOFREE_S
-	jp	FIN
-
-FRESEGS_OK:
+DOALLS:
 	ld	b,0	;Allocate 2 segments in system mode
 	ld	a,1
 	call	_ALL_SEG
+    jr  c,NOFRESEG
 	ld	(SEG1),a
+
 	ld	b,0
 	ld	a,1
 	call	_ALL_SEG
-	ld	(SEG2),a
+    jr  nc,OKSELSEG
+	
+    ld  a,(SEG1)
+    ld  b,0
+    call    _FRE_SEG
+NOFRESEG:
+	print	NOFREE_S
+	jp	FIN
+
 OKSELSEG:
+    ld	(SEG2),a
+
 
 	;==========================================================
 	;===  Copy and initialize resident code and variables  ===
@@ -1421,6 +1337,8 @@ PATCH_HOOK:
 	ld	(ix+2),h
 
 	ld	hl,(MAPTAB)
+    ld  bc,(MAPTAB_ENTRY_SIZE)
+    ld  b,0
 	ld	a,(#F344)	;Primary mapper slot
 	ld	d,a
 	ld	e,0	;Index on mappers table
@@ -1428,8 +1346,7 @@ SRCHMAP:
 	ld	a,(hl)
 	cp	d
 	jr	z,MAPFND
-	inc	hl
-	inc	hl	;Next table entry
+	add hl,bc	;Next table entry
 	inc	e
 	jr	SRCHMAP
 MAPFND:
@@ -1462,16 +1379,16 @@ INIT_S:
 	db	"InterNestor Lite for the Ethernet UNAPI"
 	endif
 
-	db	" v2.0: TCP/IP stack for MSX-DOS",13,10
+	db	" v2.1: TCP/IP stack for MSX-DOS",13,10
 
-	if	USETIMI=0 then
+	if	USETIMI=0
 	db	"*** NO TIMER!!",13,10
 	endif
-	db	"By Konamiman, 4/2010",13,10,13,10,"$"
+	db	"By Konamiman, 6/2019",13,10,13,10,"$"
 
 INFO_S:	db	"Frequently used options:",13,10,13,10
 
-	db	"INL I [/s:<seg>]",13,10
+	db	"INL I",13,10
 	db	"Installs InterNestor Lite.",13,10,13,10
 
 	db	"INL U",13,10
@@ -1534,7 +1451,12 @@ TWOLINES:	db	13,10,13,10,"$"
 
 	;--- TCP/IP UNAPI related
 
-NORAMHELP_S:	db	"*** No UNAPI RAM helper found.",13,10,"$"
+NORAMHELP_S:	db	"*** No UNAPI RAM helper found.",13,10
+                db  "    Install it with RAMHELPR.COM from www.konamiman.com"
+                db  13,10,"$"
+NOMSR_S:        db  "*** No mapper support routines found.",13,10
+                db  "    Install it with MSR.COM from www.konamiman.com"
+                db  13,10,"$"
 TCPIP_S:	db	"TCP/IP",0
 INLID_S:	db	"InterNestor Lite",0
 
@@ -1583,7 +1505,7 @@ CAN_UNINST:
 
 	di
 
-	if	USETIMI=1 then
+	if	USETIMI=1
 
 	di
 	ld	hl,OLD_TIMI
@@ -1602,11 +1524,7 @@ CAN_UNINST:
 
 	ei
 
-	;--- Free allocated segments if DOS2 present
-
-	ld	a,(DOS2)
-	or	a
-	jr	z,NOFRE
+	;--- Free allocated segments
 
 	ld	a,(#F344)
 	ld	b,a
@@ -1616,7 +1534,6 @@ CAN_UNINST:
 	ld	b,a
 	ld	a,(RES_SEG2)
 	call	_FRE_SEG
-NOFRE:	;
 
 	;--- Show information and terminate
 
@@ -4587,90 +4504,6 @@ B2A_2XX:
 	jr	B2A_XXX
 
 
-;--- Direct memory test (for DOS 1)
-;    INPUT:   DE = 256 byte buffer, it must NOT be in page 1
-;             The slot to be tested must be switched on page 1
-;    OUTPUT:  A  = Number of available segments, or:
-;                  0 -> Error: not a RAM slot
-;                  1 -> Error: not mapped RAM
-;    MODIFIES: F, HL, BC, DE
-
-MEMTEST1:
-	ld	a,(#5001)	;Check if it is actually RAM
-	ld	h,a
-	cpl
-	ld	(#5001),a
-	ld	a,(#5001)
-	cpl
-	ld	(#5001),a
-	cpl
-	cp	h
-	ld	a,0
-	ret	z
-
-	ld	hl,#4001	;Test address
-	in	a,(#FD)
-	push	af	;A  = Current page 2 segment
-	push	de	;DE = Buffer
-	ld	b,0
-
-	;* Loop for all segment numbers from 0 to 255
-
-MT1BUC1:
-	ld	a,b	;Switch segment on page 1
-	out	(#FD),a
-
-	ld	a,(hl)
-	ld	(de),a 	;Save data on the test address...
-	ld	a,b
-	ld	(hl),a	;...then write the supposed segment number on test address
-	inc	de
-	inc	b
-	ld	a,b
-	cp	0
-	jr	nz,MT1BUC1
-
-	;* Negate the value of test address for segment 0:
-	;  this is the number of segments found (0 for 256)
-
-	out	(#FD),a
-	ld	a,(hl)
-	neg
-	ld	(NUMSGS),a
-	ld	b,0
-	ld	c,a
-	pop	de
-
-	;* Restore original value of test address for all segments
-
-MT1BUC2:
-	ld	a,b
-	out	(#FD),a
-	ld	a,(de)
-	ld	(hl),a
-	inc	de
-	inc	b
-	ld	a,b
-	cp	c
-	jr	nz,MT1BUC2
-
-	;* Restore original segment on page 1 and return number of segments
-
-	pop	af
-	out	(#FD),a
-	ld	a,(NUMSGS)
-	cp	1	;No mapped RAM?
-	jr	z,NOMAP1
-	or	a
-	ret	nz
-	ld	a,#FF	;If 256 segments, return 255
-	ret
-NOMAP1:	xor	a
-	ret
-
-NUMSGS:	db	0
-
-
 ;--- Initialization of INL variables on data segment
 ;    (assumes data segment switched on page 2)
 
@@ -5142,21 +4975,12 @@ _PUT_PH:	ds	3
 _GET_PH:	ds	3
 _PUT_P0:	ds	3
 _GET_P0:	ds	3
-_PUT_P1:
-	out	(#FD),a
-	ret
-_GET_P1:
-	in	a,(#FD)
-	ret
-_PUT_P2:
-	out	(#FE),a
-	ret
-_GET_P2:
-	in	a,(#FE)
-	ret
+_PUT_P1:    ds  3
+_GET_P1:    ds  3
+_PUT_P2:    ds  3
+_GET_P2:    ds  3
 _PUT_P3:	ds	3
 _GET_P3:	ds	3
-
 
 	if	LINK=1
 
@@ -5891,6 +5715,7 @@ UNAPIID_S:	db	"ETHERNET",0
 ;*******************
 
 DOS2:		db	0	;0 under DOS 1, #FF under DOS 2
+MAPPER_ROUTINES: db 0   ;0FFh if mapper support routines available
 SEG1:		db	0	;Code segment number
 SEG2:		db	0	;Data segment number
 P3DIR:		dw	0	;Address of page 3 code
@@ -5899,6 +5724,9 @@ IS_FILE:	db	0	;#FF if parsing a configuration file
 IS_FILE_INS:	db	0	;idem, at installation time
 RAMHELPER:	dw	0	;Address of UNAPI RAM helper
 MAPTAB:		dw	0	;Address of UNAPI mappers table
+MAPTAB_ENTRY_SIZE: db   0   ;Size of an entry in the mappers table:
+                              ;- 8 in DOS 2 (mappers table provided by standard mapper support routines),
+                              ;- 2 in DOS 1 (mappers table provided by the RAM helper)
 
 	if	LINK=1
 
@@ -5922,4 +5750,3 @@ TEMPBUF2:	ds	128
 FCBS:
 
 INL_CODE:
-
