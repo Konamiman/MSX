@@ -110,7 +110,7 @@ ERR_INV_OPER:           equ     15
         push    bc
         push    de
         push    hl
-        ld      e,@c
+        ld      e,char
         ld      c,2
         call    DO_DOS
         pop     hl
@@ -136,12 +136,12 @@ ERR_INV_OPER:           equ     15
         ld      a,0FFh
         ld      (USER_COM_BUF),a
 
-        ;--- Muestra la cadena inicial
+        ;--- Show welcome string
 
-        print   PRESEN_S        ;Presentation string
+        print   PRESEN_S
         ld      (SAVESP),sp
 
-        ;--- Comprueba la version del DOS
+        ;--- Check DOS version
 
         ld      c,_DOSVER
         call    DO_DOS
@@ -230,10 +230,9 @@ OK_SET_UNAPI:
         ld      (TPASEG1),a
 NOMAPPER:
 
-        ;--- Comprueba que realmente estemos conectados,
-        ;    en caso contrario muestra error y termina
+        ;--- Check if we have network connectivity
 
-        ld      a,TCPIP_NET_STATE       ;La red esta disponible?
+        ld      a,TCPIP_NET_STATE
         call    CALL_UNAPI
         or      a
         jr      z,CONNECT_OK    ;Assume ok if "unknown"
@@ -276,7 +275,7 @@ CAN_PASSIVE:
         ld      b,0
         call    CALL_UNAPI
 
-        ;--- Comprueba que haya al menos dos conexiones TCP libres
+        ;--- Check if we have at least two TCP connections available
 
         ld      b,2
         ld      a,TCPIP_GET_CAPAB
@@ -290,8 +289,7 @@ CAN_PASSIVE:
 NOFRCON_S:      db      "*** Not enough free TCP connections available (I need two)$"
 OKFRCON:
 
-        ;--- Comprueba que NestorMan 1.21 o superior este instalado,
-        ;    y establece HAY_NMAN en ese caso
+        ;--- Check if NestorMan 1.21 or newer is installed
 
         xor     a       ;Installed?
         nesman  1
@@ -307,9 +305,8 @@ OKNMAN1:        ld      hl,0201h        ;Installed: now check version
         ld      (HAY_NMAN),a
 OKNMAN:
 
-        ;--- Obtiene la IP local.
-        ;    Con esta informacion compone la primera parte
-        ;    de la cadena que forma el comando "PORT".
+        ;--- Get local IP address.
+        ;    With this we compose the first part of the "PORT" command.
 
         ld      a,TCPIP_GET_IPINFO
         ld      b,1
@@ -346,7 +343,7 @@ SET_IP: push    hl
         ret
 OK_SET_PORT:    ;
 
-        ;--- Compone DEF_USER y DEF_PASSWORD
+        ;--- Compose DEF_USER y DEF_PASSWORD
 
         ld      hl,ENV_USER
         ld      de,DEF_USER
@@ -370,12 +367,12 @@ OK_SET_PORT:    ;
         or      a
         jr      nz,OK_DEFUSER
         ld      hl,ANONYMOUS_S
-        ld      de,DEF_USER     ;Por si no hay variable FTP_USER
+        ld      de,DEF_USER     ;In case FTP_USER is not set
         ld      bc,10
         ldir
 OK_DEFUSER:     ;
 
-        ;--- Copia el codigo del gancho CHPUT
+        ;--- Copy the code for the CHPUT hook
 
         ld      hl,HOOK_CODE0
         ld      de,HOOK_CODE
@@ -390,13 +387,13 @@ OK_DEFUSER:     ;
         xor     a
         ld      (ESC_CHAR),a
 
-        ;--- Define la rutina de terminacion
+        ;--- Define termination routine
 
         ld      de,R_ABORT
         ld      c,_DEFAB
         call    DO_DOS
 
-        ;--- Si hay parametros, salta a OPEN
+        ;--- If there are command line arguments, jump to OPEN
 
         ld      hl,80h
         ld      de,USER_COM_BUF+1
@@ -404,11 +401,11 @@ OK_DEFUSER:     ;
         call    EXTPAR
         jr      c,NOPARS
 
-        ld      hl,81h  ;Copia el comando ficticio "X"
+        ld      hl,81h  ;Copy the pseudo-command "X"
         ld      de,USER_COM_BUF+3
-        ld      bc,255  ;y los parametros a USER_COM_BUF,
+        ld      bc,255  ;and parameterts to USER_COM_BUF,
         ldir
-        ld      a,(80h) ;entonces salta a OPEN
+        ld      a,(80h) ;then jump to OPEN
         inc     a
         inc     a
         ld      (USER_COM_BUF+1),a
@@ -427,7 +424,7 @@ NOPARS: ;
 
 MAIN_LOOP:      ld      sp,(SAVESP)
 
-        ;--- Pone ABORT_STAT a 1 o a 2
+        ;--- Set ABORT_STAT to 1 or 2
 
         ld      a,(CONTROL_CON)
         cp      0FFh
@@ -436,7 +433,7 @@ MAIN_LOOP:      ld      sp,(SAVESP)
         inc     a
 MAINLOP_2:      ld      (ABORT_STAT),a
 
-        ;--- Imprime prompt y queda a la espera de un comando
+        ;--- Print prompt and wait for a command
 
         xor     a
         ld      (ES_XCOM),a
@@ -447,16 +444,15 @@ MAINLOP_2:      ld      (ABORT_STAT),a
         call    DO_DOS
         call    LF
 
-        ld      a,(USER_COM_BUF+1)      ;Anyade 0 al final
+        ld      a,(USER_COM_BUF+1)      ;Add 0 at the end
         ld      c,a
         ld      b,0
         ld      hl,USER_COM_BUF+2
         add     hl,bc
         ld      (hl),0
 
-        ;--- Busca en la tabla el comando adecuado,
-        ;    y salta a su rutina.
-        ;    Si no existe, muestra "Unknown command".
+        ;--- Find the command in the table and jump to its routine.
+        ;    If command doesn't exist, show "Unknown command".
 
         ld      hl,USER_COM_BUF+1
         ld      de,PARSE_BUF
@@ -478,7 +474,7 @@ NOADMIRA:       ld      hl,PARSE_BUF
         print   UNKCOM_S
         jr      MAIN_LOOP
 
-COM_OK: ld      a,(CONTROL_CON) ;Flushea datos si hay conexion
+COM_OK: ld      a,(CONTROL_CON) ;Flush data if there's a connection
         cp      0FFh
         jr      z,COM_OK2
         ;call     TCP_STATUS
@@ -488,13 +484,13 @@ COM_OK: ld      a,(CONTROL_CON) ;Flushea datos si hay conexion
         push    hl
         call    R_FLUSH
         pop     hl
-COM_OK2:        call    JP_HL   ;Ejecuta comando
+COM_OK2:        call    JP_HL   ;Execute command
 
         ld      a,(BELL)
         or      a
         jr      z,MAIN_LOOP
 
-        ld      iy,(0FCC1h-1)    ;Ejecuta BEEP si BELL=0FFh
+        ld      iy,(0FCC1h-1)    ;Execute BEEP if BELL=0FFh
         ld      ix,BEEP
         call    CALSLT
         jp      MAIN_LOOP
@@ -887,7 +883,7 @@ LCD_NODRIVE:    ;
 LCD_END:        print   PATHCHAN_S
         jp      PRINT_PATH
 
-LCD_NOPATH:     ld      a,92 ;"\"   ;Si se especifica unidad pero no dir,
+LCD_NOPATH:     ld      a,92 ;"\"       ;Si se especifica unidad pero no dir,
         ld      (RESPONSE_BUF+2),a      ;se muestra el dir actual
         ld      c,_GETCD
         ld      de,RESPONSE_BUF+3
@@ -1245,7 +1241,8 @@ R_LITERAL:      call    CHK_CON
         ld      a,2     ;Va cogiendo los elementos de la cadena
         ;ld     hl,USER_COM_BUF+1       ;pasada por el usuario, y los
         ld      de,SEND_COM_BUF ;copia a SEND_COM_BUF
-LITELOOP:       push    af      ;separados con un espacio
+LITELOOP:       
+        push    af   ;separados con un espacio
         push    de
         ld      hl,USER_COM_BUF+1
         call    EXTPAR
@@ -2307,23 +2304,23 @@ R_XCOMMANDS:    ld      a,3
         jp      TURN_ON_OFF
 
 
-;*** Rutinas auxiliares para la ejecucion de comandos
+;*** Auxiliary routines for command execution
 
-;--- SINGLE_COM: Ejecuta el comando HL sin parametros
+;--- SINGLE_COM: Execute command pointed by HL without parameters
 
 SINGLE_COM:     call    SET_COMMAND
         call    APPEND_LF
         jp      AUTOMATA_NO1
 
-;--- PARAM_COM: Ejecuta el comando HL con parametros ya establecidos
-;               (SEND_COM_BUF contiene "xxxxx<paramatros>")
+;--- PARAM_COM: Execute command pointed by HL with parameters already set
+;               (SEND_COM_BUF contains "xxxxx<parameters>")
 
 PARAM_COM:      call    SET_COMMAND
         call    SET_SPACE
         call    APPEND_LF
         jp      AUTOMATA_NO1
 
-;--- SINGLE_XCOM: Como SINGLE_COM, para comandos "X"
+;--- SINGLE_XCOM: Like SINGLE_COM, for "X" commands
 
 SINGLE_XCOM:    call    SET_COMMAND
         call    APPEND_LF
@@ -2331,7 +2328,7 @@ SINGLE_XCOM:    call    SET_COMMAND
         ld      (ES_XCOM),a
         jp      AUTOMATA_NO1
 
-;--- PARAM_XCOM: Como SINGLE_COM, para comandos "X"
+;--- PARAM_XCOM: Like SINGLE_COM, for "X" commands
 
 PARAM_XCOM:     call    SET_COMMAND
         call    SET_SPACE
@@ -2340,7 +2337,7 @@ PARAM_XCOM:     call    SET_COMMAND
         ld      (ES_XCOM),a
         jp      AUTOMATA_NO1
 
-;--- R_INVPAR: Faltan parametros o son incorrectos
+;--- R_INVPAR: Missing or invalid paramenters
 
 R_INVPAR:       print   INVPAR_S
         ret
@@ -2490,11 +2487,11 @@ FINEXTP:        pop     iy
         pop     hl
         ret
 
-;--- Rutina de terminacion
-;    Aborta las conexiones abiertas, si las hay
-;    y borra la cola de nombres de fichero
 
-TERM:   xor     a       ;Desde ahora, CTRL-C no tiene efecto
+;--- Termination routine
+;    Aborts all open connections and deletes the filenames queue
+
+TERM:   xor     a       ;From now on, CTRL-C has no effect
         ld      (ABORT_STAT),a
 
         ;ld      a,(DATA_CON)
@@ -2520,21 +2517,21 @@ TERM2:
         ld      h,40h
         call    ENASLT
 
-        ld      a,(TPASEG1)     ;Restaura TPA
+        ld      a,(TPASEG1)     ;Restore TPA
         call    PUT_P1
 
-        ld      a,(FILES_QUEUE) ;Borra cola de nombres de fichero
+        ld      a,(FILES_QUEUE) ;Delete filenames queue
         cp      0FFh
         jr      z,TERM_Q_OK
         ld      ix,0
         nesman  22
 TERM_Q_OK:      ;
 
-        ld      de,0    ;Desdefine rutina de CTRL-C
+        ld      de,0    ;Undefines CTRL-C handling routine
         ld      c,_DEFAB
         call    DO_DOS
 
-        ld      bc,_TERM+0*256  ;Termina
+        ld      bc,_TERM+0*256  ;Terminates
         jp      DO_DOS
 
 ;--- Prints LF
@@ -2968,7 +2965,7 @@ ROTA:   sla     l
         ret
 
 
-;--- PRINT_L: Imprime la cadena DE, acabada en CRLF
+;--- PRINT_L: Prints CRLF terminated string pointed by DE
 
 PRINT_L:        ld      a,(de)
         push    af
@@ -2983,7 +2980,8 @@ PRINT_L:        ld      a,(de)
         inc     de
         jr      PRINT_L
 
-;--- PRINT_Z: Imprime la cadena DE, acabada en cero
+
+;--- PRINT_Z: Prints zero terminated string pointed by DE
 
 PRINT_Z:        ld      a,(de)
         or      a
@@ -2996,8 +2994,9 @@ PRINT_Z:        ld      a,(de)
         inc     de
         jr      PRINT_Z
 
-;--- SHOW_ERR: Muestra la cadena DE, y a continuacion
-;    busca un error con codigo A en la tabla HL, y lo muestra.
+
+;--- SHOW_ERR: Show string pointed by DE, then search an error
+;    with code A in table pointed by HL and print it
 
 SHOW_ERR        push    af
         push    hl
@@ -3028,11 +3027,12 @@ ERROR_FOUND:    ld      c,_STROUT       ;Print error string
         scf
         ret
 
-;--- SEARCH_COM: Busca un comando en la tabla de idems
-;    Entrada: HL = Dir. del comando, acabado en 0
-;    Salida:  HL = Dir de la rutina del comando
-;             DE = Dir de la ayuda del comando
-;       Cy = 1 si no existe
+
+;--- SEARCH_COM: Search a command in the commands table
+;    Input:  HL = Zero terminated command
+;    Output: HL = Command routine address
+;            DE = Command help text address
+;            Cy = 1: unknown command
 
 SEARCH_COM:     ld      (COMM_DIR),hl
 
@@ -3050,14 +3050,14 @@ SRCH_C_LOOP:    inc     hl
         ld      a,(de)
         cp      "A"
         jr      c,SRCH_C_LP2
-        and     11011111b       ;Lo transforma a mayusculas
+        and     11011111b       ;Convert to upper case
 SRCH_C_LP2:     cp      (hl)
         jr      nz,NEXT_COM
         or      a
         jr      nz,SRCH_C_LOOP
 
         inc     hl
-        push    hl      ;Comando encontrado
+        push    hl      ;Command found
         pop     ix
         ld      l,(ix)
         ld      h,(ix+1)
@@ -3079,9 +3079,9 @@ NEXT_COM:       ld      a,(hl)
 COMM_DIR:       dw      0
 
 
-;--- TURN_ON_OFF: Intercambia el valor de una variable
-;    Entrada: HL = Variable
-;             DE = Cadena para imprimir "xxx turned ON/OFF"
+;--- TURN_ON_OFF: Change the status of a boolean variable
+;    Entrada: HL = Variable address
+;             DE = String to print "xxx turned ON/OFF"
 
 TURN_ON_OFF:    push    de
         ld      a,(hl)
@@ -3102,8 +3102,8 @@ TONOFF2:        pop     de
         jp      CRLF
 
 
-;--- SHOW_ON_OFF: Muestra la cadena DE, y luego "ON" o "OFF"
-;                 segun el valor de la variable HL.
+;--- SHOW_ON_OFF: Prints string pointed by DE, then "ON" or"OFF"
+;                 according to the variable value pointed by HL.
 
 SHOW_ON_OFF:    push    hl
         ld      c,_STROUT
@@ -3119,7 +3119,7 @@ SHOWONOFF2:     ld      c,_STROUT
         jp      CRLF
 
 
-;--- APPEND_LF: Aqade CRLF al final de la cadena en SEND_COM_BUF (acabada en 0)
+;--- APPEND_LF: Adds CRLF at the end of the zero-terminated string at SEND_COM_BUF
 
 APPEND_LF:      ld      hl,SEND_COM_BUF-1
 APLF_L: inc     hl
@@ -3132,7 +3132,7 @@ APLF_L: inc     hl
         ret
 
 
-;--- SET_COMMAND: Copia el comando HL a SEND_COM_BUF, acabado en 0
+;--- SET_COMMAND: Copies command HL to SEND_COM_BUF, zero terminated
 
 SET_COMMAND:    ld      de,SEND_COM_BUF
         ld      bc,5
@@ -3149,8 +3149,8 @@ SETCOM2:        ldir
         ret
 
 
-;--- SET_SPACE: Pone un espacio tras el comando en SEND_COM_BUF
-;               (donde esta el 0)
+;--- SET_SPACE: Set a space after the command at SEND_COM_BUF 
+;               (in lieu of the terminating 0)
 
 SET_SPACE:      ld      hl,SEND_COM_BUF-1
 SETSPACE2:      inc     hl
@@ -3161,8 +3161,8 @@ SETSPACE2:      inc     hl
         ret
 
 
-;--- DOS: Llama a una funcion del DOS, y en caso de error,
-;         imprime su codigo y vuelve con Cy=1
+;--- DOS: Execute a DOS function call, and in case of error,
+;         print its code and return Cy=1
 
 DOS:    call    DO_DOS
         or      a
@@ -3171,16 +3171,16 @@ DOS:    call    DO_DOS
 DOS2:   push    hl
         push    de
         push    bc
-        ld      b,a     ;Si se esta haciendo un DIR, el error 0D7h
-        ld      a,(LDIR_EXE)    ;(file not found) no se imprime
+        ld      b,a           ;If DIR is in progress, 0D7h
+        ld      a,(LDIR_EXE)  ;(file not found) is not printed
         or      a
         jr      z,DOS3
         ld      a,b
         cp      0D7h
         jr      z,DOS5
-DOS3:   ld      a,(PUT_EXE)     ;Si se esta haciendo un PUT,
-        or      a       ;el error 0C7h (end of file)
-        jr      z,DOS4  ;no se imprime
+DOS3:   ld      a,(PUT_EXE)   ;If PUT is in progress,
+        or      a             ;error 0C7h (end of file)
+        jr      z,DOS4        ;is not printed
         ld      a,b
         cp      0C7h
         jr      z,DOS5
@@ -3196,9 +3196,9 @@ DOS5:   scf
         pop     hl
         ret
 
-;--- PRINT_PATH: Muestra la unidad+directorio actual y un fin de linea
+;--- PRINT_PATH: Prints currend drive+directory plus CRLF
 
-PRINT_PATH:     ld      c,_CURDRV       ;Muestra unidad
+PRINT_PATH:     ld      c,_CURDRV  ;Drive
         call    DO_DOS
         add     "A"
         ld      e,a
@@ -3211,7 +3211,7 @@ PRINT_PATH:     ld      c,_CURDRV       ;Muestra unidad
         ld      c,_CONOUT
         call    DO_DOS
 
-        ld      b,0     ;Muestra dir y CRLF
+        ld      b,0     ;Directory+CRLF
         ld      de,RESPONSE_BUF
         ld      c,_GETCD
         call    DO_DOS
@@ -3220,9 +3220,9 @@ PRINT_PATH:     ld      c,_CURDRV       ;Muestra unidad
 
 
 ;--- ASK_YNAC
-;    - Imprime "(y,n,a,c)?"
-;    - Obtiene un caracter del teclado
-;    - Devuelve 0,1,2,3 para y,n,a,c respectivamente.
+;    - Prints "(y,n,a,c)?"
+;    - Reads a character from keyboard
+;    - Returns 0,1,2,3 for y,n,a,c respectively
 
 ASK_YNAC:       print   YNAC_S
 
@@ -3252,13 +3252,13 @@ ASK_YNAC3:      push    bc
         ret
 
 
-;--- PRINT_PAUSE: Imprime el caracter A, y si PAUSE=0FFh,
-;                 realiza una pausa "Press any key to continue"
-;                 cuando se muestra una pantalla llena.
-;                 Se ha de inicializar con BYTE_COUNT y LINE_COUNT a 0.
+;--- PRINT_PAUSE: Print character passed in A, and if PAUSE=0FFh,
+;                 does a "Press any key to continue" pause
+;                 if the screen is full of text.
+;                 Must be initialized with BYTE_COUNT and LINE_COUNT to 0.
 
-PRINT_PAUSE:    cp      0Ch      ;Si es "borrar panrtalla",
-        jr      z,PPAUSE_CLS    ;actua como pantalla llena
+PRINT_PAUSE:    cp      0Ch     ;If character is "clear screen",
+        jr      z,PPAUSE_CLS    ;act as if the screen was full
         push    af
         ld      e,a
         ld      c,_CONOUT
@@ -3269,8 +3269,8 @@ PRINT_PAUSE:    cp      0Ch      ;Si es "borrar panrtalla",
         ret     z
 
         ld      a,(BYTE_COUNT)
-        inc     a       ;Si se encuentra LF, o se han cogido 80 caracteres,
-        ld      (BYTE_COUNT),a  ;se cambia de linea
+        inc     a               ;If LF found, or if 80 characters printed,
+        ld      (BYTE_COUNT),a  ;change line
         cp      80
         jr      z,PPAUSE_NEWL
         ld      a,b
@@ -3279,13 +3279,13 @@ PRINT_PAUSE:    cp      0Ch      ;Si es "borrar panrtalla",
 
 PPAUSE_NEWL:    xor     a
         ld      (BYTE_COUNT),a
-        ld      a,(LINE_COUNT)  ;Si era LF, PAUSE=0FFh, y era la linea 23,
-        inc     a       ;imprime "Press any key" y hace una pausa
+        ld      a,(LINE_COUNT)   ;If it was LF, PAUSE=0FFh, and line was 23,
+        inc     a                ;print "Press any key" and pause
         ld      (LINE_COUNT),a
         cp      23
         ret     nz
 
-PPAUSE_NEWS:    xor     a       ;Pantalla llena
+PPAUSE_NEWS:    xor     a        ;Screen is full
         ld      (LINE_COUNT),a
         ld      (BYTE_COUNT),a
         print   PRESS_S
@@ -3307,7 +3307,7 @@ PPAUSE_CLS:     call    PPAUSE_NEWS
         jp      DO_DOS
 
 
-;--- CLOSE_FILE: Cierra fichero abierto si lo hay
+;--- CLOSE_FILE: Close the open file if any
 
 CLOSE_FILE:     ld      a,(FILE_FH)
         cp      0FFh
@@ -4838,7 +4838,7 @@ HOOK_C0_OK:     push    af
         push    hl
 HOOK_CODE0_END: ;
 
-;--- Rutinas para establecer y resetear el gancho
+;--- Routines to set and reset the hook
 
 SET_HOOK:       push    af
         push    bc
@@ -5078,7 +5078,7 @@ DATA_START:
 IP_LOCAL:       ds      4
 IP_REMOTE:      ds      4
 PORT_REMOTE_C:  dw      21
-PORT_REMOTE_I:  dw      0       ;Ident: el puerto local sera el 113
+PORT_REMOTE_I:  dw      0       ;Ident: local port will be 113
 PORT_REMOTE_D:  dw      0
 HAY_NMAN:       db      0
 DATA_CON:       db      0FFh
@@ -5088,7 +5088,7 @@ VERBOSE:        db      0FFh
 XCOM:   db      0
 ES_XCOM:        db      0
 SAVESP: dw      0
-TYPE:   db      0       ;0 para ASCII, 1 para binario
+TYPE:   db      0       ;0 for ASCII, 1 for binary
 DEBUG:  db      0
 BELL:   db      0
 HASH:   db      0
@@ -5097,10 +5097,10 @@ PAUSE:  db      0
 PASSIVE:        db      0
 OLD_TYPE:       db      0
 OLD_VERBOSE:    db      0
-PORT_C_PNT:     dw      C_PORT+5        ;Puntero a la parte "puerto" de PORT_C
+PORT_C_PNT:     dw      C_PORT+5        ;Pointer to the "port" part of PORT_C
 FILE_FH:        db      0FFh
-FILES_QUEUE:    db      0FFh     ;Cola para guardar los nombres de fichero
-QUITTING:       db      0       ;0FFh cuando se esta cerrando/saliendo
+FILES_QUEUE:    db      0FFh
+QUITTING:       db      0        ;0FFh when we are closing/exiting
 ALLFILES:       db      0
 ALSO_RONLY:     db      0
 LINE_COUNT:     db      0
@@ -5108,8 +5108,8 @@ BYTE_COUNT:     db      0
 INS_IX: dw      0
 ABORT_STAT:     db      0
 LAST_REPLY:     db      0
-MSS:    dw      448     ;Valor fijo
-HOOKING:        db      0       ;0FFh cuando el gancho CHPUT esta parcheado
+MSS:    dw      448             ;Fixed value
+HOOKING:        db      0       ;0FFh when CHPUT hook is patched
 UNAPI_IS_SET:   db      0       ;0FFh when UNAPI slot/seg is switched on page 1
 
 ;--- Pseudo-TCBs
@@ -5132,7 +5132,7 @@ IP_REMOTE_D:    db      0,0,0,0
         ;db     0FFh     ;Is passive
 
 
-;--- Cadenas de texto (informacion y errores)
+;--- Information and error strings
 
 PRESEN_S:       db      13,10,"FTP client for the TCP/IP UNAPI 1.0",13,10
         db      "By Konamiman, 4/2010",13,10,10
@@ -5227,7 +5227,7 @@ IDENT_S:        db      ":USERID:OTHER:MSX-DOS 2 running FTP for the TCP/IP UNAP
 IDENT_S_END:    ;
 IDENT_LEN:      equ     IDENT_S_END-IDENT_S
 
-;--- Cadenas de ayuda
+;--- Help strings
 
 BIGHELP_H:      db      13,10,"Available commands:",13,10,10
         db      "?               dir             ls              recv",13,10
@@ -5399,7 +5399,7 @@ H_SHOW: db      "SHOW <filename>",13,10
 H_STATUS:       db      "STATUS",13,10
         db      "Shows the current status of the application.",13,10,"$"
 
-H_TYPE: db      "TYPE A|I"
+H_TYPE: db      "TYPE A|I",13,10
         db      "Sets the file transfer type to ASCII (A) or binary (I).",13,10
         db      "Commands ASCII and BINARY can be used for the same purpose.",13,10,"$"
 
@@ -5421,7 +5421,7 @@ H_XCOMMANDS:    db      "XCOMMANDS",13,10
         db      "XMKD, XRMD, XPWD, XCUP and XCWD are sent to the FTP server",13,10
         db      "instead of MKD, RMD, PWD, CDUP and CWD, respectively.",13,10,"$"
 
-;--- Comandos para enviar al servidor FTP
+;--- Commands for the FTP server
 
 C_ABOR: db      "ABOR",0
 C_ACCT: db      "ACCT",0
@@ -5448,7 +5448,7 @@ C_USER: db      "USER",0
 C_XCUP: db      "XCUP",0
 
 
-;--- Tabla de comandos de usuario y direccion de su rutina y texto de ayuda
+;--- User commands table, R_ is the routine address and H_ is the help text
 
 COMMAND_TABLE:
 
@@ -5704,7 +5704,7 @@ COMMAND_TABLE:
 
         db      0
 
-;--- Tabla de errores DNS
+;--- DNS errors table
 
 DNSERRS_T:      db      1,"Query format error$"
         db      2,"Server failure$"
@@ -5736,59 +5736,58 @@ DNSQERRS_T:     db      ERR_NO_NETWORK,"No network connection$"
         db      0
 
 
-;--- Tabla de errores al abrir una conexion
+;--- Connection opening errors table
 
 OPENERR_T:      db      ERR_NO_FREE_CONN,"Too many TCP connections opened$"
-                db      ERR_NO_NETWORK,"No network connection found$"
-                db      ERR_CONN_EXISTS,"Connection already exists, try another local port number$"
-                db      ERR_INV_PARAM,"Invalid parameter when opening connection$"
-                db      0
+        db      ERR_NO_NETWORK,"No network connection found$"
+        db      ERR_CONN_EXISTS,"Connection already exists, try another local port number$"
+        db      ERR_INV_PARAM,"Invalid parameter when opening connection$"
+        db      0
 
         db      0
 
 DATA_END:
 
-;--- Bufer para el comando tecleado por el usuario
+;--- Buffer for user-typed command
 
 USER_COM_BUF:   equ     DATA_END
 
-;--- Bufer para el primer comando a enviar
+;--- Buffer for the first command to be sent
 
 SEND_COM_BUF:   equ     USER_COM_BUF+270
 
-;--- Bufer para el nombre del servidor
+;--- Buffer for the server name
 
 SERVER_NAME:    equ     SEND_COM_BUF+270
 
-;--- Bufer para la respuesta del servidor
+;--- Buffer for the server reply
 
 RESPONSE_BUF:   equ     SERVER_NAME+257
 
-;--- Bufer para examinar el comando del usuario
+;--- Buffer to parse the user command
 
 PARSE_BUF:      equ     RESPONSE_BUF+257
 
-;--- Bufer para GET_DATA
+;--- Buffer for GET_DATA
 
 GDATA_CBUF:     equ     PARSE_BUF+257
 GDATA_DBUF:     equ     GDATA_CBUF+257
 
-;--- Bufer para coger datos de la conexion de idem
+;--- Buffer for retrieving data from the data connection
 
 DATA_BUF:       equ     GDATA_DBUF+257
 
-;--- Buferes para el nombre de usuario y password por defecto
+;--- Buffers for the default username and password
 
 DEF_USER:       equ     DATA_BUF+1510
 DEF_PASSWORD:   equ     DEF_USER+257
 DEF_ACCOUNT:    equ     DEF_PASSWORD+257
 
-;--- Espacio para la rutina HOOK
+;--- Buffer for the HOOK routine
 
 HOOK_CODE:      equ     DEF_ACCOUNT+257
 
-        ;Donde colocaremos el gancho antiguo
-        ;(justo despues del codigo nuevo)
+        ;Where goes the old hook (right afther the new code)
 
 HOOK_OLD:       equ     HOOK_CODE0_END-HOOK_CODE0+HOOK_CODE
 ESC_CHAR:       equ     HOOK_OLD+5
