@@ -5446,70 +5446,258 @@ C_XCUP: db      "XCUP",0
 
 ;--- Tabla de comandos de usuario y direccion de su rutina y texto de ayuda
 
-COM_ENTRY:      macro   @c      ;Entrada para comando normal
-        db      "@c",0
-        dw      R_@c
-        dw      H_@c
-        endm
+COMMAND_TABLE:
 
-COM_ENTRY2:     macro   @c,@x   ;Entrada para alias
-        db      "@c",0
-        dw      R_@x
-        dw      H_@x
-        endm
+        ;?,HELP
+        db      "?",0
+        dw      R_HELP
+        dw      H_HELP
 
-COMMAND_TABLE:                  ;
+        ;!,LITERAL
+        db      "!",0
+        dw      R_LITERAL
+        dw      H_LITERAL
 
-        COM_ENTRY2      ?,HELP
-        COM_ENTRY2      !,LITERAL
-        COM_ENTRY       APPEND
-        COM_ENTRY       ASCII
-        COM_ENTRY       BELL
-        COM_ENTRY2      BYE,QUIT
-        COM_ENTRY       BINARY
-        COM_ENTRY       CD
-        COM_ENTRY       CDUP
-        COM_ENTRY       CLOSE
-        COM_ENTRY       DEBUG
-        COM_ENTRY       DELETE
-        COM_ENTRY       DIR
-        COM_ENTRY2      DISCONNECT,CLOSE
-        ;COM_ENTRY                FLUSH
-        COM_ENTRY       GET
-        COM_ENTRY       HASH
-        COM_ENTRY       HELP
-        COM_ENTRY       LCD
-        COM_ENTRY       LDELETE
-        COM_ENTRY       LDIR
-        COM_ENTRY       LITERAL
-        COM_ENTRY       LMKDIR
-        COM_ENTRY       LRENAME
-        COM_ENTRY       LRMDIR
-        COM_ENTRY       LS
-        COM_ENTRY       LSHOW
-        COM_ENTRY       MDELETE
-        COM_ENTRY       MGET
-        COM_ENTRY       MKDIR
-        COM_ENTRY       MPUT
-        COM_ENTRY       OPEN
-        COM_ENTRY       PASSIVE
-        COM_ENTRY       PROMPT
-        COM_ENTRY       PAUSE
-        COM_ENTRY2      PUT,SEND
-        COM_ENTRY       PWD
-        COM_ENTRY       QUIT
-        COM_ENTRY2      QUOTE,LITERAL
-        COM_ENTRY2      RECV,GET
-        COM_ENTRY       REMOTEHELP
-        COM_ENTRY       RENAME
-        COM_ENTRY       RMDIR
-        COM_ENTRY       SEND
-        COM_ENTRY       SHOW
-        COM_ENTRY       STATUS
-        COM_ENTRY       TYPE
-        COM_ENTRY       USER
-        COM_ENTRY       VERBOSE
-        COM_ENTRY       XCOMMANDS
+        ;APPEND
+        db      "APPEND",0
+        dw      R_APPEND
+        dw      H_APPEND
+
+        ;ASCII
+        db      "ASCII",0
+        dw      R_ASCII
+        dw      H_ASCII
+
+        ;BELL
+        db      "BELL",0
+        dw      R_BELL
+        dw      H_BELL
+
+        ;BYE,QUIT
+        db      "BYE",0
+        dw      R_QUIT
+        dw      H_QUIT
+
+        ;BINARY
+        db      "BINARY",0
+        dw      R_BINARY
+        dw      H_BINARY
+
+        ;CD
+        db      "CD",0
+        dw      R_CD
+        dw      H_CD
+
+        ;CDUP
+        db      "CDUP",0
+        dw      R_CDUP
+        dw      H_CDUP
+
+        ;CLOSE
+        db      "CLOSE",0
+        dw      R_CLOSE
+        dw      H_CLOSE
+
+        ;DEBUG
+        db      "DEBUG",0
+        dw      R_DEBUG
+        dw      H_DEBUG
+
+        ;DELETE
+        db      "DELETE",0
+        dw      R_DELETE
+        dw      H_DELETE
+
+        ;DIR
+        db      "DIR",0
+        dw      R_DIR
+        dw      H_DIR
+
+        ;DISCONNECT,CLOSE
+        db      "DISCONNECT",0
+        dw      R_CLOSE
+        dw      H_CLOSE
+        
+        ;FLUSH
+        ;db      "FLUSH",0
+        ;dw      R_FLUSH
+        ;dw      H_FLUSH
+
+        ;GET
+        db      "GET",0
+        dw      R_GET
+        dw      H_GET
+
+        ;HASH
+        db      "HASH",0
+        dw      R_HASH
+        dw      H_HASH
+
+        ;HELP
+        db      "HELP",0
+        dw      R_HELP
+        dw      H_HELP
+
+        ;LCD
+        db      "LCD",0
+        dw      R_LCD
+        dw      H_LCD
+
+        ;LDELETE
+        db      "LDELETE",0
+        dw      R_LDELETE
+        dw      H_LDELETE
+
+        ;LDIR
+        db      "LDIR",0
+        dw      R_LDIR
+        dw      H_LDIR
+
+        ;LITERAL
+        db      "LITERAL",0
+        dw      R_LITERAL
+        dw      H_LITERAL
+
+        ;LMKDIR
+        db      "LMKDIR",0
+        dw      R_LMKDIR
+        dw      H_LMKDIR
+
+        ;LRENAME
+        db      "LRENAME",0
+        dw      R_LRENAME
+        dw      H_LRENAME
+
+        ;LRMDIR
+        db      "LRMDIR",0
+        dw      R_LRMDIR
+        dw      H_LRMDIR
+
+        ;LS
+        db      "LS",0
+        dw      R_LS
+        dw      H_LS
+
+        ;LSHOW
+        db      "LSHOW",0
+        dw      R_LSHOW
+        dw      H_LSHOW
+
+        ;MDELETE
+        db      "MDELETE",0
+        dw      R_MDELETE
+        dw      H_MDELETE
+
+        ;MGET
+        db      "MGET",0
+        dw      R_MGET
+        dw      H_MGET
+
+        ;MKDIR
+        db      "MKDIR",0
+        dw      R_MKDIR
+        dw      H_MKDIR
+
+        ;MPUT
+        db      "MPUT",0
+        dw      R_MPUT
+        dw      H_MPUT
+
+        ;OPEN
+        db      "OPEN",0
+        dw      R_OPEN
+        dw      H_OPEN
+
+        ;PASSIVE
+        db      "PASSIVE",0
+        dw      R_PASSIVE
+        dw      H_PASSIVE
+
+        ;PROMPT
+        db      "PROMPT",0
+        dw      R_PROMPT
+        dw      H_PROMPT
+
+        ;PAUSE
+        db      "PAUSE",0
+        dw      R_PAUSE
+        dw      H_PAUSE
+
+        ;PUT,SEND
+        db      "PUT",0
+        dw      R_SEND
+        dw      H_SEND
+
+        ;PWD
+        db      "PWD",0
+        dw      R_PWD
+        dw      H_PWD
+
+        ;QUIT
+        db      "QUIT",0
+        dw      R_QUIT
+        dw      H_QUIT
+
+        ;QUOTE,LITERAL
+        db      "QUOTE",0
+        dw      R_LITERAL
+        dw      H_LITERAL
+
+        ;RECV,GET
+        db      "RECV",0
+        dw      R_GET
+        dw      H_GET
+
+        ;REMOTEHELP
+        db      "REMOTEHELP",0
+        dw      R_REMOTEHELP
+        dw      H_REMOTEHELP
+
+        ;RENAME
+        db      "RENAME",0
+        dw      R_RENAME
+        dw      H_RENAME
+
+        ;RMDIR
+        db      "RMDIR",0
+        dw      R_RMDIR
+        dw      H_RMDIR
+
+        ;SEND
+        db      "SEND",0
+        dw      R_SEND
+        dw      H_SEND
+
+        ;SHOW
+        db      "SHOW",0
+        dw      R_SHOW
+        dw      H_SHOW
+
+        ;STATUS
+        db      "STATUS",0
+        dw      R_STATUS
+        dw      H_STATUS
+
+        ;TYPE
+        db      "TYPE",0
+        dw      R_TYPE
+        dw      H_TYPE
+
+        ;USER
+        db      "USER",0
+        dw      R_USER
+        dw      H_USER
+
+        ;VERBOSE
+        db      "VERBOSE",0
+        dw      R_VERBOSE
+        dw      H_VERBOSE
+
+        ;XCOMMANDS
+        db      "XCOMMANDS",0
+        dw      R_XCOMMANDS
+        dw      H_XCOMMANDS
+
         db      0
 
 ;--- Tabla de errores DNS
