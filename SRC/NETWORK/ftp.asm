@@ -11,8 +11,8 @@
 
 nesman: macro   @f      ;Llamada indirecta a las funciones de NestorMan
         ld      c,@f
-        ld      de,#2202
-        call    #FFCA
+        ld      de,2202h
+        call    0FFCAh
         endm
 
 print:  macro   @d      ;Imprime una cadena acabada en "$"
@@ -31,44 +31,44 @@ printz: macro   @d      ;Imprime una cadena acabada en cero
         call    PRINT_Z
         endm
 
-_TERM0: equ     #00
-_CONOUT:        equ     #02     ;Some DOS function calls
-_DIRIO: equ     #06
-_INNOE: equ     #08
-_STROUT:        equ     #09
-_BUFIN: equ     #0A
-_CONST: equ     #0B
-_SELDSK:        equ     #0E
-_CURDRV:        equ     #19
-_ALLOC: equ     #1B
-_FFIRST:        equ     #40
-_FNEXT: equ     #41
-_OPEN:  equ     #43
-_CREATE:        equ     #44
-_CLOSE: equ     #45
-_READ:  equ     #48
-_WRITE: equ     #49
-_DELETE:        equ     #4D
-_RENAME:        equ     #4E
-_ATTR:  equ     #50
-_GETCD: equ     #59
-_CHDIR: equ     #5A
-_PARSE: equ     #5B
-_TERM:  equ     #62
-_DEFAB: equ     #63
-_ERROR: equ     #65
-_EXPLAIN:       equ     #66
-_GENV:  equ     #6B
-_DOSVER:        equ     #6F
+_TERM0: equ     00h
+_CONOUT:        equ     02h     ;Some DOS function calls
+_DIRIO: equ     06h
+_INNOE: equ     08h
+_STROUT:        equ     09h
+_BUFIN: equ     0Ah
+_CONST: equ     0Bh
+_SELDSK:        equ     0Eh
+_CURDRV:        equ     19h
+_ALLOC: equ     1Bh
+_FFIRST:        equ     40h
+_FNEXT: equ     41h
+_OPEN:  equ     43h
+_CREATE:        equ     44h
+_CLOSE: equ     45h
+_READ:  equ     48h
+_WRITE: equ     49h
+_DELETE:        equ     4Dh
+_RENAME:        equ     4Eh
+_ATTR:  equ     50h
+_GETCD: equ     59h
+_CHDIR: equ     5Ah
+_PARSE: equ     5Bh
+_TERM:  equ     62h
+_DEFAB: equ     63h
+_ERROR: equ     65h
+_EXPLAIN:       equ     66h
+_GENV:  equ     6Bh
+_DOSVER:        equ     6Fh
 
-ENASLT: equ     #0024   ;Slot swithcing BIOS routine
-BEEP:   equ     #00C0   ;Generates a BEEP
-CALSLT: equ     #001C   ;Calls a routine on another slot
+ENASLT: equ     0024h   ;Slot swithcing BIOS routine
+BEEP:   equ     00C0h   ;Generates a BEEP
+CALSLT: equ     001Ch   ;Calls a routine on another slot
 
-TPASLOT1:       equ     #F342
-ARG:    equ     #F847
-H_CHPH: equ     #FDA4   ;Gancho CHPUT
-EXTBIO: equ     #FFCA
+TPASLOT1:       equ     0F342h
+ARG:    equ     0F847h
+H_CHPH: equ     0FDA4h   ;Gancho CHPUT
+EXTBIO: equ     0FFCAh
 
         ;--- TCP/IP UNAPI routines
 
@@ -176,14 +176,14 @@ jpmyi:  macro   @a      ;A >=x
 ;***                    ***
 ;**************************
 
-        org     #100
+        org     100h
 
         ld      hl,DATA
-        ld      de,#8000
+        ld      de,8000h
         ld      bc,DATA_END-DATA_START
         ldir
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (USER_COM_BUF),a
 
         ;--- Muestra la cadena inicial
@@ -217,7 +217,7 @@ OKDOS2:
 
         xor     a
         ld      b,0
-        ld      de,#2222
+        ld      de,2222h
         call    EXTBIO
         ld      a,b
         or      a
@@ -234,27 +234,27 @@ OKINS:  ;
         ;--- Setup the UNAPI calling code
 
         ld      a,1
-        ld      de,#2222
+        ld      de,2222h
         call    EXTBIO
 
         ld      (DO_UNAPI+1),hl
         ld      c,a
         ld      a,h
-        cp      #C0
+        cp      0C0h
         ld      a,c
         jr      c,NO_UNAPI_P3
 
-        ld      a,#C9
+        ld      a,0C9h
         ld      (SET_UNAPI),a
         jr      OK_SET_UNAPI
 NO_UNAPI_P3:
 
         ld      (UNAPI_SLOT+1),a
         ld      a,b
-        cp      #FF
+        cp      0FFh
         jr      nz,NO_UNAPI_ROM
 
-        ld      a,#C9
+        ld      a,0C9h
         ld      (UNAPI_SEG),a
         jr      OK_SET_UNAPI
 NO_UNAPI_ROM:
@@ -264,7 +264,7 @@ OK_SET_UNAPI:
 
         ;--- Get mapper support routines (we need GET_P1 and PUT_P1)
 
-        ld      de,#0402
+        ld      de,0402h
         xor     a
         call    EXTBIO
         or      a
@@ -348,12 +348,12 @@ OKFRCON:
         or      a
         jr      z,OKNMAN
 
-OKNMAN1:        ld      hl,#0201        ;Installed: now check version
+OKNMAN1:        ld      hl,0201h        ;Installed: now check version
         ex      de,hl
         call    COMP
         jr      nc,OKNMAN
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (HAY_NMAN),a
 OKNMAN:
 
@@ -446,17 +446,17 @@ OK_DEFUSER:     ;
 
         ;--- Si hay parametros, salta a OPEN
 
-        ld      hl,#80
+        ld      hl,80h
         ld      de,USER_COM_BUF+1
         ld      a,1
         call    EXTPAR
         jr      c,NOPARS
 
-        ld      hl,#81  ;Copia el comando ficticio "X"
+        ld      hl,81h  ;Copia el comando ficticio "X"
         ld      de,USER_COM_BUF+3
         ld      bc,255  ;y los parametros a USER_COM_BUF,
         ldir
-        ld      a,(#80) ;entonces salta a OPEN
+        ld      a,(80h) ;entonces salta a OPEN
         inc     a
         inc     a
         ld      (USER_COM_BUF+1),a
@@ -478,7 +478,7 @@ MAIN_LOOP:      ld      sp,(SAVESP)
         ;--- Pone ABORT_STAT a 1 o a 2
 
         ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         ld      a,1
         jr      z,MAINLOP_2
         inc     a
@@ -527,7 +527,7 @@ NOADMIRA:       ld      hl,PARSE_BUF
         jr      MAIN_LOOP
 
 COM_OK: ld      a,(CONTROL_CON) ;Flushea datos si hay conexion
-        cp      #FF
+        cp      0FFh
         jr      z,COM_OK2
         ;call     TCP_STATUS
         ;jr      c,COM_OK2
@@ -542,7 +542,7 @@ COM_OK2:        call    JP_HL   ;Ejecuta comando
         or      a
         jr      z,MAIN_LOOP
 
-        ld      iy,(#FCC1-1)    ;Ejecuta BEEP si BELL=#FF
+        ld      iy,(0FCC1h-1)    ;Ejecuta BEEP si BELL=0FFh
         ld      ix,BEEP
         call    CALSLT
         jp      MAIN_LOOP
@@ -618,7 +618,7 @@ R_ASCII:        ld      a,4
         ld      a,"A"
 
 R_ASCBIN:       ld      (SEND_COM_BUF+5),a
-        ld      hl,#0A0D        ;Vuelve con Cy=1 en caso de error
+        ld      hl,0A0Dh        ;Vuelve con Cy=1 en caso de error
         ld      (SEND_COM_BUF+6),hl     ;(usado por R_DIR)
         ld      hl,C_TYPE
         call    SET_COMMAND
@@ -651,7 +651,7 @@ R_BELL: ld      a,3
 R_BINARY:       ;ld      a,4
         ;ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         push    af
         ld      a,"I"
 
@@ -674,7 +674,7 @@ R_CD:   call    CHK_CON
         call    EXTPAR
         jp      c,R_PWD
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         ld      hl,C_CWD
         jp      PARAM_XCOM
@@ -708,7 +708,7 @@ R_CLOSE:        call    CHK_CON
         ld      a,5
         ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (QUITTING),a
         ld      hl,C_QUIT
         call    SET_COMMAND
@@ -718,7 +718,7 @@ R_CLOSE:        call    CHK_CON
         ld      b,a
         ld      a,TCPIP_TCP_CLOSE
         call    CALL_UNAPI
-        ld      a,#FF
+        ld      a,0FFh
         ld      (CONTROL_CON),a
         xor     a
         ld      (QUITTING),a
@@ -786,7 +786,7 @@ R_DIR_LS:       ld      (RETR_COM),hl
 
 R_DIR_LS2:      ld      a,2     ;Ejecuta comando
         ld      (RETR_PAR),a
-        ld      a,#FF
+        ld      a,0FFh
         ld      (MUST_ASCII),a
         jp      RETRIEVE
 
@@ -949,7 +949,7 @@ LCD_NOPATH:     ld      a,"\"   ;Si se especifica unidad pero no dir,
 ;---  LDELETE  ---
 ;-----------------
 
-R_LDELETE:      ;ld     a,#FF
+R_LDELETE:      ;ld     a,0FFh
         ;ld     (LDIR_EXE),a
         call    _R_LDELETE
         xor     a
@@ -980,10 +980,10 @@ _R_LDELETE:     ld      a,4
         or      a
         jp      nz,R_INVPAR
         ld      a,(RESPONSE_BUF)
-        or      %00100000
+        or      00100000b
         cp      "r"
         jp      nz,R_INVPAR
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ALSO_RONLY),a
 RLDEL2: ;
 
@@ -991,11 +991,11 @@ RLDEL2: ;
 
         ld      c,_FFIRST
         ld      de,PARSE_BUF
-        ld      b,%00111        ;Incluye ficheros ocultos y de sistema
+        ld      b,00111b        ;Incluye ficheros ocultos y de sistema
 R_LDELLOOP:             ld      ix,USER_COM_BUF+1
         call    DOS     ;Realiza la busqueda
         jr      c,R_LDELEND
-        ld      a,#FF   ;Solo imprimira "file not found"
+        ld      a,0FFh   ;Solo imprimira "file not found"
         ld      (LDIR_EXE),a    ;si no encuentra el primero
 
         ;--- Comprueba si es de solo lectura,
@@ -1010,7 +1010,7 @@ R_LDELLOOP:             ld      ix,USER_COM_BUF+1
         jr      z,LDEL_NODEL
 LDEL_NORO:      ;
 
-        ;--- Si ALLFILES=#FF, pregunta
+        ;--- Si ALLFILES=0FFh, pregunta
         ;    si se quiere borrar; si no, lo borra directamente
 
         ld      a,(ALLFILES)
@@ -1026,7 +1026,7 @@ LDEL_NORO:      ;
         jr      z,LDEL_NODEL
         cp      3
         jr      z,LDEL_CANCEL
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ALLFILES),a
 
         ;--- Borrar fichero: primero le quita
@@ -1047,7 +1047,7 @@ LDEL_DEL2:      ld      de,USER_COM_BUF+1       ;Borra el fichero
         ld      c,_DELETE
         call    DOS
         ret     c
-        ld      a,#FF
+        ld      a,0FFh
         ld      (BORRALGUNO),a
 
         ;--- Pasa al siguiente fichero
@@ -1078,7 +1078,7 @@ BORRALGUNO:     db      0       ;Al final sera 0 si no se ha borrado nada
 ;---  LDIR  ---
 ;--------------
 
-R_LDIR: ld      a,#FF
+R_LDIR: ld      a,0FFh
         ld      (LDIR_EXE),a
         call    _R_LDIR
         xor     a
@@ -1111,7 +1111,7 @@ _R_LDIR:        ld      a,3
 
         ld      c,_FFIRST
         ld      de,RESPONSE_BUF
-        ld      b,%10111        ;Incluye directorios, ocultos y de sistema
+        ld      b,10111b        ;Incluye directorios, ocultos y de sistema
 R_LDIRLOOP:             ld      ix,USER_COM_BUF+1
         call    DOS     ;Realiza la busqueda
         jp      c,LDIR_END
@@ -1177,7 +1177,7 @@ LDIR_ESFILE:    ld      hl,(LDIR_FILES) ;Es fichero? Imprime tamanyo
         ld      d,(ix+1)
         jr      z,LDIR_PEQUEN   ;"Grande" si es mayor de 64K
         ;ld     a,(ix+1)
-        ;and     %11000000
+        ;and     11000000b
         ;ld     e,(ix)
         ;ld      d,(ix+1)
         ;jr      z,LDIR_PEQUEN
@@ -1199,7 +1199,7 @@ LDIR_PEQUEN:    ;Aqui, DE es el tamanyo a imprimir, y Cy=1 si es "K"
         ld      b,7
         ld      c," "
         push    af
-        ld      a,%1000
+        ld      a,1000b
         call    NUMTOASC
         print   RESPONSE_BUF
         pop     af
@@ -1223,7 +1223,7 @@ LDIR_END:       ld      (LDIR_ERRNUM),a
         ld      hl,RESPONSE_BUF ;Fin: muestra num de dirs y files encontrados
         ld      de,(LDIR_FILES)
         ld      b,1
-        ld      a,%1000
+        ld      a,1000b
         call    NUMTOASC
         print   RESPONSE_BUF
         print   FFOUND_S
@@ -1231,13 +1231,13 @@ LDIR_END:       ld      (LDIR_ERRNUM),a
         ld      hl,RESPONSE_BUF
         ld      de,(LDIR_DIRS)
         ld      b,1
-        ld      a,%1000
+        ld      a,1000b
         call    NUMTOASC
         print   RESPONSE_BUF
         print   DFOUND_S
 
         ld      a,(LDIR_ERRNUM) ;Si el error no era "file not found",
-        cp      #D7     ;no calcula espacio libre
+        cp      0D7h     ;no calcula espacio libre
         jr      nz,LDIR_ENDL3
 
         ld      a,(LDIR_DRV)    ;Consulta espacio libre en la unidad
@@ -1256,7 +1256,7 @@ LDIR_ENDL2:     srl     h       ;Convierte sectores a K
         ex      de,hl   ;Muestra "XXX K free on drive X:"
         ld      hl,RESPONSE_BUF
         ld      b,1
-        ld      a,%1000
+        ld      a,1000b
         call    NUMTOASC
         print   RESPONSE_BUF
         print   KFREE_S
@@ -1348,7 +1348,7 @@ R_LMKDIR:       ld      a,3
         ld      c,_CREATE
         ld      de,PARSE_BUF
         xor     a
-        ld      b,%10000
+        ld      b,10000b
         call    DOS
         ret     c
 
@@ -1360,7 +1360,7 @@ R_LMKDIR:       ld      a,3
 ;---  LRENAME  ---
 ;-----------------
 
-R_LRENAME:      ;ld     a,#FF
+R_LRENAME:      ;ld     a,0FFh
         ;ld     (LDIR_EXE),a
         call    _R_LRENAME
         xor     a
@@ -1383,11 +1383,11 @@ _R_LRENAME:     ld      a,3
 
         ld      c,_FFIRST
         ld      de,PARSE_BUF
-        ld      b,%00111        ;Incluye ficheros ocultos y de sistema
+        ld      b,00111b        ;Incluye ficheros ocultos y de sistema
 R_LRENLOOP:             ld      ix,USER_COM_BUF+1
         call    DOS     ;Realiza la busqueda
         jr      c,R_LRENEND
-        ld      a,#FF   ;Solo imprimira "file not found"
+        ld      a,0FFh   ;Solo imprimira "file not found"
         ld      (LDIR_EXE),a    ;si no encuentra el primero
 
         ld      de,USER_COM_BUF+1       ;Renombra cada fichero encontrado
@@ -1424,18 +1424,18 @@ R_LRMDIR:       ld      a,3
         ld      c,_PARSE
         call    DO_DOS
         bit     5,b
-        ld      a,#DA   ;"Invalid filename"
+        ld      a,0DAh   ;"Invalid filename"
         jp      nz,DOS2
 
         ld      c,_FFIRST       ;Error si no encuentra el fichero/directorio
         ld      de,RESPONSE_BUF ;con ese nombre, o si lo encuentra pero
-        ld      b,%10111        ;es un fichero
+        ld      b,10111b        ;es un fichero
         ld      ix,USER_COM_BUF+1
         call    DOS
         ret     c
         ld      a,(USER_COM_BUF+15)
         bit     4,a
-        ld      a,#D6   ;"Directory not found"
+        ld      a,0D6h   ;"Directory not found"
         jp      z,DOS2
 
         ld      de,USER_COM_BUF+1       ;Intenta borrar el directorio
@@ -1474,11 +1474,11 @@ R_LSHOW:        ld      a,3
         ld      c,_PARSE
         call    DO_DOS
         bit     5,b
-        ld      a,#DA   ;"Invalid filename"
+        ld      a,0DAh   ;"Invalid filename"
         jp      nz,DOS2
 
         ld      a,(FILE_FH)     ;Si ya hay un fichero abierto,
-        cp      #FF     ;lo cierra primero (no deberia pasar nunca)
+        cp      0FFh     ;lo cierra primero (no deberia pasar nunca)
         jr      z,R_LSHOW_OK1
         ld      c,_CLOSE
         ld      b,a
@@ -1506,7 +1506,7 @@ GET_LSHOW_END:  ld      a,(FILE_FH)     ;No quedan datos: cierra el fichero
         ld      b,a
         ld      c,_CLOSE
         call    DO_DOS
-        ld      a,#FF
+        ld      a,0FFh
         ld      (FILE_FH),a
         ret
 
@@ -1557,7 +1557,7 @@ R_MKDIR:        call    CHK_CON
         ld      a,4
         ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         ld      hl,USER_COM_BUF+1
         ld      de,SEND_COM_BUF+4
@@ -1582,7 +1582,7 @@ R_MPUT: ld      a,(HAY_NMAN)
 R_MPUT2:        ld      a,4
         ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (LDIR_EXE),a
         ld      a,(VERBOSE)
         ld      (OLD_VERBOSE_M),a
@@ -1592,7 +1592,7 @@ R_MPUT2:        ld      a,4
         ld      a,(MUL_LISTA)
         ld      ix,0
         nesman  22
-        ld      a,#FF
+        ld      a,0FFh
         ld      (MUL_LISTA),a
         ld      a,(OLD_VERBOSE_M)
         ld      (VERBOSE),a
@@ -1653,7 +1653,7 @@ R_MPUT_OOME:    print   OUTOFM_S
 ;---  OPEN  ---
 ;--------------
 
-R_OPEN: ld      a,#FF   ;Primero actualiza informacion
+R_OPEN: ld      a,0FFh   ;Primero actualiza informacion
         ld      (QUITTING),a    ;sobre la conexion
         call    CHK_CON
         ld      a,0
@@ -1741,7 +1741,7 @@ R_OPEN3:        ld      (IP_REMOTE_C),hl        ;Establece las IPs en los TCBs
         ld      de,0
         ld      iy,113  ;Conx pasiva a nuestro puerto 113
         ld      bc,0
-        ld      a,#FF
+        ld      a,0FFh
         ;debug   "3"
         call    TCP_OPEN
         ;debug   "4"
@@ -1752,7 +1752,7 @@ OK_IDENT:       ;
         ld      hl,(IP_REMOTE_C)
         ld      de,(IP_REMOTE_C+2)
         ld      ix,(PORT_REMOTE_C)
-        ld      iy,#FFFF
+        ld      iy,0FFFFh
         ld      bc,0
         xor     a
         ;debug   "5"
@@ -1783,7 +1783,7 @@ R_OPEN_L2:      call    IDENT_AUTOM
 
         ld      a,(IDENT_CON)
         call    TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (IDENT_CON),a
         ld      de,CONREF_S
         ld      c,_STROUT
@@ -1791,14 +1791,14 @@ R_OPEN_L2:      call    IDENT_AUTOM
         jp      DO_DOS
 
 OPENNOREF:      ld      d,a
-        ld      a,(#FBEC)       ;El bit 2 de #FBEC es 0
+        ld      a,(0FBECh)       ;El bit 2 de 0FBECh es 0
         bit     2,a     ;cuando se esta pulsando ESC
         ld      a,d
         jr      nz,NOOPCANCEL
 
         ld      a,b
         call    TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (CONTROL_CON),a
         print   CANCELLED_S
         ret
@@ -2017,11 +2017,11 @@ R_PWD:  call    CHK_CON
         ld      a,4
         ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         ld      a,(VERBOSE)
         push    af      ;Siempre muestra el resultado,
-        ld      a,#FF   ;aunque "verbose" sea 0
+        ld      a,0FFh   ;aunque "verbose" sea 0
         ld      (VERBOSE),a
         ld      hl,C_PWD
         call    SINGLE_XCOM
@@ -2034,7 +2034,7 @@ R_PWD:  call    CHK_CON
 ;---  QUIT  ---
 ;--------------
 
-R_QUIT: ld      a,#FF
+R_QUIT: ld      a,0FFh
         ld      (QUITTING),a
         call    CHK_CON
         jp      c,TERM
@@ -2075,7 +2075,7 @@ R_REMOTEHELP:   call    CHK_CON
         ld      de,SEND_COM_BUF+5
         ld      a,(VERBOSE)
         push    af
-        ld      a,#FF   ;Siempre muestra respuesta
+        ld      a,0FFh   ;Siempre muestra respuesta
         ld      (VERBOSE),a
         ld      a,2
         call    LITELOOP
@@ -2144,7 +2144,7 @@ R_RMDIR:        call    CHK_CON
         ld      a,4
         ld      (ABORT_STAT),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         ld      hl,USER_COM_BUF+1
         ld      de,SEND_COM_BUF+4
@@ -2187,7 +2187,7 @@ R_SEND_APP:     ld      (PUTR_PAR),a    ;Comprueba si existe el parametro
         ld      a,b
         ld      (FILE_FH),a
 
-        ld      a,#FF
+        ld      a,0FFh
         ld      (PUT_EXE),a
         call    PUTRIEVE
         xor     a
@@ -2211,14 +2211,14 @@ R_SHOW: ld      hl,C_RETR
 R_STATUS:       ld      a,3
         ld      (ABORT_STAT),a
 
-        ld      a,#FF   ;Primero actualiza informacion
+        ld      a,0FFh   ;Primero actualiza informacion
         ld      (QUITTING),a    ;sobre la conexion
         call    CHK_CON
         xor     a
         ld      (QUITTING),a
 
         ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         jr      nz,STATR_2
 
         call    CRLF
@@ -2296,7 +2296,7 @@ R_TYPE: call    CHK_CON
         jp      nz,R_INVPAR
 
         ld      a,(PARSE_BUF)   ;Error si no es "A" o "I",
-        or      %00100000       ;si no hay error, salta a ASCII o BINARY
+        or      00100000b       ;si no hay error, salta a ASCII o BINARY
         cp      "a"
         jp      z,R_ASCII
         cp      "i"
@@ -2386,7 +2386,7 @@ PARAM_COM:      call    SET_COMMAND
 
 SINGLE_XCOM:    call    SET_COMMAND
         call    APPEND_LF
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         jp      AUTOMATA_NO1
 
@@ -2395,7 +2395,7 @@ SINGLE_XCOM:    call    SET_COMMAND
 PARAM_XCOM:     call    SET_COMMAND
         call    SET_SPACE
         call    APPEND_LF
-        ld      a,#FF
+        ld      a,0FFh
         ld      (ES_XCOM),a
         jp      AUTOMATA_NO1
 
@@ -2496,7 +2496,7 @@ ENDPNUM:        ld      a,ixh   ;Error if the parameter to extract
 
         push    iy
         pop     hl
-        ;ld      hl,#81
+        ;ld      hl,81h
         ld      b,1     ;B = current parameter
 PASAP2: ld      a,(hl)  ;Skips spaces until the next
         cp      " "     ;parameter is found
@@ -2553,30 +2553,30 @@ TERM:   xor     a       ;Desde ahora, CTRL-C no tiene efecto
         ;ld      b,a
         ;ld      a,(CONTROL_CON)
         ;and     b
-        ;cp      #FF
+        ;cp      0FFh
         ;jr      z,TERM_CON_OK
 
         ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,TCP_CLOSE    ;TCP_ABORT
         ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,TCP_CLOSE    ;TCP_ABORT
         ld      a,(IDENT_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,TCP_CLOSE
 TERM_CON_OK:    ;
 
 TERM2:  
         ld      a,(TPASLOT1)
-        ld      h,#40
+        ld      h,40h
         call    ENASLT
 
         ld      a,(TPASEG1)     ;Restaura TPA
         call    PUT_P1
 
         ld      a,(FILES_QUEUE) ;Borra cola de nombres de fichero
-        cp      #FF
+        cp      0FFh
         jr      z,TERM_Q_OK
         ld      ix,0
         nesman  22
@@ -2603,9 +2603,9 @@ LF:     ld      e,10
 ;    these are overwritten with calls to
 ;    mapper support routines on DOS 2
 
-PUT_P1: out     (#FD),a
+PUT_P1: out     (0FDh),a
         ret
-GET_P1: in      a,(#FD)
+GET_P1: in      a,(0FDh)
         ret
 
 TPASEG1:        db      2       ;TPA segment on page 1
@@ -2664,16 +2664,16 @@ TPASEG1:        db      2       ;TPA segment on page 1
 NUMTOASC:       push    af,ix,de,hl
         ld      ix,WorkNTOA
         push    af,af
-        and     %00000111
+        and     00000111b
         ld      (ix+0),a        ;Type
         pop     af
-        and     %00011000
+        and     00011000b
         rrca
         rrca
         rrca
         ld      (ix+1),a        ;Finishing
         pop     af
-        and     %11100000
+        and     11100000b
         rlca
         rlca
         rlca
@@ -2891,7 +2891,7 @@ ToBufUs:        ld      l,(ix+10)
         ex      de,hl
 
 ChkFin1:        ld      a,(ix+1)        ;Checks if "$" or 00 finishing is desired
-        and     %00000111
+        and     00000111b
         or      a
         jr      z,Fin
         cp      1
@@ -2901,7 +2901,7 @@ ChkFin1:        ld      a,(ix+1)        ;Checks if "$" or 00 finishing is desire
 
 PonBit7:        dec     hl
         ld      a,(hl)
-        or      %10000000
+        or      10000000b
         ld      (hl),a
         jr      Fin
 
@@ -3084,7 +3084,7 @@ SRCH_C_LOOP:    inc     hl
         ld      a,(de)
         cp      "A"
         jrmn    SRCH_C_LP2
-        and     %11011111       ;Lo transforma a mayusculas
+        and     11011111b       ;Lo transforma a mayusculas
 SRCH_C_LP2:     cp      (hl)
         jr      nz,NEXT_COM
         or      a
@@ -3203,18 +3203,18 @@ DOS:    call    DO_DOS
         ret     z
 
 DOS2:   push    hl,de,bc
-        ld      b,a     ;Si se esta haciendo un DIR, el error #D7
+        ld      b,a     ;Si se esta haciendo un DIR, el error 0D7h
         ld      a,(LDIR_EXE)    ;(file not found) no se imprime
         or      a
         jr      z,DOS3
         ld      a,b
-        cp      #D7
+        cp      0D7h
         jr      z,DOS5
 DOS3:   ld      a,(PUT_EXE)     ;Si se esta haciendo un PUT,
-        or      a       ;el error #C7 (end of file)
+        or      a       ;el error 0C7h (end of file)
         jr      z,DOS4  ;no se imprime
         ld      a,b
-        cp      #C7
+        cp      0C7h
         jr      z,DOS5
 DOS4:   ld      de,RESPONSE_BUF
         ld      c,_EXPLAIN
@@ -3259,7 +3259,7 @@ ASK_YNAC:       print   YNAC_S
 ASK_YNAC2:      ld      c,_INNOE
         call    DO_DOS
         ld      c,a
-        or      %00100000
+        or      00100000b
         ld      b,0
         cp      "y"
         jr      z,ASK_YNAC3
@@ -3282,12 +3282,12 @@ ASK_YNAC3:      push    bc
         ret
 
 
-;--- PRINT_PAUSE: Imprime el caracter A, y si PAUSE=#FF,
+;--- PRINT_PAUSE: Imprime el caracter A, y si PAUSE=0FFh,
 ;                 realiza una pausa "Press any key to continue"
 ;                 cuando se muestra una pantalla llena.
 ;                 Se ha de inicializar con BYTE_COUNT y LINE_COUNT a 0.
 
-PRINT_PAUSE:    cp      #C      ;Si es "borrar panrtalla",
+PRINT_PAUSE:    cp      0Ch      ;Si es "borrar panrtalla",
         jr      z,PPAUSE_CLS    ;actua como pantalla llena
         push    af
         ld      e,a
@@ -3309,7 +3309,7 @@ PRINT_PAUSE:    cp      #C      ;Si es "borrar panrtalla",
 
 PPAUSE_NEWL:    xor     a
         ld      (BYTE_COUNT),a
-        ld      a,(LINE_COUNT)  ;Si era LF, PAUSE=#FF, y era la linea 23,
+        ld      a,(LINE_COUNT)  ;Si era LF, PAUSE=0FFh, y era la linea 23,
         inc     a       ;imprime "Press any key" y hace una pausa
         ld      (LINE_COUNT),a
         cp      23
@@ -3324,7 +3324,7 @@ PPAUSE_NEWS:    xor     a       ;Pantalla llena
         push    af
         call    CRLF
         pop     af
-        or      %00100000
+        or      00100000b
         cp      "p"
         ret     nz
         xor     a
@@ -3332,7 +3332,7 @@ PPAUSE_NEWS:    xor     a       ;Pantalla llena
         ret
 
 PPAUSE_CLS:     call    PPAUSE_NEWS
-        ld      e,#C
+        ld      e,0Ch
         ld      c,_CONOUT
         jp      DO_DOS
 
@@ -3340,13 +3340,13 @@ PPAUSE_CLS:     call    PPAUSE_NEWS
 ;--- CLOSE_FILE: Cierra fichero abierto si lo hay
 
 CLOSE_FILE:     ld      a,(FILE_FH)
-        cp      #FF
+        cp      0FFh
         ret     z
 
         ld      b,a
         ld      c,_CLOSE
         call    DO_DOS
-        ld      a,#FF
+        ld      a,0FFh
         ld      (FILE_FH),a
         ret
 
@@ -3357,9 +3357,9 @@ CLOSE_FILE:     ld      a,(FILE_FH)
 
 ;--- CHK_CON: Comprueba la conexion con el servidor FTP.
 ;    Si hay conexion, devuelve Cy=0.
-;    Si no hay conexion y CONTROL_CON=#FF, imprime "Disconnected" y devuelve Cy=1.
-;    Si no hay conexion y CONTROL_CON<>#FF, imprimer "ERROR" y devuelve Cy=1.
-;    Si QUITTING=#FF, no imprime nada.
+;    Si no hay conexion y CONTROL_CON=0FFh, imprime "Disconnected" y devuelve Cy=1.
+;    Si no hay conexion y CONTROL_CON<>0FFh, imprimer "ERROR" y devuelve Cy=1.
+;    Si QUITTING=0FFh, no imprime nada.
 
 CHK_CON:        call    _CHK_CON
         ret     nc
@@ -3368,10 +3368,10 @@ CHK_CON:        call    _CHK_CON
         ret
 
 _CHK_CON:       ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         jr      nz,CHK_CON2
 
-        ;CONTROL_CON es #FF:
+        ;CONTROL_CON es 0FFh:
         ;Imprime "Disconnected" y devuelve Cy=1
 
         ld      a,(QUITTING)
@@ -3382,7 +3382,7 @@ _CHK_CON:       ld      a,(CONTROL_CON)
         scf
         ret
 
-        ;CONTROL_CON no es #FF:
+        ;CONTROL_CON no es 0FFh:
         ;En teoria hay alguna conexion abierta
 
 CHK_CON2:       call    TCP_STATUS
@@ -3394,7 +3394,7 @@ CHK_CON2:       call    TCP_STATUS
         call    TCP_CLOSE       ;1.1
         ld      a,(QUITTING)    ;aunque no este ESTABLISHED,
         or      a       ;ya que pueden quedar datos por recoger
-        ld      a,#FF
+        ld      a,0FFh
         ld      (CONTROL_CON),a
         scf
         ret     nz
@@ -3409,7 +3409,7 @@ CHK_CON22:      ;call    CRLF
 
         ld      a,(CONTROL_CON)
         call    TCP_CLOSE       ;TCP_ABORT        ;No hay conexion abierta: imprime "ERROR"
-CHK_CON3:       ld      a,#FF
+CHK_CON3:       ld      a,0FFh
         ld      (CONTROL_CON),a
         xor     a
         ld      (GCDATA_COUNT),a
@@ -3423,8 +3423,8 @@ CHK_CON3:       ld      a,#FF
 
 
 ;--- SEND_COM: Envia el comando que hay en SEND_COM_BUF (acabado en CRLF).
-;    Si ES_XCOM=#FF y XCOMMANDS=#FF, envia la version "X"
-;    Si DEBUG=#FF, tambien lo imprime por pantalla.
+;    Si ES_XCOM=0FFh y XCOMMANDS=0FFh, envia la version "X"
+;    Si DEBUG=0FFh, tambien lo imprime por pantalla.
 ;    Devuelve Cy=1 si no hay conexion.
 
 SEND_COM:       ld      hl,SEND_COM_BUF
@@ -3447,7 +3447,7 @@ SEND_COM2:      inc     bc
         or      e
         jr      nz,SEND_COM3    ;Decrementa el puntero al comando,
         ld      a,"X"   ;incrementa la longitud y pone "X" al principio
-        ld      (SEND_COM_BUF-1),a      ;si XCOM y ES_XCOM son #FF
+        ld      (SEND_COM_BUF-1),a      ;si XCOM y ES_XCOM son 0FFh
         xor     a
         ld      (ES_XCOM),a
         dec     hl
@@ -3479,9 +3479,9 @@ SEND_COM_E:     print   NOMEM_S
 ;                (una linea cada vez).
 ;    Devuelve Cy=1 si no hay conexion.
 ;    Devuelve Cy=0 y A=primer digito de la respuesta en caso contrario.
-;    Imprime la respuesta si VERBOSE=#FF (cada vez que hay una linea disponible).
+;    Imprime la respuesta si VERBOSE=0FFh (cada vez que hay una linea disponible).
 
-WAIT_REPLY:     ld      a,#FF
+WAIT_REPLY:     ld      a,0FFh
         ld      (LAST_REPLY),a
         call    _WAIT_REPLY
         ret     c       ;Si tras llamar a la rutina quedan datos,
@@ -3508,7 +3508,7 @@ _WAIT_REPLY:    ;
 WREPLY_LOOP1:   ld      hl,RESPONSE_BUF
 WREPLY_LOOP2:   call    HALT
         ld      a,(IDENT_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,IDENT_AUTOM  ;!!! Mejorar esto
         push    hl
         call    CHK_CON
@@ -3548,7 +3548,7 @@ WREPLY_LOOP3:   push    hl
         ld      bc,4
         ldir
 
-        ;Lo imprime si es un error, o si VERBOSE=#FF
+        ;Lo imprime si es un error, o si VERBOSE=0FFh
 
         call    WREPLY_PRINT
 
@@ -3563,7 +3563,7 @@ WREPLY_OK1:     ld      a,(RESPONSE_BUF+3)
         or      a
         ret
 
-WREPLY_HAYMAS:  ld      a,#FF
+WREPLY_HAYMAS:  ld      a,0FFh
         ld      (WREPLY_LINE),a
         jr      WREPLY_LOOP1
 
@@ -3571,7 +3571,7 @@ WREPLY_HAYMAS:  ld      a,#FF
 
 WREPLY_NO1:     ;
 
-        ;Lo imprime si es un error, o si VERBOSE=#FF
+        ;Lo imprime si es un error, o si VERBOSE=0FFh
 
         call    WREPLY_PRINT
 
@@ -3597,7 +3597,7 @@ WREPLY_LOOP4:   ld      a,(de)
         ret
 
         ;--- Esta subrutina imprime la linea de RESPONSE_BUF
-        ;    si es un error o si VERBOSE=#FF
+        ;    si es un error o si VERBOSE=0FFh
 
 WREPLY_PRINT:   ld      a,(VERBOSE)
         or      a
@@ -3615,7 +3615,7 @@ WREPLY_PRE:     printl  RESPONSE_BUF+4
 WREPLY_PRINT2:  printl  RESPONSE_BUF
         ret
 
-WREPLY_LINE:    db      0       ;Linea: 0=1a, #FF=otras
+WREPLY_LINE:    db      0       ;Linea: 0=1a, 0FFh=otras
 WREPLY_CODE:    db      "000 "  ;Codigo de la 1a linea
 
 
@@ -3708,7 +3708,7 @@ GET_LDATA:      ld      a,(GLDATA_COUNT)
         ret
 
 GLDATA_NEW:     ld      a,(FILE_FH)
-        cp      #FF
+        cp      0FFh
         scf
         ret     z
         ld      b,a
@@ -3762,7 +3762,7 @@ AUTOMATA_NO1:   call    SEND_COM
 HALT:   push    af,bc,de,hl
         ld      a,TCPIP_WAIT
         call    CALL_UNAPI
-        ;ld      c,#B
+        ;ld      c,0Bh
         ;call    DO_DOS
         pop     hl,de,bc,af
         ret
@@ -3783,7 +3783,7 @@ OPEN_DCON:      ld      a,(PASSIVE)
 ;      imprime el error y vuelve con Cy=1
 
 OPEN_DCON_P:    ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         jr      z,OPEN_DCONP2
         call    TCP_ABORT
 OPEN_DCONP2:    call    HALT
@@ -3836,7 +3836,7 @@ OPEN_DCP_L2:    push    bc,de
         ld      ixh,a
         ld      a,(DATA_BUF+5)
         ld      ixl,a
-        ld      iy,#FFFF
+        ld      iy,0FFFFh
         xor     a
         ld      bc,0
         call    TCP_OPEN
@@ -3856,16 +3856,16 @@ OPEN_DCP_L2:    push    bc,de
 ;      imprime el error y vuelve con Cy=1
 
 OPEN_DCON_A:    ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         jr      z,OPEN_DCON2
         call    TCP_ABORT
 OPEN_DCON2:     call    HALT
 
         ld      hl,0
         ld      de,0
-        ld      iy,#FFFF
+        ld      iy,0FFFFh
         ld      bc,0
-        ld      a,#FF
+        ld      a,0FFh
         call    TCP_OPEN        ;Abre conexion pasiva
         ld      de,WHENOPEND_S
         ld      hl,OPENERR_T
@@ -3910,7 +3910,7 @@ OPEN_DCON2:     call    HALT
 
 OPEN_DCON_E:    ld      a,(DATA_CON)
         call    TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         scf
         ret
@@ -4009,7 +4009,7 @@ PUTR_LOP2:      push    bc
         ld      a,(HASH)
         or      a
         call    nz,CRLF
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         print   DCONREF_S
         ;call    WAIT_REPLY       ;Conexion cerrada legalmente: la cerramos nosotros,
@@ -4055,13 +4055,13 @@ PUTR_EX:        ld      a,(DATA_CON)    ;Respuesta inesperada al
 
 PUTR_END:       push    af
         ld      a,(FILE_FH)
-        cp      #FF
+        cp      0FFh
         jr      z,PUTR_END2
         ld      a,(FILE_FH)
         ld      b,a
         ld      c,_CLOSE
         call    DO_DOS
-        ld      a,#FF
+        ld      a,0FFh
         ld      (FILE_FH),a
 PUTR_END2:      pop     af
 
@@ -4073,9 +4073,9 @@ PUTR_COM:       dw      0
 
 ;--- RETRIEVE: Rutina generica para obtener datos
 ;              desde una conexion de datos:
-;              - Usa SILENT_ASCII y SILENT_BIN si MUST_ASCII=#FF
+;              - Usa SILENT_ASCII y SILENT_BIN si MUST_ASCII=0FFh
 ;              - Envia el comando PORT y abre una conexion de datos
-;              - Lee los datos recibidos. Si FILE_FH=#FF, los
+;              - Lee los datos recibidos. Si FILE_FH=0FFh, los
 ;                imprime por pantalla. Si no, los escribe en el fichero.
 ;              - El comando a enviar ha de estar en RETR_COM;
 ;                se envia junto a la palabra que haya
@@ -4162,7 +4162,7 @@ RETR_LOOP:      call    HALT
         ld      a,(HASH)
         or      a
         call    nz,CRLF
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         call    WAIT_REPLY      ;Conexion cerrada legalmente: la cerramos nosotros,
         jp      c,RETR_END      ;espera respuesta de la conexion de control,
@@ -4178,10 +4178,10 @@ RETR_LOOP:      call    HALT
 RETR_OKDATA:    ;
 
         ld      a,(FILE_FH)
-        cp      #FF
+        cp      0FFh
         jr      nz,RETR_FILE
 
-        ;--- FILE_FH=#FF: Imprime los datos en pantalla
+        ;--- FILE_FH=0FFh: Imprime los datos en pantalla
 
         ld      hl,DATA_BUF     ;Imprime todos los datos recibidos
 RETR_LOOP2:     push    bc,hl
@@ -4196,7 +4196,7 @@ RETR_LOOP2:     push    bc,hl
         jr      nz,RETR_LOOP2
         jp      RETR_LOOP
 
-        ;--- FILE_FH<>#FF: Guarda los datos en el fichero
+        ;--- FILE_FH<>0FFh: Guarda los datos en el fichero
 
 RETR_FILE:      ld      a,(HASH)
         or      a
@@ -4237,13 +4237,13 @@ RETR_EX:        ld      a,(DATA_CON)    ;Respuesta inesperada al
 
 RETR_END:       push    af
         ld      a,(FILE_FH)
-        cp      #FF
+        cp      0FFh
         jr      z,RETR_END2
         ld      a,(FILE_FH)
         ld      b,a
         ld      c,_CLOSE
         call    DO_DOS
-        ld      a,#FF
+        ld      a,0FFh
         ld      (FILE_FH),a
 RETR_END2:      ;
 
@@ -4251,7 +4251,7 @@ RETR_END2:      ;
         or      a
         jr      z,RETR_END2!
         ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,SILENT_BIN   ;Restaura TYPE antiguo
 RETR_END2!:     pop     af
         ret
@@ -4311,7 +4311,7 @@ MULTIPLE:       call    _MULTIPLE
         ld      a,(MUL_LISTA)
         ld      ix,0
         nesman  22
-        ld      a,#FF
+        ld      a,0FFh
         ld      (MUL_LISTA),a
         ld      a,(OLD_VERBOSE_M)
         ld      (VERBOSE),a
@@ -4343,7 +4343,7 @@ MUL_OK1:        ld      (MUL_LISTA),a
 
         call    SILENT_ASCII    ;Pone modo ASCII si es necesario
         jp      c,MUL_END
-        ld      a,#FF
+        ld      a,0FFh
         ld      (MUST_ASCII),a
 
         call    OPEN_DCON       ;Abre conexion, envia PORT
@@ -4442,7 +4442,7 @@ MUL_NODATA:     pop     hl,bc
 
 MUL_NODATA2:    ld      a,(DATA_CON)
         call    TCP_CLOSE       ;TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         call    WAIT_REPLY      ;Conexion cerrada legalmente: la cerramos nosotros,
         jp      c,MUL_END       ;espera respuesta de la conexion de control,
@@ -4475,7 +4475,7 @@ MULTIPLE2:      ld      a,(PROMPT)
 
         ;--- Obtiene un nombre de fichero y
         ;    pregunta si se ha de actuar sobre el,
-        ;    solo si ALLFILES=#FF
+        ;    solo si ALLFILES=0FFh
 
 MUL_FILE_LOOP:  ld      a,(MUL_LISTA)
         ld      ix,0
@@ -4513,7 +4513,7 @@ MUL_FILE_LOOP:  ld      a,(MUL_LISTA)
         or      a       ;Yes?
         jr      z,MUL_DO_FILE
 
-        ld      a,#FF   ;All
+        ld      a,0FFh   ;All
         ld      (ALLFILES),a
 
 MUL_DO_FILE:    ld      hl," X"
@@ -4559,7 +4559,7 @@ MUL_END:        push    af
         or      a
         jr      z,MUL_END2!
         ld      a,(CONTROL_CON)
-        cp      #FF
+        cp      0FFh
         call    nz,SILENT_BIN   ;Restaura TYPE antiguo
 MUL_END2!:      pop     af
         ret
@@ -4595,7 +4595,7 @@ R_ABORT:        pop     hl      ;Para ajustar la pila
         ld      a,(MUL_LISTA)
         ld      ix,0
         nesman  22
-        ld      a,#FF
+        ld      a,0FFh
         ld      (MUL_LISTA),a
 
         ld      a,(HOOKING)     ;Restauramos gancho CHPUT
@@ -4613,7 +4613,7 @@ AB_NOHOOK:      pop     af
         ;--- Primero comprobamos si es un error de disco,
         ;    en ese caso simplemente terminamos
 
-        cp      #9D     ;Codigo de "disk operation aborted"
+        cp      9Dh     ;Codigo de "disk operation aborted"
         jr      nz,R_AB_NODISK
 
         ld      a,b
@@ -4623,10 +4623,10 @@ AB_NOHOOK:      pop     af
         ;--- Imprimimos "CTRL-C pressed" o "CTRL-STOP pressed"
 
 R_AB_NODISK:    ld      de,CTRLC_S
-        cp      #9E     ;Codigo de "CTRL-C pressed"
+        cp      9Eh     ;Codigo de "CTRL-C pressed"
         jr      z,R_AB_PRINT
         ld      de,CTRLS_S
-        cp      #9F     ;Codigo de "CTRL-STOP pressed"
+        cp      9Fh     ;Codigo de "CTRL-STOP pressed"
         jr      z,R_AB_PRINT
         ld      de,UNKE_S       ;Error desconocido
 R_AB_PRINT:     ld      c,_STROUT
@@ -4690,7 +4690,7 @@ R_ABORT_4:      cp      4
         call    WAIT_REPLY
         jr      R_AB4_2
 
-R_AB4_1:        ;ld     hl,#F4FF        ;Envia comando telnet IP
+R_AB4_1:        ;ld     hl,0F4FFh        ;Envia comando telnet IP
         ;ld     (SEND_COM_BUF),hl
         ;ld     hl,SEND_COM_BUF
         ;ld     bc,2
@@ -4698,7 +4698,7 @@ R_AB4_1:        ;ld     hl,#F4FF        ;Envia comando telnet IP
         ;ld     a,(CONTROL_CON)
         ;call   TCP_SEND
 
-        ;ld     hl,#F2FF        ;Envia secuencia telnet SYNCH
+        ;ld     hl,0F2FFh        ;Envia secuencia telnet SYNCH
         ;ld     (SEND_COM_BUF),hl
         ;ld     hl,SEND_COM_BUF
         ;ld     bc,2
@@ -4712,23 +4712,23 @@ R_AB4_1:        ;ld     hl,#F4FF        ;Envia comando telnet IP
         call    AUTOMATA_NO1
 
 R_AB4_2:        ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         jp      z,MAIN_LOOP
         call    TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         jp      MAIN_LOOP
 
         ;--- 5: Abortamos conexion de control
 
 R_ABORT_5:      ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         jr      z,R_ABORT_52
 
         print   ABDCON_S
         ld      a,(DATA_CON)
         call    TCP_ABORT
-        ld      a,#FF
+        ld      a,0FFh
         ld      (DATA_CON),a
         ret
 
@@ -4736,7 +4736,7 @@ R_ABORT_52:     print   ABCCON_S
 
         call    CLOSE_FILE
         ld      a,(DATA_CON)
-        cp      #FF
+        cp      0FFh
         jr      z,R_ABORT_53
         call    TCP_ABORT
 R_ABORT_53:     ld      a,(CONTROL_CON)
@@ -4755,13 +4755,13 @@ IDENT_AUTOM:    push    af,bc,de,hl
         ret
 
 _IDENT_AUTOM:   ld      a,(IDENT_CON)
-        cp      #FF
+        cp      0FFh
         ret     z
 
         call    TCP_STATUS
         or      a
         jr      nz,IDENT_AUT1
-        ld      a,#FF
+        ld      a,0FFh
         ld      (IDENT_CON),a
         ret
 
@@ -4822,7 +4822,7 @@ HOOK_CODE0:     pop     hl,bc   ;B=Caracter a imprimir
         jr      z,HOOK_C0_SETESC        ;lo imprimimos
         ld      a,c
 
-        and     %11111110       ;Secuencia "ESC x n" o "ESC y n"
+        and     11111110b       ;Secuencia "ESC x n" o "ESC y n"
         cp      "x"     ;y el caracter actual es "n":
         ld      a,0     ;lo imprimimos
         jr      z,HOOK_C0_SETESC
@@ -4853,11 +4853,11 @@ HOOK_CODE0_END: ;
 
 SET_HOOK:       push    af,bc,de,hl
         di
-        ld      a,#C3
+        ld      a,0C3h
         ld      (H_CHPH),a
         ld      hl,HOOK_CODE
         ld      (H_CHPH+1),hl
-        ld      a,#FF
+        ld      a,0FFh
         ld      (HOOKING),a
         ei
         pop     hl,de,bc,af
@@ -4883,7 +4883,7 @@ SET_UNAPI:
         dec     a
         ld      (UNAPI_IS_SET),a
 UNAPI_SLOT:     ld      a,0
-        ld      h,#40
+        ld      h,40h
         call    ENASLT
 UNAPI_SEG:      ld      a,0
         jp      PUT_P1
@@ -4915,9 +4915,9 @@ DO_DOS:
 ;Input:  A = 0 for active, 1 for passive
 ;        L.H.E.D = remote IP (0.0.0.0 for passive with unespecified remote socket)
 ;        IX = Remote port (ignored if IP=0.0.0.0)
-;        IY = Local port (#FFFF for random between 16384 and 32767)
+;        IY = Local port (0FFFFh for random between 16384 and 32767)
 ;        BC = Usuer timeout in seconds
-;             (1-1080, 0 for 3 minutes, #FFFF for infinite)
+;             (1-1080, 0 for 3 minutes, 0FFFFh for infinite)
 ;Output: Cy=0 if OK, 1 if error
 ;        If OK: A = Connection number
 ;        If error: A = UNAPI Error code
@@ -5064,7 +5064,7 @@ TCP_RCV:
 ;*************************************
 
 DATA:
-        org     #8000
+        org     8000h
 
 DATA_START:
 
@@ -5076,10 +5076,10 @@ PORT_REMOTE_C:  dw      21
 PORT_REMOTE_I:  dw      0       ;Ident: el puerto local sera el 113
 PORT_REMOTE_D:  dw      0
 HAY_NMAN:       db      0
-DATA_CON:       db      #FF
-CONTROL_CON:    db      #FF
-IDENT_CON:      db      #FF
-VERBOSE:        db      #FF
+DATA_CON:       db      0FFh
+CONTROL_CON:    db      0FFh
+IDENT_CON:      db      0FFh
+VERBOSE:        db      0FFh
 XCOM:   db      0
 ES_XCOM:        db      0
 SAVESP: dw      0
@@ -5087,15 +5087,15 @@ TYPE:   db      0       ;0 para ASCII, 1 para binario
 DEBUG:  db      0
 BELL:   db      0
 HASH:   db      0
-PROMPT: db      #FF
+PROMPT: db      0FFh
 PAUSE:  db      0
 PASSIVE:        db      0
 OLD_TYPE:       db      0
 OLD_VERBOSE:    db      0
 PORT_C_PNT:     dw      C_PORT+5        ;Puntero a la parte "puerto" de PORT_C
-FILE_FH:        db      #FF
-FILES_QUEUE:    db      #FF     ;Cola para guardar los nombres de fichero
-QUITTING:       db      0       ;#FF cuando se esta cerrando/saliendo
+FILE_FH:        db      0FFh
+FILES_QUEUE:    db      0FFh     ;Cola para guardar los nombres de fichero
+QUITTING:       db      0       ;0FFh cuando se esta cerrando/saliendo
 ALLFILES:       db      0
 ALSO_RONLY:     db      0
 LINE_COUNT:     db      0
@@ -5104,8 +5104,8 @@ INS_IX: dw      0
 ABORT_STAT:     db      0
 LAST_REPLY:     db      0
 MSS:    dw      448     ;Valor fijo
-HOOKING:        db      0       ;#FF cuando el gancho CHPUT esta parcheado
-UNAPI_IS_SET:   db      0       ;#FF when UNAPI slot/seg is switched on page 1
+HOOKING:        db      0       ;0FFh cuando el gancho CHPUT esta parcheado
+UNAPI_IS_SET:   db      0       ;0FFh when UNAPI slot/seg is switched on page 1
 
 ;--- Pseudo-TCBs
 
@@ -5118,13 +5118,13 @@ IP_REMOTE_C:    db      0,0,0,0
 
 IP_REMOTE_D:    db      0,0,0,0
 ;PORT_REMOTE_D: dw      0
-        ;db     #FF     ;Control connection is passive
+        ;db     0FFh     ;Control connection is passive
 
 ;Ident protocol connection
 
 ;PORT_REMOTE_I:    dw      0
         ;dw     113
-        ;db     #FF     ;Is passive
+        ;db     0FFh     ;Is passive
 
 
 ;--- Cadenas de texto (informacion y errores)
