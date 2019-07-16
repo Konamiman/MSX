@@ -7,25 +7,25 @@
 ;***                        ***
 ;******************************
 
-nesman: macro   @f      ;Llamada indirecta a las funciones de NestorMan
-        ld      c,@f
+        macro nesman func      ;Indirect call to NestorMan functions
+        ld      c,func
         ld      de,2202h
         call    0FFCAh
         endm
 
-print:  macro   @d      ;Imprime una cadena acabada en "$"
-        ld      de,@d
+        macro print str      ;Print a "$" terminated string
+        ld      de,str
         ld      c,_STROUT
         call    DO_DOS
         endm
 
-printl: macro   @d      ;Imprime una cadena acabada en CRLF
-        ld      de,@d
+        macro printl str      ;Print a CRLF terminated string
+        ld      de,str
         call    PRINT_L
         endm
 
-printz: macro   @d      ;Imprime una cadena acabada en cero
-        ld      de,@d
+        macro printz str      ;Print a zero terminated string
+        ld      de,str
         call    PRINT_Z
         endm
 
@@ -102,7 +102,7 @@ ERR_BUFFER:             equ     13
 ERR_LARGE_DGRAM:        equ     14
 ERR_INV_OPER:           equ     15
 
-debug:  macro   @c
+        macro debug char
         push    af,bc,de,hl
         ld      e,@c
         ld      c,2
@@ -2293,18 +2293,6 @@ R_XCOMMANDS:    ld      a,3
         ld      hl,XCOM
         ld      de,XCOM_M_S
         jp      TURN_ON_OFF
-
-
-;--- Pruebas: comandos no implementados aun
-
-NOIMP:  macro   @c
-R_@c:   ;jp     R_NOIMP
-        endm
-
-        ;NOIMP   APPEND
-
-R_NOIMP:        print   NOIMP_S
-        ret
 
 
 ;*** Rutinas auxiliares para la ejecucion de comandos
@@ -5086,7 +5074,6 @@ WHENDNS_S:      db      "when resolving server name:",13,10,"    $"
 WHENOPEN_S:     db      "when creating or accessing local file:",13,10,"    $"
 WHENCONN_S:     db      "when connecting to the server:",13,10,"    $"
 WHENOPEND_S:    db      "when opening data connection:",13,10,"    $"
-NOIMP_S:        db      "Command not implemented in this version of the application",13,10,"$"
 CONNECTING_S:   db      "Connecting (press ESC to cancel)... $"
 CONLOST_S:      db      13,10,"*** ERROR: Connection to FTP server lost",13,10,10,"$"
 NOMEM_S:        db      13,10,"*** ERROR: Not enough memory to enqueue data",13,10,10,"$"
