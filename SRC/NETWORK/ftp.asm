@@ -103,11 +103,17 @@ ERR_LARGE_DGRAM:        equ     14
 ERR_INV_OPER:           equ     15
 
         macro debug char
-        push    af,bc,de,hl
+        push    af
+        push    bc
+        push    de
+        push    hl
         ld      e,@c
         ld      c,2
         call    DO_DOS
-        pop     hl,de,bc,af
+        pop     hl
+        pop     de
+        pop     bc
+        pop     af
         endm
 
 
@@ -318,7 +324,8 @@ OKNMAN:
         call    SET_IP
         jr      OK_SET_PORT
 
-SET_IP: push    hl,de
+SET_IP: push    hl
+        push    de
         ld      e,a
         ld      d,0
         ld      b,1
@@ -331,7 +338,8 @@ SET_IP: push    hl,de
         ld      (hl),","
         inc     hl
         ld      (PORT_C_PNT),hl
-        pop     de,hl
+        pop     de
+        pop     hl
         ret
 OK_SET_PORT:    ;
 
@@ -1234,7 +1242,8 @@ R_LITERAL:      call    CHK_CON
         ld      a,2     ;Va cogiendo los elementos de la cadena
         ;ld     hl,USER_COM_BUF+1       ;pasada por el usuario, y los
         ld      de,SEND_COM_BUF ;copia a SEND_COM_BUF
-LITELOOP:       push    af,de   ;separados con un espacio
+LITELOOP:       push    af      ;separados con un espacio
+        push    de
         ld      hl,USER_COM_BUF+1
         call    EXTPAR
         pop     hl
@@ -2390,7 +2399,10 @@ EXTPAR: or      a       ;Terminates with error if A = 0
         ret     z
         ld      a,b
 
-        push    hl,de,ix,iy
+        push    hl
+        push    de
+        push    ix
+        push    iy
         ld      ix,0    ;IXl: Number of parameter
         ld      ixh,a   ;IXh: Parameter to be extracted
         inc     hl
@@ -2470,7 +2482,10 @@ ENDPUT: xor     a
         or      a
         jr      FINEXTP
 EXTPERR:        scf
-FINEXTP:        pop     iy,ix,de,hl
+FINEXTP:        pop     iy
+        pop     ix
+        pop     de
+        pop     hl
         ret
 
 ;--- Rutina de terminacion
@@ -2592,9 +2607,13 @@ TPASEG1:        db      2       ;TPA segment on page 1
 ;                   Tailing "$" or 00 are not counted for the length
 ;               All other registers are preserved
 
-NUMTOASC:       push    af,ix,de,hl
+NUMTOASC:       push    af
+        push    ix
+        push    de
+        push    hl
         ld      ix,WorkNTOA
-        push    af,af
+        push    af
+        push    af
         and     00000111b
         ld      (ix+0),a        ;Type
         pop     af
@@ -2681,7 +2700,8 @@ EsBin2: ld      b,8
 EsDec:  ld      b,5
 
 EsHexa2:        push    de
-Divide: push    bc,hl   ;DE/(IX+7)=DE, remaining A
+Divide: push    bc   ;DE/(IX+7)=DE, remaining A
+        push    hl
         ld      a,d
         ld      c,e
         ld      d,0
@@ -2701,7 +2721,8 @@ BucDiv: rl      c
         ld      d,a
         ld      e,c
         ld      a,l
-        pop     hl,bc
+        pop     hl
+        pop     bc
 
 ChkRest9:       cp      10      ;Converts the remaining
         jp      nc,EsMay9       ;to a character
@@ -2844,7 +2865,10 @@ PonDo0: ld      (hl),a
 
 Fin:    ld      b,(ix+5)
         ld      c,(ix+4)
-        pop     hl,de,ix,af
+        pop     hl
+        pop     de
+        pop     ix
+        pop     af
         ret
 
 WorkNTOA:       defs    16
@@ -2867,7 +2891,8 @@ BufNTOA:        ds      10
 ;                          only the first five digits.
 ;    All other registers are preserved.
 
-EXTNUM: push    hl,ix
+EXTNUM: push    hl
+        push    ix
         ld      ix,ACA
         res     0,(ix)
         set     1,(ix)
@@ -2911,14 +2936,16 @@ FINEXT: ld      a,e
         cp      "9"+1
         call    nc,NODESB
         ld      a,(ix)
-        pop     ix,hl
+        pop     ix
+        pop     hl
         srl     a
         ret
 
 NODESB: res     1,(ix)
         ret
 
-POR10:  push    de,hl   ;BC = BC * 10 
+POR10:  push    de
+        push    hl   ;BC = BC * 10 
         push    bc
         push    bc
         pop     hl
@@ -2934,18 +2961,21 @@ ROTA:   sla     l
         call    c,BIT17
         push    hl
         pop     bc
-        pop     hl,de
+        pop     hl
+        pop     de
         ret
 
 
 ;--- PRINT_L: Imprime la cadena DE, acabada en CRLF
 
 PRINT_L:        ld      a,(de)
-        push    af,de
+        push    af
+        push    de
         ld      e,a
         ld      c,_CONOUT
         call    DO_DOS
-        pop     de,af
+        pop     de
+        pop     af
         cp      10
         ret     z
         inc     de
@@ -2967,12 +2997,15 @@ PRINT_Z:        ld      a,(de)
 ;--- SHOW_ERR: Muestra la cadena DE, y a continuacion
 ;    busca un error con codigo A en la tabla HL, y lo muestra.
 
-SHOW_ERR        push    af,hl,de
+SHOW_ERR        push    af
+        push    hl
+        push    de
         print   ERROR_S
         pop     de
         ld      c,_STROUT
         call    DO_DOS
-        pop     de,af
+        pop     de
+        pop     af
         ld      b,a
 SEARCH_ERROR:   ld      a,(de)
         inc     de
@@ -3133,7 +3166,9 @@ DOS:    call    DO_DOS
         or      a
         ret     z
 
-DOS2:   push    hl,de,bc
+DOS2:   push    hl
+        push    de
+        push    bc
         ld      b,a     ;Si se esta haciendo un DIR, el error 0D7h
         ld      a,(LDIR_EXE)    ;(file not found) no se imprime
         or      a
@@ -3154,7 +3189,9 @@ DOS4:   ld      de,RESPONSE_BUF
         printz  RESPONSE_BUF
         call    CRLF
 DOS5:   scf
-        pop     bc,de,hl
+        pop     bc
+        pop     de
+        pop     hl
         ret
 
 ;--- PRINT_PATH: Muestra la unidad+directorio actual y un fin de linea
@@ -3690,12 +3727,18 @@ AUTOMATA_NO1:   call    SEND_COM
 
 ;--- HALT: Espera a la siguiente interrupcion
 
-HALT:   push    af,bc,de,hl
+HALT:   push    af
+        push    bc
+        push    de
+        push    hl
         ld      a,TCPIP_WAIT
         call    CALL_UNAPI
         ;ld      c,0Bh
         ;call    DO_DOS
-        pop     hl,de,bc,af
+        pop     hl
+        pop     de
+        pop     bc
+        pop     af
         ret
 
 
@@ -3744,7 +3787,8 @@ OPEN_DCP_L1:    inc     hl
         ld      de,DATA_BUF
         ld      b,6     ;4 bytes para IP y 2 para puerto
 
-OPEN_DCP_L2:    push    bc,de
+OPEN_DCP_L2:    push    bc
+        push    de
         call    EXTNUM
 
         ld      e,d     ;Hace que HL apunte al siguiente numero
@@ -4115,7 +4159,8 @@ RETR_OKDATA:    ;
         ;--- FILE_FH=0FFh: Imprime los datos en pantalla
 
         ld      hl,DATA_BUF     ;Imprime todos los datos recibidos
-RETR_LOOP2:     push    bc,hl
+RETR_LOOP2:     push    bc
+        push    hl
         ld      a,(hl)
         call    PRINT_PAUSE
         pop     hl
@@ -4318,7 +4363,8 @@ MUL_WAIT:       ;debug   "3"
         ;--- Va cogiendo Los nombres de fichero y los
         ;    inserta en la lista
 
-MUL_NLST_LOOP:  push    af,hl
+MUL_NLST_LOOP:  push    af
+        push    hl
 MUL_NLST_LOOP2: call    GET_DDATA
         jr      c,MUL_NODATA
         cp      10
@@ -4335,7 +4381,8 @@ MUL_NLST_LOOP2: call    GET_DDATA
 MUL_NEXT_NAME:  ;Nombre completo obtenido, HL apunta a su direccion
         ;y A contiene su longitud (en la pila)
 
-        pop     hl,af   ;Inserta nombre en la lista
+        pop     hl ;Inserta nombre en la lista
+        pop     af
         ld      l,a
         ld      h,0
         ld      a,(MUL_LISTA)
@@ -4352,7 +4399,8 @@ MUL_NEXT_NAME:  ;Nombre completo obtenido, HL apunta a su direccion
         ;--- No se pueden coger mas datos: esperamos o
         ;    pasamos a tratar los nombres de fichero recibidos
 
-MUL_NODATA:     pop     hl,bc
+MUL_NODATA:     pop     hl
+        pop     bc
         push    af
         ld      (MUL_NAME_PNT),hl
         ld      a,b
@@ -4680,9 +4728,15 @@ R_ABORT_53:     ld      a,(CONTROL_CON)
 ;    Espera datos de la conexion IDENT_CON,
 ;    y los devuelve seguidos de IDENT_S
 
-IDENT_AUTOM:    push    af,bc,de,hl
+IDENT_AUTOM:    push    af
+        push    bc
+        push    de
+        push    hl
         call    _IDENT_AUTOM
-        pop     hl,de,bc,af
+        pop     hl
+        pop     de
+        pop     bc
+        pop     af
         ret
 
 _IDENT_AUTOM:   ld      a,(IDENT_CON)
@@ -4730,7 +4784,8 @@ IDENT_AUT1:     cp      4
 ;    excepto espacios, caracteres de control (<32 y 127)
 ;    y secuencias de escape
 
-HOOK_CODE0:     pop     hl,bc   ;B=Caracter a imprimir
+HOOK_CODE0:     pop     hl
+        pop     bc   ;B=Caracter a imprimir
         ld      a,(ESC_CHAR)
         or      a
         jr      z,HOOK_C0_NORMAL
@@ -4777,12 +4832,16 @@ HOOK_C0_NORM2:  cp      33
         cp      127
         jr      z,HOOK_C0_OK
         ld      a,"*"
-HOOK_C0_OK:     push    af,hl
+HOOK_C0_OK:     push    af
+        push    hl
 HOOK_CODE0_END: ;
 
 ;--- Rutinas para establecer y resetear el gancho
 
-SET_HOOK:       push    af,bc,de,hl
+SET_HOOK:       push    af
+        push    bc
+        push    de
+        push    hl
         di
         ld      a,0C3h
         ld      (H_CHPH),a
@@ -4791,17 +4850,26 @@ SET_HOOK:       push    af,bc,de,hl
         ld      a,0FFh
         ld      (HOOKING),a
         ei
-        pop     hl,de,bc,af
+        pop     hl
+        pop     de
+        pop     bc
+        pop     af
         ret
 
-RESET_HOOK:     push    af,bc,de,hl
+RESET_HOOK:     push    af
+        push    bc
+        push    de
+        push    hl
         di
         ld      hl,HOOK_OLD
         ld      de,H_CHPH
         ld      bc,5
         ldir
         ei
-        pop     hl,de,bc,af
+        pop     hl
+        pop     de
+        pop     bc
+        pop     af
         ret
 
 
@@ -4945,14 +5013,16 @@ TCP_STATUS_2:
 ;Output: Cy=1 if error, then A=UNAPI error code
 
 TCP_SEND:
-        push    hl,bc
+        push    hl
+        push    bc
 
         ld      b,a
         rla
         and     1
         ld      c,a
 
-        pop     hl,de
+        pop     hl
+        pop     de
         ld      a,TCPIP_TCP_SEND
         call    CALL_UNAPI
         or      a
@@ -4973,8 +5043,10 @@ TCP_SEND:
 ;        Z = 1 if BC=0
 
 TCP_RCV:
-        push    af,bc
-        pop     hl,bc
+        push    af
+        push    bc
+        pop     hl
+        pop     bc
 
         ld      a,TCPIP_TCP_RCV
         call    CALL_UNAPI
