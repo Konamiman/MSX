@@ -110,63 +110,6 @@ debug:  macro   @c
         pop     hl,de,bc,af
         endm
 
-; Conditional relative jumps
-
-jri:    macro   @a      ;A = x
-        jr      z,@a
-        endm
-
-jrni:   macro   @a      ;A <> x
-        jr      nz,@a
-        endm
-
-jrmn:   macro   @a      ;A < x
-        jr      c,@a
-        endm
-
-jrmy:   macro   @a      ;A > x
-        jr      z,$+4
-        jr      nc,@a
-        endm
-
-jrmni:  macro   @a      ;A <= x
-        jr      c,@a
-        jr      z,@a
-        endm
-
-jrmyi:  macro   @a      ;A >= x
-        jr      nc,@a
-        endm
-
-; Conditional absolute jumps
-
-jpi:    macro   @a      ;A = x
-        jp      z,@a
-        endm
-
-jpni:   macro   @a      ;A <> x
-        jp      nz,@a
-        endm
-
-jpmn:   macro   @a      ;A < x
-        jp      c,@a
-        endm
-
-jpmy:   macro   @a      ;A > x
-        jr      z,$+5
-        jp      nc,@a
-        endm
-
-jpmni:  macro   @a      ;A <= x
-        jp      c,@a
-        jp      z,@a
-        endm
-
-jpmyi:  macro   @a      ;A >=x
-        jp      nc,@a
-        endm
-
-
 
 ;**************************
 ;***                    ***
@@ -2475,7 +2418,7 @@ PASASPC:        ld      a,(hl)  ;Skips spaces until a parameter
         jr      z,ENDPNUM
         cp      " "
         inc     hl
-        jri     PASASPC
+        jr      z,PASASPC
 
         inc     ix      ;Increases number of parameters
 PASAPAR:        ld      a,(hl)  ;Walks through the parameter
@@ -2483,14 +2426,16 @@ PASAPAR:        ld      a,(hl)  ;Walks through the parameter
         jr      z,ENDPNUM
         cp      " "
         inc     hl
-        jri     PASASPC
+        jr      z,PASASPC
         jr      PASAPAR
 
         ;* Here we know already how many parameters are available
 
 ENDPNUM:        ld      a,ixh   ;Error if the parameter to extract
         cp      ixl     ;is greater than the total number of
-        jrmy    EXTPERR ;parameters available
+        jr      z,PAROK ;parameters available
+        jr      nc,EXTPERR
+PAROK:
 
         push    iy
         pop     hl
@@ -2499,17 +2444,17 @@ ENDPNUM:        ld      a,ixh   ;Error if the parameter to extract
 PASAP2: ld      a,(hl)  ;Skips spaces until the next
         cp      " "     ;parameter is found
         inc     hl
-        jri     PASAP2
+        jr      z,PASAP2
 
         ld      a,ixh   ;If it is the parameter we are
         cp      b       ;searching for, we extract it,
-        jri     PUTINDE0        ;else...
+        jr     z,PUTINDE0        ;else...
 
         inc     b
 PASAP3: ld      a,(hl)  ;...we skip it and return to PASAP2
         cp      " "
         inc     hl
-        jrni    PASAP3
+        jr      nz,PASAP3
         jr      PASAP2
 
         ;* Parameter is located, now copy it to the user buffer
@@ -2519,7 +2464,7 @@ PUTINDE0:       ld      b,0
 PUTINDE:        inc     b
         ld      a,(hl)
         cp      " "
-        jri     ENDPUT
+        jr      z,ENDPUT
         or      a
         jr      z,ENDPUT
         cp      13
@@ -3081,7 +3026,7 @@ SRCH_C_LOOP:    inc     hl
         inc     de
         ld      a,(de)
         cp      "A"
-        jrmn    SRCH_C_LP2
+        jr      c,SRCH_C_LP2
         and     11011111b       ;Lo transforma a mayusculas
 SRCH_C_LP2:     cp      (hl)
         jr      nz,NEXT_COM
