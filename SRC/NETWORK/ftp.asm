@@ -1,11 +1,14 @@
         ;--- FTP 1.0 - FTP client for the TCP/IP UNAPI
-        ;    By Konami Man, 4/2010
+        ;    By Konamiman, 4/2010
+        ;
+        ;    Can be complied with sjasm 0.39 (https://github.com/Konamiman/Sjasm/releases):
+        ;    sjasm ftp.asm ftp.com
 
-;******************************
-;***                        ***
-;***   MACROS, CONSTANTES   ***
-;***                        ***
-;******************************
+;*****************************
+;***                       ***
+;***   MACROS, CONSTANTS   ***
+;***                       ***
+;*****************************
 
         macro nesman func      ;Indirect call to NestorMan functions
         ld      c,func
@@ -119,7 +122,7 @@ ERR_INV_OPER:           equ     15
 
 ;**************************
 ;***                    ***
-;***   INICIALIZACION   ***
+;***   INITIALIZATION   ***
 ;***                    ***
 ;**************************
 
@@ -416,11 +419,11 @@ NOPARS: ;
 
 
 
-;***************************
-;***                     ***
-;***   BUCLE PRINCIPAL   ***
-;***                     ***
-;***************************
+;*****************************
+;***                       ***
+;***   MAIN PROGRAM LOOP   ***
+;***                       ***
+;*****************************
 
 MAIN_LOOP:      ld      sp,(SAVESP)
 
@@ -498,11 +501,11 @@ COM_OK2:        call    JP_HL   ;Ejecuta comando
 
 
 
-;******************************
-;***                        ***
-;***   COMANDOS DE USUARIO  ***
-;***                        ***
-;******************************
+;************************
+;***                  ***
+;***   USER COMMANDS  ***
+;***                  ***
+;************************
 
 ;-----------------
 ;---  ?, HELP  ---
@@ -2346,15 +2349,14 @@ R_INVPAR:       print   INVPAR_S
 
 ;******************************
 ;***                        ***
-;***   RUTINAS AUXILIARES   ***
+;***   AUXILIARY ROUTINES   ***
 ;***                        ***
 ;******************************
 
 
-;--------------------------------------------
-;---  Rutinas de manipulacion de cadenas  ---
-;---      e impresion por pantalla        ---
-;--------------------------------------------
+;----------------------------------------------------------
+;---  String manipulation and screen printing routines  ---
+;----------------------------------------------------------
 
 
 ;--- NAME: COMP
@@ -5060,11 +5062,11 @@ TCP_RCV:
         ret
 
 
-;*************************************
-;***                               ***
-;***   DATOS, VARIABLES, CADENAS   ***
-;***                               ***
-;*************************************
+;************************************
+;***                              ***
+;***   DATA, VARIABLES, STRINGS   ***
+;***                              ***
+;************************************
 
 DATA:
         org     8000h
