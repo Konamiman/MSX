@@ -1,8 +1,6 @@
         ;--- FTP 1.0 - FTP client for the TCP/IP UNAPI
         ;    By Konami Man, 4/2010
 
-        .label  20
-
 ;******************************
 ;***                        ***
 ;***   MACROS, CONSTANTES   ***
@@ -935,7 +933,7 @@ LCD_NODRIVE:    ;
 LCD_END:        print   PATHCHAN_S
         jp      PRINT_PATH
 
-LCD_NOPATH:     ld      a,"\"   ;Si se especifica unidad pero no dir,
+LCD_NOPATH:     ld      a,92 ;"\"   ;Si se especifica unidad pero no dir,
         ld      (RESPONSE_BUF+2),a      ;se muestra el dir actual
         ld      c,_GETCD
         ld      de,RESPONSE_BUF+3
@@ -3237,7 +3235,7 @@ PRINT_PATH:     ld      c,_CURDRV       ;Muestra unidad
         ld      e,":"
         ld      c,_CONOUT
         call    DO_DOS
-        ld      e,"\"
+        ld      e,92    ;"\"
         ld      c,_CONOUT
         call    DO_DOS
 
@@ -5308,7 +5306,7 @@ H_LDELETE:      db      "LDELETE <mask> [R]",13,10
         db      "Deletes the specified local file(s).",13,10
         db      "With ",34,"R",34," deletes also read-only file(s).",13,10,"$"
 
-H_LDIR: db      "LDIR [<path>\][<mask>]",13,10
+H_LDIR: db      "LDIR [<path>",92,"][<mask>]",13,10
         db      "Shows the contents of the specified local directory (current one if omitted)",13,10
         db      "according to the specified mask (all files if omitted).",13,10,"$"
 
