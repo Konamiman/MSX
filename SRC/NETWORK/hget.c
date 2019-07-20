@@ -96,6 +96,10 @@ typedef unsigned char bool;
 #define HTTP_DEFAULT_PORT (80)
 #define HTTPS_DEFAULT_PORT (443)
 
+#define TCPIP_CAPAB_VERIFY_CERTIFICATE 16
+#define TCPFLAGS_USE_TLS 4
+#define TCPFLAGS_VERIFY_CERTIFICATE 8
+
 enum TcpipUnapiFunctions {
     UNAPI_GET_INFO = 0,
     TCPIP_GET_CAPAB = 1,
@@ -136,11 +140,11 @@ enum TcpipErrorCodes {
 
 const char* strTitle=
     "HTTP file downloader 1.3\r\n"
-    "By Konamiman, 2011 v1.3 Oduvaldo (ducasp@gmail.com) 07/2019\r\n"
+    "By Oduvaldo (ducasp@gmail.com) 07/2019 Based on HGET 1.1 by Konamiman\r\n"
     "\r\n";
 
 const char* strUsage=
-    "Usage: hgetf <file URL>|<local file with the URL>|con [/l:<local file name>]\r\n"
+    "Usage: hget <file URL>|<local file with the URL>|con [/l:<local file name>]\r\n"
     "  [/n] [/t] [/c] [/v] [/h] [/x:<headers file name>] [/a:<user>:<password>]\r\n"
     "\r\n"
     "/c: Continue downloading a partially downloaded file.\r\n"
@@ -187,7 +191,7 @@ int remainingInputData = 0;
 byte* inputDataPointer;
 int emptyLineReaded;
 long contentLength,blockSize,currentBlock;
-bool bFirstUpdate;
+bool isFirstUpdate;
 int isChunkedTransfer;
 long currentChunkSize = 0;
 int newLocationReceived;
@@ -226,11 +230,11 @@ typedef struct {
 } t_TcpConnectionParameters;
 
 t_TcpConnectionParameters* TcpConnectionParameters;
-bool bTls = false;
-bool bHTTPS = false;
-bool bCheckCertificate = true;
-bool bCheckHostName = true;
-bool bSafeTLSSupport = true;
+bool TlsIsSupported = false;
+bool useHttps = false;
+bool mustCheckCertificate = true;
+bool mustCheckHostName = true;
+bool safeTlsIsSupported = true;
 
     /* Some handy defines */
 
@@ -333,10 +337,10 @@ void ReadUrlFromConsole();
 
 int main(char** argv, int argc)
 {
-	bHTTPS = false;
-	bCheckCertificate = true;
-	bCheckHostName = true;
-	bTls = false;
+	useHttps = false;
+	mustCheckCertificate = true;
+	mustCheckHostName = true;
+	TlsIsSupported = false;
     arguments = argv;
     argumentsCount = argc;
 
@@ -450,17 +454,17 @@ void InitializeTcpipUnapi()
     if((regs.Bytes.L & (1 << 3)) == 0) {
         Terminate("This TCP/IP implementation does not support active TCP connections.");
     }
-	if(regs.Bytes.D & 16) //fifth bit is set?
-		bSafeTLSSupport = true;
+	if(regs.Bytes.D & TCPIP_CAPAB_VERIFY_CERTIFICATE)
+		safeTlsIsSupported = true;
 	else
-		bSafeTLSSupport = false;
+		safeTlsIsSupported = false;
 	
 	regs.Bytes.B = 4;
     UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
 	if (regs.Bytes.A == 0) 
 	{
 		if(regs.Bytes.H & 1)
-			bTls = true;
+			TlsIsSupported = true;
 	}	
 
     regs.Bytes.B = 0;
@@ -571,7 +575,7 @@ void ProcessUrl(char* url, byte isRedirection)
         }
     } else if(StringStartsWith(url, "http://")) {
 		TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
-		TcpConnectionParameters->flags = 0 ; //set flags properly for HTTP in case of redirection...
+		TcpConnectionParameters->flags = 0 ;
         if(isRedirection) {
 			pointer = FindFirstSlash(url+7);
 			if ((pointer)&&(strncmpi(url+7, domainName, (pointer-url-7))))
@@ -580,7 +584,7 @@ void ProcessUrl(char* url, byte isRedirection)
 				redirectionUrlIsNewDomainName = 0;
         }
         strcpy(domainName, url + 7);
-    } else if((bTls)&&(StringStartsWith(url, "https://"))) {
+    } else if((TlsIsSupported)&&(StringStartsWith(url, "https://"))) {
         if(isRedirection) {
 			pointer = FindFirstSlash(url+8);
 			if ((pointer)&&(strncmpi(url+8, domainName, (pointer-url-8))))
@@ -589,9 +593,9 @@ void ProcessUrl(char* url, byte isRedirection)
 				redirectionUrlIsNewDomainName = 0;
         }
         strcpy(domainName, url + 8);
-		bHTTPS = true;
+		useHttps = true;
 		TcpConnectionParameters->remotePort = HTTPS_DEFAULT_PORT;
-		TcpConnectionParameters->flags = TcpConnectionParameters->flags | 4 ; //set flags properly for TLS
+		TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_USE_TLS ;
 		
     } else if(ContainsProtocolSpecifier(url)) {
         if(isRedirection) {
@@ -645,7 +649,7 @@ void ExtractPortNumberFromDomainName()
 
     pointer = FindFirstSemicolon(domainName);
     if(pointer == NULL) {
-		if (!bHTTPS)
+		if (!useHttps)
 			TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
 		else
 			TcpConnectionParameters->remotePort = HTTPS_DEFAULT_PORT;
@@ -672,12 +676,12 @@ void ProcessOptions()
             verboseMode = 1;
             debug("Verbose mode");
         } else if(ArgumentIs(arguments[i], "u")) {
-            bCheckCertificate = false;
-			bCheckHostName = false;
+            mustCheckCertificate = false;
+			mustCheckHostName = false;
             debug("UNSAFE TLS");
         } else if(ArgumentIs(arguments[i], "n")) {
-            bCheckCertificate = true;
-			bCheckHostName = false;
+            mustCheckCertificate = true;
+			mustCheckHostName = false;
             debug("TLS won't check host name");
         } else if(ArgumentIs(arguments[i], "c")) {
             continueDownloading = 1;
@@ -1350,7 +1354,7 @@ void DoDirectDatatransfer()
 	{
 		blockSize = contentLength/25;
 		currentBlock = 0;
-		bFirstUpdate = true;
+		isFirstUpdate = true;
 	}
     while(contentLength == 0 || receivedLength < contentLength) {
         EnsureThereIsTcpDataAvailable();
@@ -1373,7 +1377,7 @@ void DoChunkedDataTransfer()
 	{
 		blockSize = contentLength/25;
 		currentBlock = 0;
-		bFirstUpdate = true;
+		isFirstUpdate = true;
 	}
     while(1) {
         if(currentChunkSize == 0) {
@@ -1500,29 +1504,10 @@ void UpdateReceivingMessage()
 				print("=");
 			}
 
-			if (bFirstUpdate)
+			if (isFirstUpdate)
 			{
-				bFirstUpdate=false;
-				print("\r[                         ]");
-				__asm
-				  push AF
-				  push HL
-				  push IX
-				  push IY
-				  ld   A,#2
-				  ld   H,A
-				  ld   A,(0xF3DC)
-				  ld   L,A
-					 
-				  ld   IX,#0x00c6
-				  ld   IY,(0xFCC0)
-				  call 0x001C
-				  
-				  pop  IY
-				  pop  IX
-				  pop  HL
-				  pop  AF
-				__endasm;
+				isFirstUpdate=false;
+				print("\r[                         ]\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d");				
 			}
 		}
 		else
@@ -1624,19 +1609,19 @@ void ResolveServerName()
     TcpConnectionParameters->remoteIP[2] = regs.Bytes.E;
     TcpConnectionParameters->remoteIP[3] = regs.Bytes.D;
 
-	if (bHTTPS)
+	if (useHttps)
 	{
-		if (bCheckCertificate)
-			TcpConnectionParameters->flags = TcpConnectionParameters->flags | 8 ; //set flags properly for TLS certificate validation
-		if (bCheckHostName)
-			TcpConnectionParameters->hostName =  (int)domainName; //set host name buffer
+		if (mustCheckCertificate)
+			TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_VERIFY_CERTIFICATE ;
+		if (mustCheckHostName)
+			TcpConnectionParameters->hostName =  (int)domainName;
 		else
-			TcpConnectionParameters->hostName =  0; //clear host name buffer
+			TcpConnectionParameters->hostName =  0;
 	}
 	else
 	{
-		TcpConnectionParameters->flags = 0 ; //set flags properly for regular tcp
-		TcpConnectionParameters->hostName =  0; //clear host name buffer
+		TcpConnectionParameters->flags = 0 ;
+		TcpConnectionParameters->hostName =  0;
 	}
 
     print(" Ok\r\n");
@@ -1664,7 +1649,7 @@ void OpenTcpConnection()
         Terminate(strNoNetwork);
     } else if(regs.Bytes.A != 0) {
         sprintf(Buffer, "Unexpected error when opening TCP connection (%i)", regs.Bytes.A);
-		if ((bHTTPS)&&(regs.Bytes.A == ERR_NO_CONN)) //B should have the reason
+		if ((useHttps)&&(regs.Bytes.A == ERR_NO_CONN)) //C should have the reason
 		{
 			switch (regs.Bytes.C)
 			{
