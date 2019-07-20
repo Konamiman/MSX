@@ -43,7 +43,7 @@ LINK:	equ	1
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	1
+INL_VER2:	equ	2
 TCPIP_VER1:	equ	1
 TCPIP_VER2:	equ	1
 
@@ -77,6 +77,10 @@ CLOSE.WAIT:	equ	7
 CLOSING:	equ	8
 LAST.ACK:	equ	9
 TIME.WAIT:	equ	10	;Not used (CLOSED is entered directly)
+;The following states are used during SOCKS negotiation
+SOCKS_STATE_BASE: equ 11
+SOCKS_METHODS_SENT: equ 11
+SOCKS_ADDRESS_SENT: equ 12
 
 ;--- Maximum number of simultaneous UDP connections
 
@@ -229,7 +233,10 @@ RS_OUT_STAT:	jp	0
 EXEUNAPI:			;#402A
 	ds	12
 
-	endif
+    endif
+
+TCP_UNAPI_ENTRY:
+    jp TCPIP_UNAPI_ENTRY    ;#4036
 
 	;--- TCP/IP UNAPI routines table
 
@@ -267,7 +274,7 @@ FN_27:	dw	TCPIP_CONFIG_TTL
 FN_28:	dw	TCPIP_CONFIG_PING
 FN_29:	dw	TCPIP_WAIT
 
-MAX_IMPFN:	equ	140
+MAX_IMPFN:	equ	142
 
 IMPFN_TABLE:
 FN_128:	dw	INL_GET_DATASEG
@@ -283,6 +290,8 @@ FN_137:	dw	INL_GET_MAC
 FN_138:	dw	INL_SEND_MODEM
 FN_139:	dw	INL_PPP_OPEN
 FN_140:	dw	INL_PPP_CLOSE
+FN_141: dw  INL_GET_SOCKS_PROXY
+FN_142: dw  INL_SET_SOCKS_PROXY
 
 
 ;*****************************
@@ -13522,6 +13531,74 @@ INL_PPP_CLOSE:
 
 	endif
 
+
+	;=============================
+	;===  INL_GET_SOCKS_PROXY  ===
+	;=============================
+
+;Get the current SOCKS proxy configuration.
+;
+;Input:  A = 141
+;        Cy = 0: get configuration for non-TLS connections
+;             1: get configuration for TLS connections
+;Output: A = 0
+;        L.H.E.D = Proxy address (0.0.0.0 if not configured)
+;        BC = Proxy port (undefined if not configured)
+
+INL_GET_SOCKS_PROXY:
+    call SETUP_P2
+
+    ld ix,SOCKS_NONTLS_ADD
+    jr nc,INL_GET_SOCKS_DO
+    ld ix,SOCKS_TLS_ADD
+INL_GET_SOCKS_DO:
+    ld l,(ix)
+    ld h,(ix+1)    
+    ld e,(ix+2)
+    ld d,(ix+3)
+    ld c,(ix+4)
+    ld b,(ix+5)
+
+    call RESTORE_P2
+
+    xor a
+    ret
+
+
+	;=============================
+	;===  INL_SET_SOCKS_PROXY  ===
+	;=============================
+
+;Set the current SOCKS proxy configuration.
+;
+;Input:  A = 141
+;        Cy = 0: set configuration for non-TLS connections
+;             1: set configuration for TLS connections
+;        L.H.E.D = Proxy address (0.0.0.0 to disable)
+;        BC = Proxy port (not needed when disabling)
+;Output: A = 0
+
+INL_SET_SOCKS_PROXY:
+    call SETUP_P2
+    
+    ld ix,SOCKS_NONTLS_ADD
+    bit 0,a
+    jr nc,INL_SET_SOCKS_DO
+    ld ix,SOCKS_TLS_ADD
+INL_SET_SOCKS_DO:
+    ld (ix),l
+    ld (ix+1),h
+    ld (ix+2),e
+    ld (ix+3),d
+    ld (ix+4),c
+    ld (ix+5),b
+
+    call RESTORE_P2
+
+    xor a
+    ret
+
+
 ;--- Buffer used to exchange blocks of data
 ;    with user functions
 
@@ -13860,6 +13937,13 @@ RECEIVED_MSS:	dw	0	;TCP MSS option received in current segment, or 512
 
 CUR_UDPTCB_NUM:	db	0	;Number of UDP connection whose UDP is at UDP_TCB_TEMP
 
+     ;--- Variables for SOCKS proxy client
+
+SOCKS_NONTLS_ADD: ds 4
+SOCKS_NONTLS_PORT: ds 2
+SOCKS_TLS_ADD: ds 4
+SOCKS_TLS_PORT: ds 2
+
 
 	;=================================================
 	;===  Variables for Ethernet datagram sending  ===
@@ -14089,7 +14173,6 @@ UDP_RESIDENT:	equ	UDP_FLAGS+1	;#FF if resident connection
 UDP_DATA:	equ	UDP_RESIDENT+1	;IP address + remote port + length for each buffer
 
 UDP_TCB_END:	equ	UDP_DATA-8*2
-
 
 		if LINK=0
 
