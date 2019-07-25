@@ -1497,18 +1497,17 @@ void UpdateReceivingMessage()
 
     if(!localFileIsConsole) {
 		if (contentLength)
-		{
-			if (currentBlock>=blockSize)
-			{
-				currentBlock-=blockSize;
-				print("=");
-			}
-
+		{			
 			if (isFirstUpdate)
 			{
 				isFirstUpdate=false;
-				print("\r[                         ]\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d\x1d");				
+				print("\r[                         ]\r\x1c");
 			}
+			while (currentBlock>=blockSize)
+			{
+				currentBlock-=blockSize;
+				print("=");
+			}			
 		}
 		else
 		{
