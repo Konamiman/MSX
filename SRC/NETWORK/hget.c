@@ -1671,7 +1671,7 @@ void OpenTcpConnection()
         Terminate(strNoNetwork);
     } else if(regs.Bytes.A != 0) {
         sprintf(Buffer, "Unexpected error when opening TCP connection (%i)", regs.Bytes.A);
-		if ((useHttps)&&(regs.Bytes.A == ERR_NO_CONN)) //C should have the reason
+		if (regs.Bytes.A == ERR_NO_CONN) //C should have the reason
 		{
 			if (regs.Bytes.C >= TCP_CONN_FAILURE_KNOWN_REASONS)
 				printf("\r\n%s",strConnFailureReasons[TCP_CONN_FAILURE_KNOWN_REASONS]);
