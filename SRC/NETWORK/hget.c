@@ -169,6 +169,29 @@ const char* strInvParam = "Invalid parameter";
 const char* strNoNetwork = "No network connection available";
 const char* strCRLF = "\r\n";
 const char* strWwwAuthenticate = "WWW-Authenticate";
+#define TCP_CONN_FAILURE_KNOWN_REASONS 20
+const char* strConnFailureReasons[21] = {
+	"Unknow failure opening connection\r\n",
+	"This connection has never been used since the implementation was initialized.\r\n",
+	"The TCPIP_TCP_CLOSE method was called.\r\n",
+	"The TCPIP_TCP_ABORT method was called.\r\n",
+	"A RST segment was received (the connection was refused or aborted by the remote host).\r\n",
+	"The user timeout expired.\r\n",
+	"The connection establishment timeout expired.\r\n",
+	"Network connection was lost while the TCP connection was open.\r\n",
+	"ICMP \"Destination unreachable\" message received.\r\n",
+	"TLS: The server did not provide a certificate.\r\n",
+	"TLS: Invalid server certificate.\r\n",
+	"TLS: Invalid server certificate (the host name didn't match).\r\n",
+	"TLS: Invalid server certificate (expired).\r\n",
+	"TLS: Invalid server certificate (self-signed).\r\n",
+	"TLS: Invalid server certificate (untrusted root).\r\n",
+	"TLS: Invalid server certificate (revoked).\r\n",
+	"TLS: Invalid server certificate (invalid certificate authority).\r\n",
+	"TLS: Invalid server certificate (invalid TLS version or cypher suite).\r\n",
+	"TLS: Our certificate was rejected by the peer.\r\n",
+	"TLS: Other error.\r\n",
+	"An error that is unknown to this software occurred...\r\n"};
 
 
     /* Variables */
@@ -1650,71 +1673,10 @@ void OpenTcpConnection()
         sprintf(Buffer, "Unexpected error when opening TCP connection (%i)", regs.Bytes.A);
 		if ((useHttps)&&(regs.Bytes.A == ERR_NO_CONN)) //C should have the reason
 		{
-			switch (regs.Bytes.C)
-			{
-				case 0:
-					printf("Unknow failure opening connection\r\n");
-				break;
-				case 1:
-					printf("This connection has never been used since the implementation was initialized.\r\n");
-				break;
-				case 2:
-					printf("The TCPIP_TCP_CLOSE method was called.\r\n");
-				break;
-				case 3:
-					printf("The TCPIP_TCP_ABORT method was called.\r\n");
-				break;
-				case 4:
-					printf("A RST segment was received (the connection was refused or aborted by the remote host).\r\n");
-				break;
-				case 5:
-					printf("The user timeout expired.\r\n");
-				break;
-				case 6:
-					printf("The connection establishment timeout expired.\r\n");
-				break;
-				case 7:
-					printf("Network connection was lost while the TCP connection was open.\r\n");
-				break;
-				case 8:
-					printf("ICMP \"Destination unreachable\" message received.\r\n");
-				break;
-				case 9:
-					printf("TLS: The server did not provide a certificate.\r\n");
-				break;
-				case 10:
-					printf("TLS: Invalid server certificate.\r\n");
-				break;
-				case 11:
-					printf("TLS: Invalid server certificate (the host name didn't match).\r\n");
-				break;
-				case 12:
-					printf("TLS: Invalid server certificate (expired).\r\n");
-				break;
-				case 13:
-					printf("TLS: Invalid server certificate (self-signed).\r\n");
-				break;
-				case 14:
-					printf("TLS: Invalid server certificate (untrusted root).\r\n");
-				break;
-				case 15:
-					printf("TLS: Invalid server certificate (revoked).\r\n");
-				break;
-				case 16:
-					printf("TLS: Invalid server certificate (invalid certificate authority).\r\n");
-				break;
-				case 17:
-					printf("TLS: Invalid server certificate (invalid TLS version or cypher suite).\r\n");
-				break;
-				case 18:
-					printf("TLS: Our certificate was rejected by the peer.\r\n");
-				break;
-				case 19:
-					printf("TLS: Other error.\r\n");
-				default:
-					printf("An error that is unknown to this software occurred...\r\n");
-				break;
-			}
+			if (regs.Bytes.C >= TCP_CONN_FAILURE_KNOWN_REASONS)
+				printf("\r\n%s",strConnFailureReasons[TCP_CONN_FAILURE_KNOWN_REASONS]);
+			else
+				printf("\r\n%s",strConnFailureReasons[regs.Bytes.C]);
 		}
         Terminate(Buffer);
     }
@@ -1738,7 +1700,14 @@ void OpenTcpConnection()
     if(regs.Bytes.A != 0) {
         debug2("Error connecting: %i\r\n", regs.Bytes.A);
         Terminate("Could not establish a connection to the server");
-    }
+		if (regs.Bytes.A == ERR_NO_CONN)
+		{
+			if (regs.Bytes.C >= TCP_CONN_FAILURE_KNOWN_REASONS)
+				printf("\r\n%s",strConnFailureReasons[TCP_CONN_FAILURE_KNOWN_REASONS]);
+			else
+				printf("\r\n%s",strConnFailureReasons[regs.Bytes.C]);
+		}
+    }	
 
     print("OK\r\n\r\n");
 }
