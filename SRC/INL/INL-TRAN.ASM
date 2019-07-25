@@ -3140,6 +3140,14 @@ TCPCLOSE_T:	db	1,"Connection never used$"
 	db	6,"Connection establishment timeout expired$"
 	db	7,"Internet connection lost$"
 	db	8,"Destination host unreachable$"
+    db  128,"Malformed response from SOCKS server$"
+    db  129,"SOCKS server requires authentication$"
+    db  130,"SOCKS: server failure$"
+    db  131,"SOCKS: connection not allowed by ruleset$"
+    db  132,"SOCKS: network unreachable$"
+    db  133,"SOCKS: host unreachable$"
+    db  134,"SOCKS: host refused connection$"
+    db  135,"SOCKS: TTL expired$"
 	db	0
 
 
