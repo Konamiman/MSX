@@ -258,6 +258,7 @@ bool useHttps = false;
 bool mustCheckCertificate = true;
 bool mustCheckHostName = true;
 bool safeTlsIsSupported = true;
+byte redirectionRequests = 0;
 
     /* Some handy defines */
 
@@ -600,26 +601,36 @@ void ProcessUrl(char* url, byte isRedirection)
 		TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
 		TcpConnectionParameters->flags = 0 ;
         if(isRedirection) {
-			pointer = FindFirstSlash(url+7);
-			if ((pointer)&&(strncmpi(url+7, domainName, (pointer-url-7))))
+			if (useHttps)
 				redirectionUrlIsNewDomainName = 1;
 			else
-				redirectionUrlIsNewDomainName = 0;
+			{
+				pointer = FindFirstSlash(url+7);
+				if ((pointer)&&(strncmpi(url+7, domainName, (pointer-url-7))))
+					redirectionUrlIsNewDomainName = 1;
+				else
+					redirectionUrlIsNewDomainName = 0;
+			}
         }
         strcpy(domainName, url + 7);
+		useHttps = false;
     } else if((TlsIsSupported)&&(StringStartsWith(url, "https://"))) {
         if(isRedirection) {
-			pointer = FindFirstSlash(url+8);
-			if ((pointer)&&(strncmpi(url+8, domainName, (pointer-url-8))))
+			if (!useHttps)
 				redirectionUrlIsNewDomainName = 1;
 			else
-				redirectionUrlIsNewDomainName = 0;
+			{
+				pointer = FindFirstSlash(url+8);
+				if ((pointer)&&(strncmpi(url+8, domainName, (pointer-url-8))))
+					redirectionUrlIsNewDomainName = 1;
+				else
+					redirectionUrlIsNewDomainName = 0;
+			}
         }
         strcpy(domainName, url + 8);
 		useHttps = true;
 		TcpConnectionParameters->remotePort = HTTPS_DEFAULT_PORT;
-		TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_USE_TLS ;
-		
+		TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_USE_TLS ;		
     } else if(ContainsProtocolSpecifier(url)) {
         if(isRedirection) {
             Terminate("Redirection request received, but the new URL protocol is not HTTP.");
@@ -832,6 +843,7 @@ char* FindFirstSemicolon(char* string)
 void DoHttpWork()
 {
     authenticationRequested = 0;
+	redirectionRequests = 0;
 
     ResetTcpBuffer();
     ResolveServerName();
@@ -874,7 +886,7 @@ void DoHttpWork()
 
 void PrintRedirectionInformation()
 {
-    printf("* Redirecting to: %s\r\n\r\n", redirectionFullLocation);
+    printf("* Redirecting to: %s\r\n\r\n", redirectionFullLocation);	
 }
 
 
@@ -1081,6 +1093,9 @@ void ProcessResponseStatus()
         continueReceived = 1;
     } else if(responseStatusCodeFirstDigit == 3) {
         redirectionRequested = 1;
+		++redirectionRequests;
+		if (redirectionRequests>10)
+			Terminate ("ERROR: Too many redirects!\r\n");
     } else if(responseStatusCodeFirstDigit == 2 && continueDownloading && responseStatusCode != 206) {
         Terminate("ERROR: Resume download was requested, but the server started a new download.");
     } else if(responseStatusCodeFirstDigit != 2) {
