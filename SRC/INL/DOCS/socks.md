@@ -1,0 +1,1 @@
+# InterNestor Lite - acting as a SOCKS client
