@@ -100,6 +100,8 @@ typedef unsigned char bool;
 #define TCPFLAGS_USE_TLS 4
 #define TCPFLAGS_VERIFY_CERTIFICATE 8
 
+#define MAX_REDIRECTIONS 10
+
 enum TcpipUnapiFunctions {
     UNAPI_GET_INFO = 0,
     TCPIP_GET_CAPAB = 1,
@@ -140,12 +142,18 @@ enum TcpipErrorCodes {
 
 const char* strTitle=
     "HTTP file downloader 1.3\r\n"
-    "By Oduvaldo (ducasp@gmail.com) 07/2019 Based on HGET 1.1 by Konamiman\r\n"
+    "By Oduvaldo (ducasp@gmail.com) 7/2019\r\n"
+    "Based on HGET 1.1 by Konamiman\r\n"
     "\r\n";
 
-const char* strUsage=
+const char* strUseQuestionMarkForHelp=
+    "\r\nFor extended help: hget ?\r\n";
+
+const char* strShortUsage=
     "Usage: hget <file URL>|<local file with the URL>|con [/l:<local file name>]\r\n"
-    "  [/n] [/t] [/c] [/v] [/h] [/x:<headers file name>] [/a:<user>:<password>]\r\n"
+    "  [/n] [/t] [/c] [/v] [/h] [/x:<headers file name>] [/a:<user>:<password>]\r\n";
+
+const char* strLongUsage=
     "\r\n"
     "/c: Continue downloading a partially downloaded file.\r\n"
     "/v: Verbose mode, shows all the HTTP headers sent and received.\r\n"
@@ -157,9 +165,11 @@ const char* strUsage=
     "\r\n"
     "If no local file name is specified, the name is taken from the\r\n"
     "last part of the URL. If the URL ends with a slash or has no\r\n"
-    "slashes, then INDEX.HTM is used.\r\n"    
+    "slashes, then INDEX.HTM is used.\r\n"
+    "\r\n"
     "If an existing local text file is specified instead of an URL,\r\n"
     "then the URL is read from that file (useful for very large URLs).\r\n"
+    "\r\n"
     "If \"con\" is specified instead of an URL, the name is read from the console\r\n"
     "(useful for very large URLs or for redirecting, e.g. \"type url.txt|hget con\")\r\n"
     "\r\n"
@@ -274,10 +284,11 @@ byte redirectionRequests = 0;
 
 int NoParameters();
 void PrintTitle();
-void PrintUsageAndEnd();
+void PrintUsageAndEnd(bool printLongUsage);
 void Terminate(const char* errorMessage);
 void CheckDosVersion();
 void InitializeTcpipUnapi();
+bool LongHelpRequested();
 void ProcessParameters();
 void ProcessUrl(char* url, byte isRedirection);
 void ProcessOptions();
@@ -370,7 +381,11 @@ int main(char** argv, int argc)
 
     PrintTitle();
     if(NoParameters()) {
-        PrintUsageAndEnd();
+        PrintUsageAndEnd(false);
+    }
+    if(LongHelpRequested()) 
+    {
+        PrintUsageAndEnd(true);
     }
 
     DisableAutoAbort();
@@ -422,9 +437,10 @@ void PrintTitle()
 }
 
 
-void PrintUsageAndEnd()
+void PrintUsageAndEnd(bool printLongUsage)
 {
-    print(strUsage);
+    print(strShortUsage);
+    print(printLongUsage ? strLongUsage : strUseQuestionMarkForHelp);
     DosCall(0, &regs, REGS_MAIN, REGS_NONE);
 }
 
@@ -499,6 +515,12 @@ void InitializeTcpipUnapi()
     TcpConnectionParameters->userTimeout = 0;
     TcpConnectionParameters->flags = 0;
     debug("TCP/IP UNAPI initialized OK");
+}
+
+
+bool LongHelpRequested()
+{
+    return strcmpi(arguments[0], "?") == 0;
 }
 
 
@@ -1094,7 +1116,7 @@ void ProcessResponseStatus()
     } else if(responseStatusCodeFirstDigit == 3) {
         redirectionRequested = 1;
 		++redirectionRequests;
-		if (redirectionRequests>10)
+		if (redirectionRequests>MAX_REDIRECTIONS)
 			Terminate ("ERROR: Too many redirects!\r\n");
     } else if(responseStatusCodeFirstDigit == 2 && continueDownloading && responseStatusCode != 206) {
         Terminate("ERROR: Resume download was requested, but the server started a new download.");
