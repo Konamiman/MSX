@@ -269,6 +269,8 @@ bool mustCheckCertificate = true;
 bool mustCheckHostName = true;
 bool safeTlsIsSupported = true;
 byte redirectionRequests = 0;
+byte tcpIpSpecificationVersionMain;
+byte tcpIpSpecificationVersionSecondary;
 
     /* Some handy defines */
 
@@ -288,6 +290,7 @@ void PrintUsageAndEnd(bool printLongUsage);
 void Terminate(const char* errorMessage);
 void CheckDosVersion();
 void InitializeTcpipUnapi();
+void CheckTcpipCapabilities();
 bool LongHelpRequested();
 void ProcessParameters();
 void ProcessUrl(char* url, byte isRedirection);
@@ -348,7 +351,7 @@ void PrepareLocalFileForAppend();
 void DoDirectDatatransfer();
 void DoChunkedDataTransfer();
 long GetNextChunkSize();
-void GetUnapiImplementationName();
+void GetUnapiImplementationNameAndVersion();
 void CheckIfLocalFileIsConsole();
 int FirstParameterIsExistingfileName();
 void ReadUrlFromFile();
@@ -392,7 +395,8 @@ int main(char** argv, int argc)
     InitializeBufferPointers();
     CheckDosVersion();
     InitializeTcpipUnapi();
-    GetUnapiImplementationName();
+    GetUnapiImplementationNameAndVersion();
+    CheckTcpipCapabilities();
     ProcessParameters();
     CheckNetworkConnection();
 
@@ -489,24 +493,6 @@ void InitializeTcpipUnapi()
     }
     UnapiBuildCodeBlock(NULL, 1, codeBlock);
 
-    regs.Bytes.B = 1;
-    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
-    if((regs.Bytes.L & (1 << 3)) == 0) {
-        Terminate("This TCP/IP implementation does not support active TCP connections.");
-    }
-	if(regs.Bytes.D & TCPIP_CAPAB_VERIFY_CERTIFICATE)
-		safeTlsIsSupported = true;
-	else
-		safeTlsIsSupported = false;
-	
-	regs.Bytes.B = 4;
-    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
-	if (regs.Bytes.A == 0) 
-	{
-		if(regs.Bytes.H & 1)
-			TlsIsSupported = true;
-	}	
-
     regs.Bytes.B = 0;
     UnapiCall(codeBlock, TCPIP_TCP_ABORT, &regs, REGS_MAIN, REGS_MAIN);
 
@@ -515,6 +501,30 @@ void InitializeTcpipUnapi()
     TcpConnectionParameters->userTimeout = 0;
     TcpConnectionParameters->flags = 0;
     debug("TCP/IP UNAPI initialized OK");
+}
+
+
+void CheckTcpipCapabilities()
+{
+    regs.Bytes.B = 1;
+    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
+    if((regs.Bytes.L & (1 << 3)) == 0) {
+        Terminate("This TCP/IP implementation does not support active TCP connections.");
+    }
+
+    TlsIsSupported = false;
+    safeTlsIsSupported = false;
+
+    if(tcpIpSpecificationVersionMain == 0 || (tcpIpSpecificationVersionMain == 1 && tcpIpSpecificationVersionSecondary == 0))
+        return; //TCP/IP UNAPI <1.1 has no TLS support at all
+
+    if(regs.Bytes.D & TCPIP_CAPAB_VERIFY_CERTIFICATE)
+		safeTlsIsSupported = true;
+
+    regs.Bytes.B = 4;
+    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
+    if(regs.Bytes.H & 1)
+        TlsIsSupported = true;
 }
 
 
@@ -655,9 +665,9 @@ void ProcessUrl(char* url, byte isRedirection)
 		TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_USE_TLS ;		
     } else if(ContainsProtocolSpecifier(url)) {
         if(isRedirection) {
-            Terminate("Redirection request received, but the new URL protocol is not HTTP.");
+            Terminate("Redirection request to HTTPS received, but this TCP/IP doesn't support TLS.");
         } else {
-            Terminate("This application supports the HTTP protocol only.");
+            Terminate("This TCP/IP implementation supports the HTTP protocol only.");
         }
     } /*else if(domainName[0]=='\0') {
         if(isRedirection) {
@@ -971,7 +981,7 @@ void SendHttpRequest()
     SendLineToTcp(TcpOutputData);
     sprintf(TcpOutputData, "Host: %s\r\n", domainName);
     SendLineToTcp(TcpOutputData);
-    sprintf(TcpOutputData, "User-Agent: HGET/1.1 (MSX-DOS %s; TCP/IP UNAPI; %s)\r\n", dosVersion, unapiImplementationName);
+    sprintf(TcpOutputData, "User-Agent: HGET/1.3 (MSX-DOS %s; TCP/IP UNAPI; %s)\r\n", dosVersion, unapiImplementationName);
     SendLineToTcp(TcpOutputData);
     SendCredentialsIfNecessary();
     SendPartialRequestIfNecessary();
@@ -1906,7 +1916,7 @@ char* ltoa(unsigned long num, char *string)
 }
 
 
-void GetUnapiImplementationName()
+void GetUnapiImplementationNameAndVersion()
 {
     byte readChar;
     byte versionMain;
@@ -1918,6 +1928,9 @@ void GetUnapiImplementationName()
     versionMain = regs.Bytes.B;
     versionSec = regs.Bytes.C;
     nameAddress = regs.UWords.HL;
+
+    tcpIpSpecificationVersionMain = regs.Bytes.D;
+    tcpIpSpecificationVersionSecondary = regs.Bytes.E;
 
     while(1) {
         readChar = UnapiRead(codeBlock, nameAddress);
