@@ -1,19 +1,21 @@
 /* SNTP client for Ethernet UNAPI
    By Konamiman 2/2010
+   v1.1 by Oduvaldo Pavan Junior ( ducasp@gmail.com )
    
+   v1.1 fixes when the count of seconds will end with HH:MM:60 when 
+   it should be HH:MM+1:00
+
    Compilation command line:
-   
-   sdcc --code-loc 0x170 --data-loc 0 -mz80 --disable-warning 196
-        --no-std-crt0 crt0_msxdos_advanced.rel msxchar.rel asm.lib sntp.c
+
+   sdcc --code-loc 0x180 --data-loc 0 -mz80 --disable-warning 196 
+        --no-std-crt0 crt0msx_msxdos_advanced.rel printf_simple.rel 
+	putchar_msxdos.rel asm.lib sntp.c
+
    hex2bin -e com sntp.ihx
    
    ASM.LIB, MSXCHAR.REL and crt0msx_msxdos_advanced.rel
    are available at www.konamiman.com
-   
-   (You don't need MSXCHAR.LIB if you manage to put proper PUTCHAR.REL,
-   GETCHAR.REL and PRINTF.REL in the standard Z80.LIB... I couldn't manage to
-   do it, I get a "Library not created with SDCCLIB" error)
-   
+
    Comments are welcome: konamiman@konamiman.com
 */
 
@@ -65,27 +67,28 @@ enum TcpipUnapiFunctions {
 };
 
 enum TcpipErrorCodes {
-    ERR_OK,			    
-    ERR_NOT_IMP,		
-    ERR_NO_NETWORK,		
-    ERR_NO_DATA,		
-    ERR_INV_PARAM,		
-    ERR_QUERY_EXISTS,	
-    ERR_INV_IP,		    
-    ERR_NO_DNS,		    
-    ERR_DNS,		    
-    ERR_NO_FREE_CONN,	
-    ERR_CONN_EXISTS,	
-    ERR_NO_CONN,		
-    ERR_CONN_STATE,		
-    ERR_BUFFER,		    
-    ERR_LARGE_DGRAM,	
+    ERR_OK,
+    ERR_NOT_IMP,
+    ERR_NO_NETWORK,
+    ERR_NO_DATA,
+    ERR_INV_PARAM,
+    ERR_QUERY_EXISTS,
+    ERR_INV_IP,
+    ERR_NO_DNS,
+    ERR_DNS,
+    ERR_NO_FREE_CONN,
+    ERR_CONN_EXISTS,
+    ERR_NO_CONN,
+    ERR_CONN_STATE,
+    ERR_BUFFER,
+    ERR_LARGE_DGRAM,
     ERR_INV_OPER
 };
 
 const char* strPresentation=
-    "SNTP time setter for the TCP/IP UNAPI 1.0\r\n"
-    "By Konamiman, 4/2010\r\n"
+    "SNTP time setter for the TCP/IP UNAPI 1.1\r\n"
+    "by Oduvaldo\r\n"
+	"based on SNTP 1.0 by Konamiman\r\n"
     "\r\n";
 
 const char* strUsage=
@@ -142,7 +145,7 @@ void CheckYear();
 /**********************
  ***  MAIN is here  ***
  **********************/
- 
+
 int main(char** argv, int argc)
 {
     char paramLetter;
@@ -170,7 +173,7 @@ int main(char** argv, int argc)
     SecsPerMonth[11]=SECS_IN_MONTH_31;
 
     //* Try to get time zone from environment item
-    
+
     timeZoneBuffer[0] = '\0';
     regs.Words.HL = (int)"TIMEZONE";
     regs.Words.DE = (int)timeZoneBuffer;
@@ -228,18 +231,18 @@ int main(char** argv, int argc)
     }
 
     //* Parse time zone
-    
+
     if(timeZoneString != NULL) {
         timeZoneHours = (((byte)(timeZoneString[1])-'0')*10) + (byte)(timeZoneString[2]-'0');
         if(timeZoneHours > 12) {
             Terminate(strInvalidTimeZone);
         }
-        
+
         timeZoneMinutes = (((byte)(timeZoneString[4])-'0')*10) + (byte)(timeZoneString[5]-'0');
         if(timeZoneMinutes > 59) {
             Terminate(strInvalidTimeZone);
         }
-        
+
         timeZoneSeconds = ((timeZoneHours * (int)SECS_IN_HOUR)) + ((timeZoneMinutes * (int)SECS_IN_MINUTE));
     }
 
@@ -250,7 +253,7 @@ int main(char** argv, int argc)
         Terminate("No TCP/IP UNAPI implementations found");
     }
     UnapiBuildCodeBlock(NULL, 1, &codeBlock);
-   
+
     regs.Bytes.B = 0;
     UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
     if(regs.Bytes.A == ERR_NOT_IMP) {
@@ -260,7 +263,7 @@ int main(char** argv, int argc)
     regs.Words.HL = SNTP_PORT;
     regs.Bytes.B = 0;
     UnapiCall(&codeBlock, TCPIP_UDP_OPEN, &regs, REGS_MAIN, REGS_MAIN);
-    if(regs.Bytes.A == ERR_NO_FREE_CONN) {    
+    if(regs.Bytes.A == ERR_NO_FREE_CONN) {
         Terminate("No free UDP connections available");
     }
     else if(regs.Bytes.A == ERR_CONN_EXISTS) {
@@ -275,7 +278,7 @@ int main(char** argv, int argc)
     //* Resolve the host name
 
     PrintIfVerbose("Resolving host name... ");
-    
+
     regs.Words.HL = (int)hostString;
     regs.Bytes.B = 0;
     UnapiCall(&codeBlock, TCPIP_DNS_Q, &regs, REGS_MAIN, REGS_MAIN);
@@ -289,13 +292,13 @@ int main(char** argv, int argc)
         sprintf(buffer, "Unknown error when resolving the host name (code %i)", regs.Bytes.A);
         Terminate(buffer);
     }
-    
+
     do {
         UnapiCall(&codeBlock, TCPIP_WAIT, &regs, REGS_NONE, REGS_NONE);
         regs.Bytes.B = 0;
         UnapiCall(&codeBlock, TCPIP_DNS_S, &regs, REGS_MAIN, REGS_MAIN);
     } while (regs.Bytes.A == 0 && regs.Bytes.B == 1);
-    
+
     if(regs.Bytes.A != 0) {
         if(regs.Bytes.B == 2) {
             Terminate("DNS server failure");
@@ -313,7 +316,7 @@ int main(char** argv, int argc)
             sprintf(buffer, "Unknown error returned by DNS server (code %i)", regs.Bytes.B);
             Terminate(buffer);
         }
-    }    
+    }
 
     paramsBlock[0] = regs.Bytes.L;
     paramsBlock[1] = regs.Bytes.H;
@@ -325,9 +328,9 @@ int main(char** argv, int argc)
     }
 
     //* Open a new UDP connection and send request
-    
+
     PrintIfVerbose("Querying the time server... ");
-    
+
     *buffer=0x1B;
     for(i=1; i<48; i++) {
         buffer[i]=0;
@@ -341,7 +344,7 @@ int main(char** argv, int argc)
     regs.Bytes.B = conn;
     regs.Words.HL=(int)buffer;
     regs.Words.DE=(int)paramsBlock;
-   
+
     UnapiCall(&codeBlock, TCPIP_UDP_SEND, &regs, REGS_MAIN, REGS_MAIN);
     if(regs.Bytes.A != 0) {
         sprintf(buffer, "Unknown error when sending request to time server (code %i)", regs.Bytes.A);
@@ -394,7 +397,7 @@ int main(char** argv, int argc)
     ((byte*)&seconds)[1]=buffer[42];
     ((byte*)&seconds)[2]=buffer[41];
     ((byte*)&seconds)[3]=buffer[40];
-    
+
     if(verbose) {
         SecondsToDate(seconds, &year, &month, &day, &hour, &minute, &second);
         CheckYear();
@@ -408,15 +411,15 @@ int main(char** argv, int argc)
             seconds += timeZoneSeconds;
         }
     }
-    
+
     SecondsToDate(seconds, &year, &month, &day, &hour, &minute, &second);
     CheckYear();
     if(verbose && timeZoneString != NULL) {
         printf("Time adjusted to time zone:   %i-%i-%i, %i:%i:%i\r\n", year, month, day, hour, minute, second);
     }
-    
+
     //* Change the MSX clock if necessary
-    
+
     if(displayOnly) {
         if(!verbose) {
             printf("Time obtained from time server: %i-%i-%i, %i:%i:%i\r\n", year, month, day, hour, minute, second);
@@ -429,7 +432,7 @@ int main(char** argv, int argc)
         if(regs.Bytes.A != 0) {
             Terminate("Invalid date for the MSX clock");
         }
-        
+
         regs.Bytes.H = hour;
         regs.Bytes.L = minute;
         regs.Bytes.D = second;
@@ -437,14 +440,14 @@ int main(char** argv, int argc)
         if(regs.Bytes.A != 0) {
             Terminate("Invalid time for the MSX clock");
         }
-    
+
         if(verbose) {
             print("The clock has been set to the adjusted time.");
         } else {
             printf("The clock has been set to: %i-%i-%i, %i:%i:%i\r\n", year, month, day, hour, minute, second);
         }
     }
-    
+
     Terminate(NULL);
     return 0;
 }
@@ -527,7 +530,7 @@ void SecondsToDate(unsigned long seconds, int* year, byte* month, byte* day, byt
 
      *minute = 0;
 
-     while(seconds > SECS_IN_MINUTE) {
+     while(seconds >= SECS_IN_MINUTE) {
          seconds -= SECS_IN_MINUTE;
          *minute = (byte)(*minute + 1);
      }
@@ -543,17 +546,17 @@ int IsValidTimeZone(byte* timeZoneString)
     if(!(timeZoneString[0]==(byte)'+' || timeZoneString[0]==(byte)'-')) {
         return 0;
     }
-    
+
     if(!(IsDigit(timeZoneString[1]) && IsDigit(timeZoneString[2]) && IsDigit(timeZoneString[4]) && IsDigit(timeZoneString[5])))
     {
         return 0;
     }
-    
+
     if(timeZoneString[3] != (byte)':' || timeZoneString[6] != 0)
     {
         return 0;
     }
-    
+
     return 1;
 }
 
@@ -573,12 +576,12 @@ void Terminate(char* errorMessage)
             printf("*** SNTP ERROR: %s\r\n", errorMessage);
         }
     }
-    
+
     if(conn != 0) {
         regs.Bytes.B = conn;
         UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
     }
-    
+
     DosCall(_TERM0, &regs, REGS_NONE, REGS_NONE);
 }
 
@@ -588,7 +591,7 @@ void CheckYear()
     if(year < 2010) {
         Terminate("The server returned a date that is before year 2010");
     }
-    
+
     if(year > 2079) {
         Terminate("The server returned a date that is after year 2079");
     }
