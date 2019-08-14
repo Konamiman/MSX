@@ -10,7 +10,7 @@ Binaries for InterNestor Lite are available at [Konamiman's MSX page](http://www
 
 - [InterNestor Lite control program reference](DOCS/control-program.md): How to configure and control InterNestor Lite using INL.COM
 
-- [Proxying through a SOCKS server](DOCS/socks.md), useful to provide WiFi or TLS support by using an additional device
+- [Proxying through a SOCKS server](https://github.com/Konamiman/MSX/pull/11), useful to provide WiFi or TLS support by using an additional device
 
 Additionally, if you want to dig deeper in the technical side you can look at these:
 
