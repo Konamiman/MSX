@@ -43,7 +43,7 @@ LINK:	equ	1
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	1
+INL_VER2:	equ	2
 TCPIP_VER1:	equ	1
 TCPIP_VER2:	equ	1
 
@@ -77,6 +77,18 @@ CLOSE.WAIT:	equ	7
 CLOSING:	equ	8
 LAST.ACK:	equ	9
 TIME.WAIT:	equ	10	;Not used (CLOSED is entered directly)
+
+;--- Custom TCP close reason codes
+
+;Malformed reply from SOCKS server
+CLO_RE_BAD_SOCKS_RESPONSE: equ 128
+
+;Authentication method rejected by server
+CLO_RE_SOCKS_AUTH_REJECTED: equ 129
+
+;Base for reply code as defined in RFC1928 
+;130=general SOCKS server failure, 131=connection not allowed by ruleset, etc
+CLO_RE_SOCKS_ERROR_BASE: equ 130
 
 ;--- Maximum number of simultaneous UDP connections
 
@@ -229,7 +241,10 @@ RS_OUT_STAT:	jp	0
 EXEUNAPI:			;#402A
 	ds	12
 
-	endif
+    endif
+
+TCP_UNAPI_ENTRY:
+    jp TCPIP_UNAPI_ENTRY    ;#4036
 
 	;--- TCP/IP UNAPI routines table
 
@@ -267,7 +282,7 @@ FN_27:	dw	TCPIP_CONFIG_TTL
 FN_28:	dw	TCPIP_CONFIG_PING
 FN_29:	dw	TCPIP_WAIT
 
-MAX_IMPFN:	equ	140
+MAX_IMPFN:	equ	142
 
 IMPFN_TABLE:
 FN_128:	dw	INL_GET_DATASEG
@@ -283,6 +298,8 @@ FN_137:	dw	INL_GET_MAC
 FN_138:	dw	INL_SEND_MODEM
 FN_139:	dw	INL_PPP_OPEN
 FN_140:	dw	INL_PPP_CLOSE
+FN_141: dw  INL_GET_SOCKS_PROXY
+FN_142: dw  INL_SET_SOCKS_PROXY
 
 
 ;*****************************
@@ -4640,7 +4657,7 @@ TCP_SYNS_OKACK2:
 	call	SET_WNDWL
 
 	call	SEND_ACK
-	jp	END_GET_TCP
+	jp	END_SET_ESTABLISHED
 
 	;Processing if SND_UNA<=ISS
 
@@ -4733,7 +4750,7 @@ OK_ACK_RANGE:
 	ld	de,SND_UNA
 	ld	bc,4
 	ldir
-	jp	END_GET_TCP
+	jp	END_SET_ESTABLISHED
 TCP_NO_SYNR:
 
 	;--- Process all other states
@@ -4787,6 +4804,87 @@ TCP_NO_CLLA:
 	jp	c,TCP_OK_TXT
 	cp	FIN.WAIT.2+1
 	jp	nc,TCP_OK_TXT
+
+    ld	bc,(IN_BUFFER+6)
+	ld	a,b
+	or	c
+	jp	z,TCP_OK_TXT
+
+    ;--- If the SOCKS state is "greetings send", validate server response
+    ;    and send connection request
+
+    ld a,(SOCKS_STATE)
+    dec a
+    jr nz,TCP_NO_SOCKS_STATE_1
+
+    ld hl,(IN_BUFFER+6)     ;Received size must be exactly 2 bytes
+    ld de,2
+    call _COMP16
+    ld b,CLO_RE_BAD_SOCKS_RESPONSE
+    jp nz,ABORT_AND_END_TCP
+
+    ld a,(IN_BUFFER+44)     ;Socks version must be 5
+    cp 5
+    ld b,CLO_RE_BAD_SOCKS_RESPONSE
+    jp nz,ABORT_AND_END_TCP
+
+    ld a,(IN_BUFFER+45)     ;Accepted authentication method must be 0
+    or a
+    ld b,CLO_RE_SOCKS_AUTH_REJECTED
+    jp nz,ABORT_AND_END_TCP
+
+    ;* Server response ok, now we must send the connection request
+
+    ld hl,(REMOTE_IP)
+    ld (SOCKS_REQ_IP),hl
+    ld hl,(REMOTE_IP+2)
+    ld (SOCKS_REQ_IP+2),hl
+    ld hl,(REMOTE_PORT)     ;Set port in big-endian
+    ld a,h
+    ld (SOCKS_REQ_PORT),a
+    ld a,l
+    ld (SOCKS_REQ_PORT+1),a
+
+    ld hl,SOCKS_REQUEST
+    ld bc,SOCKS_REQUEST_END-SOCKS_REQUEST
+    call ENQUEUE_TCP_DATA
+
+    ld a,2
+    ld (SOCKS_STATE),a
+
+    ld de,2 ;Amount of received data
+    jr TCP_INSERT_OK
+
+TCP_NO_SOCKS_STATE_1:
+    dec a
+    jr nz,TCP_NO_SOCKS_STATE_2
+
+    ;--- If the SOCKS state is "request sent", validate server response
+
+    xor a
+    ld (SOCKS_STATE),a
+
+    ld hl,(IN_BUFFER+6)     ;Received size must be at least 10 bytes
+    ld de,10
+    call _COMP16
+    ld b,CLO_RE_BAD_SOCKS_RESPONSE
+    jp c,ABORT_AND_END_TCP
+
+    ld a,(IN_BUFFER+44)     ;Socks version must be 5
+    cp 5
+    ld b,CLO_RE_BAD_SOCKS_RESPONSE
+    jp nz,ABORT_AND_END_TCP
+
+    ld a,(IN_BUFFER+45)
+    or a
+    ld de,(IN_BUFFER+6)     ;Amount of received data
+    jr z,TCP_INSERT_OK
+
+    add CLO_RE_SOCKS_ERROR_BASE-1
+    ld b,a
+    jp ABORT_AND_END_TCP
+
+TCP_NO_SOCKS_STATE_2:
 
 	;--- Queue data and update RCV_NXT
 
@@ -4879,13 +4977,29 @@ TCP_NO_FW1_2:
 	cp	FIN.WAIT.2
 	jp	z,TCP_TO_CLOSED
 TCP_NO_FIN:
+    jr END_GET_TCP
 
 	;>>> End <<<
+
+END_SET_ESTABLISHED:
+    ld  a,(SOCKS_SERVER_USED)
+    or  a
+    jr  z,END_GET_TCP
+
+    ld hl,SOCKS_GREETING
+    ld bc,SOCKS_GREETING_END-SOCKS_GREETING
+    call ENQUEUE_TCP_DATA
+
+    ld  a,1
+    ld  (SOCKS_STATE),a
 
 END_GET_TCP:
 	call	SAVE_TCB
 	jp	END_GET_PACK
 
+ABORT_AND_END_TCP:
+    call DO_TCP_ABORT_LOADED
+    jr END_GET_TCP
 
 	;======================================
 	;===  Processing of TCP connection  ===
@@ -8314,6 +8428,17 @@ SEARCH_TCP:
 	ld	(STCP_TEMP+4),ix
 	ld	(STCP_TEMP+6),iy
 
+    or a
+    call SOCKS_SERVER_CONF_CORE
+    ld c,1
+    jr nz,STCP_DO
+    scf
+    call SOCKS_SERVER_CONF_CORE
+    ld c,1
+    jr nz,STCP_DO
+    dec c
+STCP_DO:    ;Here C=1 if any SOCKS server is configured, 0 otherwisep4
+
 	ld	hl,TCBS+TCB_SIZE*3
 	ld	b,4
 
@@ -8325,6 +8450,12 @@ STCP_LOOP:
 	inc	hl
 	jr	z,STCP_NEXT
 
+    bit 0,c
+    jr nz,STCP_PORT
+
+    ;We aren't using SOCKS: check both ports and the peer IP
+
+STCP_FULL:
 	push	hl,bc
 	ld	de,STCP_TEMP
 	call	COMP32
@@ -8340,7 +8471,31 @@ STCP_LOOP:
 	call	COMP32
 	pop	bc,hl
 	jr	nz,STCP_NEXT
+    jr STCP_FOUND
 
+    ;We are using SOCKS: check the local port only.
+    ;That's not ideal but it's the only thing we can do,
+    ;since the received TCP datagrams will always have the same
+    ;source IP and port (the ones of the SOCKS server).
+
+STCP_PORT:
+	push	hl,bc
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+    inc	hl
+    inc	hl
+    ld a,(hl)
+    inc hl
+    ld h,(hl)
+    ld l,a
+    ld de,(STCP_TEMP+6)
+    call _COMP16
+    pop	bc,hl
+	jr	nz,STCP_NEXT
+
+STCP_FOUND:
 	ld	a,b	;Connection found
 	dec	a
 	ret
@@ -8492,10 +8647,36 @@ TCP_IS_ZERO:
 ;    local port en IY, and remote port en IX
 
 SET_TCP_PORTS:
-	ld	ix,(REMOTE_PORT)
-	ld	iy,(LOCAL_PORT)
+    push af
+
+    ld a,(SOCKS_SERVER_USED)
+    or a
+    jr z,SET_TCP_PORTS_OWN
+
+    dec a
+    ld ix,SOCKS_NONTLS_ADD
+    jr z,SET_TCP_PORTS_SOCKS
+    ld ix,SOCKS_TLS_ADD
+
+SET_TCP_PORTS_SOCKS:    
+    ld l,(ix+4) ;SOCKS server port
+    ld h,(ix+5)
+    push hl
+    ld l,(ix)   ;SOCKS server IP
+    ld h,(ix+1)
+    ld e,(ix+2)
+    ld d,(ix+3)
+    pop ix
+    jr SET_TCP_PORTS_LOCAL
+
+SET_TCP_PORTS_OWN:
 	ld	hl,(REMOTE_IP)
 	ld	de,(REMOTE_IP+2)
+	ld	ix,(REMOTE_PORT)
+
+SET_TCP_PORTS_LOCAL:
+	ld	iy,(LOCAL_PORT)
+    pop af
 	ret
 
 
@@ -9081,6 +9262,29 @@ NEXT_TCP:
 	pop	bc,de,hl
 	xor	a
 	ret
+
+
+;--- SOCKS_SERVER_CONFIGURED: Return NZ if a socks server is configured
+;    Input: Z for non-TLS server, NZ for TLS server
+
+SOCKS_SERVER_CONFIGURED:
+    call SETUP_P2
+    call SOCKS_SERVER_CONF_CORE
+    jp RESTORE_P2
+
+SOCKS_SERVER_CONF_CORE:
+    push ix
+    ld ix,SOCKS_NONTLS_ADD
+    jr nc,SSC_DO
+    ld ix,SOCKS_TLS_ADD
+SSC_DO:
+    ld a,(ix)
+    or (ix+1)
+    or (ix+2)
+    or (ix+3)
+    pop ix
+
+    ret
 
 
 	;===========================================
@@ -10247,6 +10451,7 @@ TCPIP_GET_CAPAB:
     ;
     ; - Obtain all the IPs automatically
     ; - Obtain all the IPs manually (except peer address unless we use PPP)
+    ; - Use TLS for active connections, but only if a SOCKS server is configured
 
     if LINK = 1
     ld  hl,% 000000 0011110111
@@ -10254,8 +10459,12 @@ TCPIP_GET_CAPAB:
     ld  hl,% 000000 0011111111
     endif
 
+    scf
+    call SOCKS_SERVER_CONFIGURED
     ld  de,0
-    xor a
+    ld  a,0
+    ret z
+    set 0,h
     ret
 
 	;--- Info block 3
@@ -11457,7 +11666,8 @@ DNS_R_ERR:
 ;+10 (1): Flags:
 ;         bit 0: Set for passive connection
 ;         bit 1: Set for resident connection
-;         bit 2: Use TLS (not supported)
+;         bit 2: Use TLS (supported only if the appropriate SOCKS server is configured)
+;         bit 3: Verify server certificate (ignored)
 
 TCPIP_TCP_OPEN:
 	ld	de,USER_DATA
@@ -11465,9 +11675,17 @@ TCPIP_TCP_OPEN:
 	ldir
 
     ld	a,(USER_DATA+10)
-    and %100
+    bit 2,a
+    jr z,TCPOP_TLS_PARAM_OK ;TLS not requested
+    bit 0,a
+    jr nz,TCPOP_ERR_NOT_IMP ;We don't support TLS for passive connections
+    scf
+    call SOCKS_SERVER_CONFIGURED
+    jr nz,TCPOP_TLS_PARAM_OK    ;TLS is OK only if we have a SOCKS server configured
+TCPOP_ERR_NOT_IMP:
     ld  a,ERR_NOT_IMP
-    ret nz  ;Error if TLS requested
+    ret
+TCPOP_TLS_PARAM_OK:
 
 	call	SETUP_P2
 
@@ -11475,7 +11693,7 @@ TCPIP_TCP_OPEN:
 
 	ld	a,(USER_DATA+10)
 	ld	b,a
-	and	%11111000
+	and	%11110000
 	ld	a,ERR_INV_PARAM
 	jp	nz,RESTORE_P2
 	ld	a,b
@@ -11510,6 +11728,18 @@ TCPIP_TCP_OPEN:
 	ld	(hl),0
 	ldir
 	ld	(RESIDENT_CONN),a
+
+    ld  a,(USER_DATA+10)
+    and 100b
+    ld a,2  ;We use the TLS SOCKS server if TLS was requested...
+    jr nz,TCPOP_SET_SOCKS_SERVER
+    or a
+    call SOCKS_SERVER_CONF_CORE
+    ld a,0  ;...otherwise we use non-TLS SOCKS server if it's configured.
+    jr z,TCPOP_SET_SOCKS_SERVER
+    inc a
+TCPOP_SET_SOCKS_SERVER:    
+    ld  (SOCKS_SERVER_USED),a
 
 	pop	hl	;User timeout: check value
 	ld	de,#FFFF	;If #FFFF (infinite), do not modify
@@ -11854,23 +12084,27 @@ DO_TCP_ABORT:
 	ld	a,b
 
 	;--- Load connection TCB, clear it,
-	;    and send RST state was SYN-RECEIVED to CLOSE-WAIT
+	;    and send RST if state was SYN-RECEIVED to CLOSE-WAIT
 
 	push	bc
 	call	LOAD_TCB
 	pop	bc
 	bit	0,c
-	jr	z,DO_TCP_ABORT2
+    ld b,3  ;Close reason: ABORT called
+	jr	z,DO_TCP_ABORT_LOADED
 	ld	a,(RESIDENT_CONN)
 	or	a
 	ret	nz
-DO_TCP_ABORT2:
 
+    ;--- Abort connection currently loaded
+    ;    Input: B = Reason
+
+DO_TCP_ABORT_LOADED:
 	ld	a,(TCP_STATE)
 	push	af
 	xor	a
 	ld	(TCP_STATE),a
-	ld	a,3
+	ld	a,b
 	ld	(LAST_CLOSE),a
 	call	SAVE_TCB
 	pop	af
@@ -11956,6 +12190,14 @@ NO_INFOBLOCK:
 	ld	ix,(OUTBUF_FREE)
 	ld	de,0
 	ld	a,(TCP_STATE)
+    cp  ESTABLISHED
+    jr  nz,NO_SPECIAL_SOCKS_STATE
+    ld  a,(SOCKS_STATE)
+    or a
+    ld a,ESTABLISHED
+    jr  z,NO_SPECIAL_SOCKS_STATE
+    ld  a,SYN.SENT  ;If we are in the middle of SOCKS setup, inform SYN.SENT state
+NO_SPECIAL_SOCKS_STATE:
 	ld	b,a
 
 	xor	a
@@ -12088,6 +12330,20 @@ TCP_SEND_ADD:	dw	0
 TCP_SEND_LEN:	dw	0
 TCP_SEND_FLAGS:	db	0
 TCP_SND_OLDUSED:	dw	0
+
+
+    ;--- Enqueue data for sending in the current TCP connection immediately,
+    ;    assumes there's currenyl no data to send.
+    ;    This is used for SOCKS handshaking.
+    ;
+    ;    Input: HL = Data address
+    ;           BC = Data length
+
+ENQUEUE_TCP_DATA:
+	ld	(SEND_PUSH_PEND),bc
+    ld	ix,OUTBUF
+	call	RBUF_INSERT
+    ret
 
 
 	;=======================
@@ -13522,6 +13778,74 @@ INL_PPP_CLOSE:
 
 	endif
 
+
+	;=============================
+	;===  INL_GET_SOCKS_PROXY  ===
+	;=============================
+
+;Get the current SOCKS proxy configuration.
+;
+;Input:  A = 141
+;        Cy = 0: get configuration for non-TLS connections
+;             1: get configuration for TLS connections
+;Output: A = 0
+;        L.H.E.D = Proxy address (0.0.0.0 if not configured)
+;        BC = Proxy port (undefined if not configured)
+
+INL_GET_SOCKS_PROXY:
+    call SETUP_P2
+
+    ld ix,SOCKS_NONTLS_ADD
+    jr nc,INL_GET_SOCKS_DO
+    ld ix,SOCKS_TLS_ADD
+INL_GET_SOCKS_DO:
+    ld l,(ix)
+    ld h,(ix+1)    
+    ld e,(ix+2)
+    ld d,(ix+3)
+    ld c,(ix+4)
+    ld b,(ix+5)
+
+    call RESTORE_P2
+
+    xor a
+    ret
+
+
+	;=============================
+	;===  INL_SET_SOCKS_PROXY  ===
+	;=============================
+
+;Set the current SOCKS proxy configuration.
+;
+;Input:  A = 141
+;        Cy = 0: set configuration for non-TLS connections
+;             1: set configuration for TLS connections
+;        L.H.E.D = Proxy address (0.0.0.0 to disable)
+;        BC = Proxy port (not needed when disabling)
+;Output: A = 0
+
+INL_SET_SOCKS_PROXY:
+    call SETUP_P2
+    
+    ld ix,SOCKS_NONTLS_ADD
+    bit 0,a
+    jr nc,INL_SET_SOCKS_DO
+    ld ix,SOCKS_TLS_ADD
+INL_SET_SOCKS_DO:
+    ld (ix),l
+    ld (ix+1),h
+    ld (ix+2),e
+    ld (ix+3),d
+    ld (ix+4),c
+    ld (ix+5),b
+
+    call RESTORE_P2
+
+    xor a
+    ret
+
+
 ;--- Buffer used to exchange blocks of data
 ;    with user functions
 
@@ -13590,6 +13914,22 @@ UNARP_IP:	ds	4
 		db	255,255,255,255
 
 	endif
+
+    ;--- SOCKS 5 greeting
+
+SOCKS_GREETING:
+    db 5,1,0    ;We don't support authentication
+SOCKS_GREETING_END:
+
+    ;--- SOCKS 5 connection request
+
+SOCKS_REQUEST:
+    db 5,1,0,1
+SOCKS_REQ_IP:
+    ds 4
+SOCKS_REQ_PORT:
+    dw 0
+SOCKS_REQUEST_END:
 
 CODE_END:
 
@@ -13860,6 +14200,15 @@ RECEIVED_MSS:	dw	0	;TCP MSS option received in current segment, or 512
 
 CUR_UDPTCB_NUM:	db	0	;Number of UDP connection whose UDP is at UDP_TCB_TEMP
 
+     ;--- Variables for SOCKS proxy client
+     ;    WARNING: the _PORT variable must be immediately after the corresponding _ADD variable,
+     ;             the code assumes that!
+
+SOCKS_NONTLS_ADD: ds 4
+SOCKS_NONTLS_PORT: ds 2
+SOCKS_TLS_ADD: ds 4
+SOCKS_TLS_PORT: ds 2
+
 
 	;=================================================
 	;===  Variables for Ethernet datagram sending  ===
@@ -14056,7 +14405,9 @@ OUTBUF_OUTPNT:	equ	OUTBUF_INPNT+2
 OUTBUF_BUFADD:	equ	OUTBUF_OUTPNT+2
 OUTBUF_ENDADD:	equ	OUTBUF_BUFADD+2
 
-RESIDENT_CONN:	equ	OUTBUF_ENDADD+2	;
+SOCKS_SERVER_USED:       equ	OUTBUF_ENDADD+2 ;0=none, 1=non-TLS, 2=TLS
+SOCKS_STATE:    equ SOCKS_SERVER_USED+1 ;0=SOCKS not used or established, 1=greeting send, 2=request send
+RESIDENT_CONN:	equ	SOCKS_STATE+1
 
 		if LINK=0
 VJ_OUT_HEAD:	equ	RESIDENT_CONN+1	;Header for Van Jacobson compression (output)
@@ -14089,7 +14440,6 @@ UDP_RESIDENT:	equ	UDP_FLAGS+1	;#FF if resident connection
 UDP_DATA:	equ	UDP_RESIDENT+1	;IP address + remote port + length for each buffer
 
 UDP_TCB_END:	equ	UDP_DATA-8*2
-
 
 		if LINK=0
 

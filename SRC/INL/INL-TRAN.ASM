@@ -115,6 +115,8 @@ INL_IP_STRING:	equ	136
 INL_SEND_MODEM:	equ	138
 INL_PPP_OPEN:	equ	139
 INL_PPP_CLOSE:	equ	140
+INL_GET_SOCKS_PROXY: equ 141
+INL_SET_SOCKS_PROXY: equ 142
 
 ;--- TCP/IP UNAPI error codes
 
@@ -226,6 +228,8 @@ RS_IN:		equ	#402A
 	if	LINK=1
 EXEUNAPI:	equ	#402A	;Code to execute Ethernet UNAPI routines
 	endif
+
+TCP_UNAPI_ENTRY: equ #4036
 
 
 ;************************
@@ -509,10 +513,7 @@ PPPPAR:
 
 	;* TCP parameter
 
-TCPPAR:	ld	a,(IS_FILE)
-	or	a
-	jp	nz,NOFILE
-
+TCPPAR:	
 	ld	a,2
 	ld	de,TEMPBUF
 	call	EXTPAR
@@ -520,12 +521,22 @@ TCPPAR:	ld	a,(IS_FILE)
 
 	ld	a,(TEMPBUF)
 	or	#20
+    cp  "x"
+    jp  z,PAR_TCP_X
+
+    ld b,a
+    ld	a,(IS_FILE)
+	or	a
+	jp	nz,NOFILE
+    ld a,b
+
 	cp	"s"
 	jp	z,PAR_TCP_S
 	cp	"c"
 	jp	z,PAR_TCP_C
 	cp	"a"
 	jp	z,PAR_TCP_A
+    
 	jp	UNKPAR
 
 	;* DNS parameter
@@ -1379,20 +1390,17 @@ INIT_S:
 	db	"InterNestor Lite for the Ethernet UNAPI"
 	endif
 
-	db	" v2.1: TCP/IP stack for MSX-DOS",13,10
+	db	" v2.2: TCP/IP stack for MSX-DOS",13,10
 
 	if	USETIMI=0
 	db	"*** NO TIMER!!",13,10
 	endif
-	db	"By Konamiman, 6/2019",13,10,13,10,"$"
+	db	"By Konamiman, 8/2019",13,10,13,10,"$"
 
 INFO_S:	db	"Frequently used options:",13,10,13,10
 
-	db	"INL I",13,10
-	db	"Installs InterNestor Lite.",13,10,13,10
-
-	db	"INL U",13,10
-	db	"Uninstalls InterNestor Lite.",13,10,13,10
+	db	"INL I|U",13,10
+	db	"Installs/uninstalls InterNestor Lite.",13,10,13,10
 
 	if	LINK=0
 
@@ -1412,6 +1420,10 @@ INFO_S:	db	"Frequently used options:",13,10,13,10
 	db	"INL IP L|M|G|P|S <IP address>",13,10
 	db	"Set up the local IP address/subnet mask/default gateway/",13,10
 	db	"primary DNS server/secondary DNS server.",13,10,13,10
+    
+	db	"INL TCP X1|X2 <IP address>|0 <port>",13,10
+	db	"Sets SOCKS server address and port for non-TLS (X1) and TLS (X2) connections.",13,10
+    db  "Pass 0 instead of IP address and no port to unset.",13,10,13,10
 
 	endif
 
@@ -1739,6 +1751,13 @@ PARSIMS_3:	call	DOS
 	ld	de,(BUF_IPDNS2+2)
 	call	DO_PRINT_STRING
 
+    ld de,IPSOCKS1_S
+    or a
+    call PRINT_SOCKS_INFO
+    ld de,IPSOCKS2_S
+    scf
+    call PRINT_SOCKS_INFO
+
 	;--- DHCP automaton state
 
 	if	LINK=1
@@ -1769,6 +1788,36 @@ DO_PRINT_STRING:
 	call	CALL_UNAPI
 	ld	de,IPBUF
 	jp	PRINTZ
+
+PRINT_SOCKS_INFO:
+    push af
+    ld c,_STROUT
+    call DOS
+    pop af
+
+    ld a,INL_GET_SOCKS_PROXY
+    call CALL_UNAPI
+
+    ld  a,h
+    or l
+    or e
+    or d
+    jr nz,SOCKS_INFO_PRESENT
+    print NOTSET_S
+    ret
+SOCKS_INFO_PRESENT:
+
+    push bc
+    call	DO_PRINT_STRING
+    print SOCKSPORT_S
+    pop hl
+    ld de,TEMPBUF
+    call NUMTOASC
+    ld de,TEMPBUF
+    ld c,_STROUT
+    call DOS
+
+    ret
 
 
 	;--- Strings
@@ -1817,6 +1866,12 @@ DEFGW_S:	db	13,10,"Default gateway: $"
 
 IPDNS1IS_S:	db	13,10,"Primary DNS address: $"
 IPDNS2IS_S:	db	13,10,"Secondary DNS address: $"
+
+IPSOCKS1_S: db  13,10,"Socks server (non-TLS): $"
+IPSOCKS2_S: db  13,10,"Socks server (TLS): $"
+SOCKSPORT_S: db ", port $"
+NOTSET_S: db "Not set$"
+OK_S: db "Ok",13,10,"$"
 
 	if	LINK=1
 
@@ -3085,6 +3140,14 @@ TCPCLOSE_T:	db	1,"Connection never used$"
 	db	6,"Connection establishment timeout expired$"
 	db	7,"Internet connection lost$"
 	db	8,"Destination host unreachable$"
+    db  128,"Malformed response from SOCKS server$"
+    db  129,"SOCKS server requires authentication$"
+    db  130,"SOCKS: server failure$"
+    db  131,"SOCKS: connection not allowed by ruleset$"
+    db  132,"SOCKS: network unreachable$"
+    db  133,"SOCKS: host unreachable$"
+    db  134,"SOCKS: host refused connection$"
+    db  135,"SOCKS: TTL expired$"
 	db	0
 
 
@@ -3161,6 +3224,65 @@ TCP_CLOSED_S:	db	"closed.$"
 TCP_ABORTED_S:	db	"aborted.$"
 
 TCPNOCONN_S:	db	1,"*** Invalid TCP connection number or connection is closed",13,10,"$"
+
+
+	;====================================
+	;===  TCP X1/X2: Set SOCKS proxy  ===
+	;====================================
+
+PAR_TCP_X:
+	ld  a,(TEMPBUF+1)
+    sub "0"
+    or a
+    jp z,INVPAR
+    cp 2+1
+    jp nc,INVPAR
+    ld (TCP_X_WHICH),a
+
+    ld a,3  ;Extract server IP
+    ld	de,TEMPBUF+3
+    call EXTPAR
+    jp c,MISSPAR
+    ld a,(TEMPBUF+3)
+    cp "0"
+    jr nz,PAR_TCP_X_SET
+    ld a,(TEMPBUF+4)
+    or a
+    ld hl,0
+    ld de,0
+    jr z,PAR_TCP_X_SET2 ;Just "0" passed: unset the address
+PAR_TCP_X_SET:
+    ld hl,TEMPBUF+3
+    call PARSE_IP
+    jp c,INVPAR
+
+    ld a,4  ;Extract server port
+    ld	de,TEMPBUF
+    call EXTPAR
+    jp c,MISSPAR
+    ld hl,TEMPBUF
+    call EXTNUM16
+    jp c,INVPAR
+
+    ;Parameters ok, do the thing
+
+PAR_TCP_X_SET2:
+	ld	a,(SEG1)
+	call	_PUT_P1
+
+    ld a,(TCP_X_WHICH)
+    rrca
+    ccf
+    ld a,INL_SET_SOCKS_PROXY
+    ld hl,(PARSED_IP)
+    ld de,(PARSED_IP+2)
+    call TCP_UNAPI_ENTRY    ;We can't use CALL_UNAPI from the config file at install time
+
+    print PARSETOK_S
+
+    jp FIN
+
+TCP_X_WHICH: db 0
 
 
 	if	LINK=1
@@ -4254,6 +4376,22 @@ EXTNUM8:
 	ld	a,c
 	or	a
 	ret
+
+
+;--- NAME: EXTNUM16
+;      Extracts a 16 bit number from a string
+;    INPUT:    HL = ASCII string address
+;    OUTPUT:   BC = number
+;              Cy = 1 on error (number too big, or not zero-terminated)
+
+;EXTNUM16:
+;    call EXTNUM
+;    ret c ;Not a 16 bit number
+;    ld a,e
+;    or a
+;    ret z
+;    scf ;Not zero terminated, or has more than 5 digits
+;    ret
 
 
 ;--- NAME: EXTNUM
