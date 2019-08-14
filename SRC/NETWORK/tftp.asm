@@ -17,7 +17,7 @@
 	;  RETX_CNT_MAX and RETX_TIMER_MAX constants.
 
 
-	.label	20	;Compass needs this
+	;.label	20	;Compass needs this
 
 ;****************************
 ;***                      ***
@@ -311,8 +311,12 @@ NO_SERVER:	;
 	jr	z,GETPUT_OK
 	cp	"s"	;"P" or "S": Send
 	jp	nz,INVPAR	;Other: Error
+	ld	a,(TIME)
+	ld	(OLD_TIME),a
+	ld	a,(TIME+1)
+	ld	(OLD_TIME+1),a
 GETPUT_OK:	;
-
+	
 	;--- Resolves the server name
 
 	ld	a,1
@@ -481,6 +485,8 @@ TFTP_GET2:	;
 	call	SEND_TFTP	;Sends packet
 
 	print	WRQSENT_S
+	
+	call	INITIALIZE_PROGRESS ;Initialize progress indication
 
 	;--- Initializes timers
 
@@ -694,6 +700,8 @@ OPEN_GET_OK:	;
 	call	SEND_TFTP
 
 	print	RRQSENT_S
+	
+	call	INITIALIZE_PROGRESS ;Initialize progress indication
 
 	;--- Initializes timers
 
@@ -816,7 +824,7 @@ GET_LOOP_W:	call	WAIT_TICK
 GETPUT_END:	ld	a,(SERVER)
 	or	a
 	jp	z,TERMINATE
-	Jr	TO_SERVER2
+	jr	TO_SERVER2
 
 
 	;-----------------------------------
@@ -919,13 +927,14 @@ RRQ_OK_2:	;
 	;    (jump to SEND_BLOCK, where theorically the request ACK that we
 	;    would have sent if being in client mode would have been received)
 
-	call	INIT_RETX
+	call	INIT_RETX	
 
 	ld	hl,0
 	ld	(LAST_BLKID),hl
 
 	ld	a,#FF
 	ld	(GETPUT),a
+	call	INITIALIZE_PROGRESS ;Initialize progress indication
 
 	jp	SEND_BLOCK
 
@@ -971,13 +980,14 @@ WRQ_OK_2:	;
 	;--- Jump to the receiving main loop of the
 	;    client mode
 
-	call	INIT_RETX
+	call	INIT_RETX	
 
 	ld	hl,0
 	ld	(LAST_BLKID),hl
 
 	xor	a
 	ld	(GETPUT),a
+	call	INITIALIZE_PROGRESS ;Initialize progress indication
 
 	;* Jump to the client mode main loop.
 	;  We make the code to believe that we have previously received 512
@@ -1276,314 +1286,83 @@ LOOP_GETS3:	ld	a,(de)	;No: Go to the next
 STRUNK_S:	db	"Unknown$"
 
 
-;--- NOMBRE: NUMTOASC
-;      16 bits integer to characters string conversion
-;    INPUT:      DE = Number to be converted to
-;                HL = Buffer to store the string
-;                B  = Total number of string characters without
-;                     including end symbols
-;                C  = Filling character
-;                     The number is justified to the right, and the exceeded
-;                     spaces are filled in with (C) character.
-;                     If the resultant number has more characters than the
-;                     number that B shows, this register is ignored and the
-;                     string fills just the necessary characters.
-;                     The ending character is not counted, "$" or 00,
-;                     talking about length.
-;                 A = &B ZPRFFTTT
-;                     TTT = Resultant number format
-;                            0: decimal
-;                            1: hexadecimal
-;                            2: hexadecimal, starting with "&H"
-;                            3: hexadecimal, starting "#"
-;                            4: hexadecimal, finishing with "H"
-;                            5: binary
-;                            6: binary, starting with "&B"
-;                            7: binary, finishing with "B"
-;                     R   = Unsigned Range
-;                            0: 0..65535 (unsigned integer)
-;                            1: -32768..32767 (2's complement integer)
-;                               If the output format is binary, the
-;                               number is interpreted as 8 bits integer
-;                               and its range is 0..255. So, R bit and
-;                               D register are ignored.
-;                     FF  = String ending type
-;                            0: Without special ending
-;                            1: Character "$" added
-;                            2: Character 00 added
-;                            3: 7th bit of last character is set to 1
-;                     P   = Sign "+"
-;                            0: Sign "+" is not added to positive numbers
-;                            1: Sign "+" added to positive numbers
-;                     Z   = Exceeded spaces
-;                            0: Taking zeros out from the left
-;                            1: Not taking zeros out from the left
-;    OUTPUT:    String starting from (HL)
-;               B = Characters number of the string formed by the number
-;                   (including the sign) and the type indicator
-;                   (if they are generated)
-;               C = Total characters number of the string
-;                   without counting "$" or 00 if they are generated
-;    REGISTERS: -
-
-NUMTOASC:	push	af,ix,de,hl
-	ld	ix,WorkNTOA
-	push	af,af
-	and	%00000111
-	ld	(ix+0),a	;Tipo 
-	pop	af
-	and	%00011000
-	rrca
-	rrca
-	rrca
-	ld	(ix+1),a	;Fin 
-	pop	af
-	and	%11100000
-	rlca
-	rlca
-	rlca
-	ld	(ix+6),a	;Flags: Z(zero), P(sign +), R(range)
-	ld	(ix+2),b	;Ending characters number
-	ld	(ix+3),c	;Filling character 
-	xor	a
-	ld	(ix+4),a	;Total length
-	ld	(ix+5),a	;Number length
-	ld	a,10
-	ld	(ix+7),a	;Divisor = 10 
-	ld	(ix+13),l	;Buffer sent by user 
-	ld	(ix+14),h
-	ld	hl,BufNTOA
-	ld	(ix+10),l	;Routine buffer
-	ld	(ix+11),h
-
-ChkTipo:	ld	a,(ix+0)	;Divisor = 2 or = 16, or it keeps = 10
-	or	a
-	jr	z,ChkBoH
-	cp	5
-	jp	nc,EsBin
-EsHexa:	ld	a,16
-	jr	GTipo
-EsBin:	ld	a,2
-	ld	d,0
-	res	0,(ix+6)	;If it is binary then it is between 0 and 255
-GTipo:	ld	(ix+7),a
-
-ChkBoH:	ld	a,(ix+0)	;Checks if "H" or "B" has to be added
-	cp	7	;at the end
-	jp	z,PonB
-	cp	4
-	jr	nz,ChkTip2
-PonH:	ld	a,"H"
-	jr	PonHoB
-PonB:	ld	a,"B"
-PonHoB:	ld	(hl),a
-	inc	hl
-	inc	(ix+4)
-	inc	(ix+5)
-
-ChkTip2:	ld	a,d	;If the number is 0 the sign is never added
-	or	e
-	jr	z,NoSgn
-	bit	0,(ix+6)	;Checks the range   
-	jr	z,SgnPos
-ChkSgn:	bit	7,d
-	jr	z,SgnPos
-SgnNeg:	push	hl	;Negates the number 
-	ld	hl,0	;Sign=0:without sign; 1:+; 2:- 
-	xor	a
-	sbc	hl,de
+; DE contains the number to be converted
+; HL contains the destination of ASCII string
+LEADING0EXCLUSION db 1
+NOTFINALRET db 1
+CURRENTDIGIT db '0'
+NUM2DEC:
+	push af
+	push bc
+	push de
+	push hl
 	ex	de,hl
-	pop	hl
-	ld	a,2
-	jr	FinSgn
-SgnPos:	bit	1,(ix+6)
-	jr	z,NoSgn
 	ld	a,1
-	jr	FinSgn
-NoSgn:	xor	a
-FinSgn:	ld	(ix+12),a
-
-ChkDoH:	ld	b,4
-	xor	a
-	cp	(ix+0)
-	jp	z,EsDec
-	ld	a,4
-	cp	(ix+0)
-	jp	nc,EsHexa2
-EsBin2:	ld	b,8
-	jr	EsHexa2
-EsDec:	ld	b,5
-
-EsHexa2:	push	de
-Divide:	push	bc,hl	;DE/(IX+7)=DE, remainder A 
-	ld	a,d
-	ld	c,e
-	ld	d,0
-	ld	e,(ix+7)
-	ld	hl,0
-	ld	b,16
-BucDiv:	rl	c
-	rla
-	adc	hl,hl
-	sbc	hl,de
-	jr	nc,$+3
-	add	hl,de
-	ccf
-	djnz	BucDiv
-	rl	c
-	rla
-	ld	d,a
-	ld	e,c
-	ld	a,l
-	pop	hl,bc
-
-ChkRest9:	cp	10	;Remainder to character conversion
-	jp	nc,EsMay9
-EsMen9:	add	a,"0"
-	jr	PonEnBuf
-EsMay9:	sub	10
-	add	a,"A"
-
-PonEnBuf:	ld	(hl),a	;Character is stored in buffer 
-	inc	hl
-	inc	(ix+4)
-	inc	(ix+5)
-	djnz	Divide
-	pop	de
-
-ChkECros:	bit	2,(ix+6)	;Checks if zeros have to be erased 
-	jr	nz,ChkAmp
-	dec	hl
-	ld	b,(ix+5)
-	dec	b	;B=Digits number to be checked
-Chk1Cro:	ld	a,(hl)
-	cp	"0"
-	jr	nz,FinECeros
-	dec	hl
-	dec	(ix+4)
-	dec	(ix+5)
-	djnz	Chk1Cro
-FinECeros:	inc	hl
-
-ChkAmp:	ld	a,(ix+0)	;It adds "#", "&H" or "&B" if it is necessary
-	cp	2
-	jr	z,PonAmpH
-	cp	3
-	jr	z,PonAlm
-	cp	6
-	jr	nz,PonSgn
-PonAmpB:	ld	a,"B"
-	jr	PonAmpHB
-PonAlm:	ld	a,"#"
-	ld	(hl),a
-	inc	hl
-	inc	(ix+4)
-	inc	(ix+5)
-	jr	PonSgn
-PonAmpH:	ld	a,"H"
-PonAmpHB:	ld	(hl),a
-	inc	hl
-	ld	a,"&"
-	ld	(hl),a
-	inc	hl
-	inc	(ix+4)
-	inc	(ix+4)
-	inc	(ix+5)
-	inc	(ix+5)
-
-PonSgn:	ld	a,(ix+12)	;The sign is set
+	ld	(LEADING0EXCLUSION),a	
+	ld	(NOTFINALRET),a	
+	ld	a,(LAST_NUMBER_OF_CHARS)
 	or	a
-	jr	z,ChkLon
-SgnTipo:	cp	1
-	jr	nz,PonNeg
-PonPos:	ld	a,"+"
-	jr	PonPoN
-	jr	ChkLon
-PonNeg:	ld	a,"-"
-PonPoN	ld	(hl),a
-	inc	hl
-	inc	(ix+4)
-	inc	(ix+5)
-
-ChkLon:	ld	a,(ix+2)	;Filling characters are added if necessary 
-	cp	(ix+4)
-	jp	c,Invert
-	jr	z,Invert
-PonCars:	sub	(ix+4)
+	jr	z,NUM2DECST
 	ld	b,a
-	ld	a,(ix+3)
-Pon1Car:	ld	(hl),a
-	inc	hl
-	inc	(ix+4)
-	djnz	Pon1Car
-
-Invert:	ld	l,(ix+10)
-	ld	h,(ix+11)
-	xor	a	;Reverts the string
-	push	hl
-	ld	(ix+8),a
-	ld	a,(ix+4)
-	dec	a
-	ld	e,a
-	ld	d,0
-	add	hl,de
-	ex	de,hl
-	pop	hl	;HL=starting buffer, DE=ending buffer
-	ld	a,(ix+4)
-	srl	a
-	ld	b,a
-BucInv:	push	bc
-	ld	a,(de)
-	ld	b,(hl)
-	ex	de,hl
+	ld	a,29
+NUN2DECGOTOLEFT:	
 	ld	(de),a
-	ld	(hl),b
-	ex	de,hl
-	inc	hl
-	dec	de
+	inc	de
+	dec	b
+	jr	nz,NUN2DECGOTOLEFT
+	
+NUM2DECST:
+	xor	a
+	ld	(LAST_NUMBER_OF_CHARS),a
+	ld	bc,-10000
+	call	NUM1
+	ld	bc,-1000
+	call	NUM1
+	ld	bc,-100
+	call	NUM1
+	ld	c,-10
+	call	NUM1
+	xor	a
+	ld	(NOTFINALRET),a
+	ld	c,b
+
+NUM1:
+	ld	a,'0'-1
+NUM2:
+	inc	a
+	add	hl,bc
+	jr	c,NUM2
+	sbc	hl,bc
+	
+	ld	(de),a
+	ld	(CURRENTDIGIT),a
+	ld	a,(LEADING0EXCLUSION)
+	or	a
+	jr	z,NUMNOTEXCLUDINGLEADING0
+	ld	a,(NOTFINALRET)
+	or	a
+	jr	z,NUMNOTEXCLUDINGLEADING0; last digit, so it does not matter if leading 0 ended or not
+	ld	a,(CURRENTDIGIT)
+	cp	'0'
+	ret	z ;if a leading 0, do not want to increment HL
+	xor a
+	ld	(LEADING0EXCLUSION),a ;if here a digit that is not 0 has been found, so there are no more leading 0s
+NUMNOTEXCLUDINGLEADING0:	
+	inc	de ;not excluding, so increment address
+	ld	a,(LAST_NUMBER_OF_CHARS)
+	inc	a
+	ld	(LAST_NUMBER_OF_CHARS),a ;increment how many chars will be printed
+	ld	a,(NOTFINALRET)
+	or	a
+	ret	nz ;if not the final ret, we won't append $ and restore registers
+	;If here, need to finalize string with '$' and restore registers
+	ld	a,'$'
+	ld	(de),a
+	pop	hl
+	pop	de
 	pop	bc
-	ld	a,b
-	or	a
-	jr	z,ToBufUs
-	djnz	BucInv
-ToBufUs:	ld	l,(ix+10)
-	ld	h,(ix+11)
-	ld	e,(ix+13)
-	ld	d,(ix+14)
-	ld	c,(ix+4)
-	ld	b,0
-	ldir
-	ex	de,hl
-
-ChkFin1:	ld	a,(ix+1)	;Checks if it has to be ended 
-	and	%00000111		;with "$" or 0
-	or	a
-	jr	z,Fin
-	cp	1
-	jr	z,PonDolar
-	cp	2
-	jr	z,PonChr0
-
-PonBit7:	dec	hl
-	ld	a,(hl)
-	or	%10000000
-	ld	(hl),a
-	jr	Fin
-
-PonChr0:	xor	a
-	jr	PonDo0
-PonDolar:	ld	a,"$"
-PonDo0:	ld	(hl),a
-	inc	(ix+4)
-
-Fin:	ld	b,(ix+5)
-	ld	c,(ix+4)
-	pop	hl,de,ix,af
+	pop af
 	ret
-
-WorkNTOA:	defs	16
-BufNTOA:	ds	10
-
 
 ;--- STRLEN: Returns in BC the length of the string
 ;    pointed by HL and finished with 0
@@ -2440,27 +2219,27 @@ RCV_TFTPOK:	call	INIT_RETX
 	or	a
 	ret
 
-
-;--- WAIT_TICK: Waits for an interval to elapse and decrements RETX_TIMER.
+;--- Changed by Oduvaldo 07/2019
+;--- WAIT_TICK: This version won't wait a tick after calling TCPIP_WAIT
+;    but if tick has changed will decrements RETX_TIMER, otherwise return.
 ;    If it arrives to 0, restores it to RETX_TIMER_MAX*60, increments
 ;    RETX_COUNTER, and sends again the last sent packet.
 ;    If the retransmissions counter arrives to RETX_CNT_MAX,
 ;    it sends a timeout error message and returns Cy=1.
 
-WAIT_TICK:
+WAIT_TICK:	
 	call	SET_UNAPI
-	ld	hl,(TIME)
-	push	hl
 	ld	a,TCPIP_WAIT
 	call	CALL_UNAPI
-	pop	hl
+	ld	hl,(OLD_TIME)
+	ld	de,(TIME)	;Tick changed?
+	call	COMP	
+	scf
+	ccf
+	ret	z	;Nope, so nothing else to do
+	ld	(OLD_TIME),de	;New tick value
 
-WAIT_TICK_L:
-	ld	de,(TIME)	;This is needed to prevent
-	call	COMP		;TCPIP_WAIT not actually doing anything
-	jr	z,WAIT_TICK_L
-
-	;* An interval of 1/50 or 1/60 seconds has elapsed
+	;* At least an interval of 1/50 or 1/60 seconds has elapsed
 
 	ld	a,(RETX_TIMER)
 	dec	a
@@ -2485,6 +2264,7 @@ WAIT_TICK_L:
 	scf
 	ccf
 	ret
+	
 WAIT_TICK_2:	;
 
 	;* No more attempts remaining: sends an error packet and finishes
@@ -2492,8 +2272,7 @@ WAIT_TICK_2:	;
 	call	SEND_TOUTRTT
 	print	ABTOUT_S
 	scf
-	ret
-
+	ret	
 
 ;--- SHOW_TFTPE: Shows information about the received error packet
 ;    (stored in IN_BUFFER);
@@ -2520,40 +2299,29 @@ SHOW_TFTPE2:	call	PRINTZ
 	print	ONE_NL_S
 	ret
 
-
-;--- SHOW_PROGRESS: Shows the sending/receiving progress
-
-SHOW_PROGRESS:	ld	a,(GETPUT)
+;--- INITIALIZE_PROGRESS: Shows just the text Sending or Receiving, we won't print it again
+INITIALIZE_PROGRESS:
+	xor a
+	ld	(LAST_NUMBER_OF_CHARS),a
+	ld	a,(GETPUT)
 	or	a
 	ld	de,RECEIVED_S
 	jr	z,SHOW_PROG2
 	ld	de,SENT_S
 SHOW_PROG2:	ld	c,_STROUT	;Prints "Sending" or "Receiving"
 	call	5
+	ret
 
+;--- SHOW_PROGRESS: Shows the sending/receiving progress
+SHOW_PROGRESS:	
 	ld	de,(LAST_BLKID)
 	srl	d
 	rr	e	;DE=Received KBytes
 
 	ld	hl,PARAM_BUFFER
-	ld	b,1
-	ld	a,%1000
-	call	NUMTOASC
+	call	NUM2DEC
 	print	PARAM_BUFFER	;Prints the number of KBytes
 
-	ld	e,"."
-	ld	c,_CONOUT
-	call	5
-
-	ld	a,(LAST_BLKID)	;Prints ".0" or ".5"
-	ld	e,"0"
-	and	1
-	jr	z,SHOW_PROG3
-	ld	e,"5"
-SHOW_PROG3:	ld	c,_CONOUT
-	call	5
-
-	print	BLOCKS_S
 	ret
 
 
@@ -2769,15 +2537,18 @@ FILEPART_PNT:	dw	0	;Pointer to the file name
 LAST_SND_SIZE:	dw	0	;Length of the last sent packet
 LAST_RCV_SIZE:	dw	0	;Length of the last received packet
 UDP_CONN:	db	#FF	;UDP connection number
-LOCAL_TID:    db      #FFFF            ;Will be 69 if /SP option is used
+LOCAL_TID:    dw      #FFFF            ;Will be 69 if /SP option is used
+OLD_TIME:	dw	0	;Stores the last tick
+LAST_NUMBER_OF_CHARS:	db	0	;Stores how many size chars were printed so we know how many to go back
 
 	;--- Strings
 
 	;* Usage Information
 
 PRESENT_S:	db	27,"x5"	;Disables cursor
-	db	"TFTP Client/Server for the TCP/IP UNAPI 1.0",13,10
-	db	"By Konamiman, 4/2010",13,10,10,"$"
+	db	"TFTP Client/Server for the TCP/IP UNAPI 1.1",13,10
+	db	"Oduvaldo (ducasp@gmail.com) 07/2019",13,10
+	db	"Based on TFTP 1.0 by Konamiman",13,10,10,"$"
 
 INFO_S:	db	"Usage:",13,10,10
 	db	"* To send a file:",13,10
@@ -2851,9 +2622,8 @@ FNOTF_S:	db	"File not found or invalid path",0
 
 INSERV_S:	db	13,">>> Now running in server mode. Press any key to exit.",13,10,"$"
 
-RECEIVED_S:	db	13,"Receiving: $"
-SENT_S:	db	13,"Sending: $"
-BLOCKS_S:	db	" KBytes     $"
+RECEIVED_S:	db	13,10,"Receiving (KBytes): $"
+SENT_S:	db	13,10,"Sending (KBytes): $"
 
 RRQSENT_S:	db	"Read request sent...",13,"$"
 WRQSENT_S:	db	"Write request sent...",13,"$"
@@ -2879,7 +2649,7 @@ NOFREEUDP_S:	db	"*** No free UDP connections available",13,10,"$"
 	;---  Buffers  ---
 	;-----------------
 
-PARAM_BUFFER:	;For the last extracted parameter
+PARAM_BUFFER:		;For the last extracted parameter
 DISK_BUFFER:	equ	PARAM_BUFFER+128	;Generic buffer for disk op.
 OUT_BUFFER:	equ	DISK_BUFFER+70	;For the last sent packet
 IN_BUFFER:	equ	OUT_BUFFER+520	;For the last received packet
