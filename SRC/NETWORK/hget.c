@@ -1,21 +1,32 @@
-/* HTTP getter 1.1
-   By Konamiman 1/2011
+/* HTTP getter 1.3
+   By Konamiman 1/2011 v1.1
+   By Oduvaldo Pavan Junior 07/2019 v1.3
 
-   Compilation command line:
-   
-   sdcc --code-loc 0x170 --data-loc 0 -mz80 --disable-warning 196
-        --no-std-crt0 crt0_msxdos_advanced.rel msxchar.lib base64.lib
-          asm.lib hget.c
-   hex2bin -e com hget.ihx
-   
    ASM.LIB, BASE64.LIB and crt0msx_msxdos_advanced.rel
    are available at www.konamiman.com
    
-   (You don't need MSXCHAR.LIB if you manage to put proper PUTCHAR.REL,
-   GETCHAR.REL and PRINTF.REL in the standard Z80.LIB... I couldn't manage to
-   do it, I get a "Library not created with SDCCLIB" error)
+   printf_simple.rel and putchar.rel can be obtained at 
+   www.konamiman.com or retrieved from Fusion-C
+
+   sdcc --code-loc 0x180 --data-loc 0 -mz80 --disable-warning 196 --no-std-crt0 
+   crt0_msxdos_advanced.rel printf_simple.rel putchar.rel base64.lib asm.lib hget.c
    
-   Comments are welcome: konamiman@konamiman.com
+   And then:
+   
+   hex2bin -e com hget.ihx
+
+   Comments are welcome: konamiman@konamiman.com (original creator)
+                         ducasp@gmail.com (1.3 update creator)
+
+   Version 1.3 should be TCP-IP v1.1 compliant, that means, TLS support, so you
+   can download files from https sites if your device is compliant.
+   It also removes an extra tick wait after calling TCPIP_WAIT, as there seems
+   to have no reason for it and it can lower the performance. Any needed WAIT
+   should be already done by adapter UNAPI when calling TCPIP_WAIT.
+   Also I've changed the download progress to a bar, it changes every 4% 
+   increment of file size of known file size or there is a moving character if 
+   file size is unknown. This is way easier on VDP / CALLs and allow better 
+   performance on fast adapters that can use the extra CPU time.
 */
 
 //#define DEBUG
@@ -83,6 +94,13 @@ typedef unsigned char bool;
 #define TCPOUT_STEP_SIZE (512)
 
 #define HTTP_DEFAULT_PORT (80)
+#define HTTPS_DEFAULT_PORT (443)
+
+#define TCPIP_CAPAB_VERIFY_CERTIFICATE 16
+#define TCPFLAGS_USE_TLS 4
+#define TCPFLAGS_VERIFY_CERTIFICATE 8
+
+#define MAX_REDIRECTIONS 10
 
 enum TcpipUnapiFunctions {
     UNAPI_GET_INFO = 0,
@@ -100,21 +118,21 @@ enum TcpipUnapiFunctions {
 };
 
 enum TcpipErrorCodes {
-    ERR_OK = 0,			    
-    ERR_NOT_IMP,		
-    ERR_NO_NETWORK,		
-    ERR_NO_DATA,		
-    ERR_INV_PARAM,		
-    ERR_QUERY_EXISTS,	
-    ERR_INV_IP,		    
-    ERR_NO_DNS,		    
-    ERR_DNS,		    
-    ERR_NO_FREE_CONN,	
-    ERR_CONN_EXISTS,	
-    ERR_NO_CONN,		
-    ERR_CONN_STATE,		
-    ERR_BUFFER,		    
-    ERR_LARGE_DGRAM,	
+    ERR_OK = 0,
+    ERR_NOT_IMP,
+    ERR_NO_NETWORK,
+    ERR_NO_DATA,
+    ERR_INV_PARAM,
+    ERR_QUERY_EXISTS,
+    ERR_INV_IP,
+    ERR_NO_DNS,
+    ERR_DNS,
+    ERR_NO_FREE_CONN,
+    ERR_CONN_EXISTS,
+    ERR_NO_CONN,
+    ERR_CONN_STATE,
+    ERR_BUFFER,
+    ERR_LARGE_DGRAM,
     ERR_INV_OPER
 };
 
@@ -123,36 +141,67 @@ enum TcpipErrorCodes {
 #define strDefaultFilename "index.htm";
 
 const char* strTitle=
-    "HTTP file downloader 1.1\r\n"
-    "By Konamiman, 1/2011\r\n"
+    "HTTP file downloader 1.3\r\n"
+    "By Oduvaldo (ducasp@gmail.com) 7/2019\r\n"
+    "Based on HGET 1.1 by Konamiman\r\n"
     "\r\n";
-    
-const char* strUsage=
+
+const char* strUseQuestionMarkForHelp=
+    "\r\nFor extended help: hget ?\r\n";
+
+const char* strShortUsage=
     "Usage: hget <file URL>|<local file with the URL>|con [/l:<local file name>]\r\n"
-    "            [/c] [/v] [/h] [/x:<headers file name>] [/a:<user>:<password>]\r\n"
+    "  [/n] [/t] [/c] [/v] [/h] [/x:<headers file name>] [/a:<user>:<password>]\r\n";
+
+const char* strLongUsage=
     "\r\n"
-    "/c: Continue donwloading a partially downloaded file.\r\n"
+    "/c: Continue downloading a partially downloaded file.\r\n"
     "/v: Verbose mode, shows all the HTTP headers sent and received.\r\n"
     "/h: Show HTTP headers only, do not download any file.\r\n"
     "/x: Send the contents of the specified text file as extra HTTP headers.\r\n"
     "/a: Authentication parameters (basic HTTP authentication is used).\r\n"
+	"/u: Unsafe https, do not validate server certificate and hostname.\r\n"
+	"/n: Authenticate server certificate but not the hostname on https.\r\n"
     "\r\n"
     "If no local file name is specified, the name is taken from the\r\n"
     "last part of the URL. If the URL ends with a slash or has no\r\n"
     "slashes, then INDEX.HTM is used.\r\n"
     "\r\n"
-    "If an exsiting local text file is specified instead of an URL,\r\n"
+    "If an existing local text file is specified instead of an URL,\r\n"
     "then the URL is read from that file (useful for very large URLs).\r\n"
     "\r\n"
     "If \"con\" is specified instead of an URL, the name is read from the console\r\n"
     "(useful for very large URLs or for redirecting, e.g. \"type url.txt|hget con\")\r\n"
     "\r\n"
-    "TIP: Use /l:con to display the contents instead of saving to a file.\r\n";
-    
+    "TIP: Use /l:con to display the contents instead of saving to a file.";
+
 const char* strInvParam = "Invalid parameter";
 const char* strNoNetwork = "No network connection available";
 const char* strCRLF = "\r\n";
 const char* strWwwAuthenticate = "WWW-Authenticate";
+#define TCP_CONN_FAILURE_KNOWN_REASONS 20
+const char* strConnFailureReasons[21] = {
+	"Unknow failure opening connection\r\n",
+	"This connection has never been used since the implementation was initialized.\r\n",
+	"The TCPIP_TCP_CLOSE method was called.\r\n",
+	"The TCPIP_TCP_ABORT method was called.\r\n",
+	"A RST segment was received (the connection was refused or aborted by the remote host).\r\n",
+	"The user timeout expired.\r\n",
+	"The connection establishment timeout expired.\r\n",
+	"Network connection was lost while the TCP connection was open.\r\n",
+	"ICMP \"Destination unreachable\" message received.\r\n",
+	"TLS: The server did not provide a certificate.\r\n",
+	"TLS: Invalid server certificate.\r\n",
+	"TLS: Invalid server certificate (the host name didn't match).\r\n",
+	"TLS: Invalid server certificate (expired).\r\n",
+	"TLS: Invalid server certificate (self-signed).\r\n",
+	"TLS: Invalid server certificate (untrusted root).\r\n",
+	"TLS: Invalid server certificate (revoked).\r\n",
+	"TLS: Invalid server certificate (invalid certificate authority).\r\n",
+	"TLS: Invalid server certificate (invalid TLS version or cypher suite).\r\n",
+	"TLS: Our certificate was rejected by the peer.\r\n",
+	"TLS: Other error.\r\n",
+	"An error that is unknown to this software occurred...\r\n"};
 
 
     /* Variables */
@@ -174,7 +223,8 @@ byte authenticationSent;
 int remainingInputData = 0;
 byte* inputDataPointer;
 int emptyLineReaded;
-long contentLength;
+long contentLength,blockSize,currentBlock;
+bool isFirstUpdate;
 int isChunkedTransfer;
 long currentChunkSize = 0;
 int newLocationReceived;
@@ -209,10 +259,18 @@ typedef struct {
     uint localPort;
     int userTimeout;
     byte flags;
-} t_TcpConnectionParameters; 
+	int hostName;
+} t_TcpConnectionParameters;
 
 t_TcpConnectionParameters* TcpConnectionParameters;
-
+bool TlsIsSupported = false;
+bool useHttps = false;
+bool mustCheckCertificate = true;
+bool mustCheckHostName = true;
+bool safeTlsIsSupported = true;
+byte redirectionRequests = 0;
+byte tcpIpSpecificationVersionMain;
+byte tcpIpSpecificationVersionSecondary;
 
     /* Some handy defines */
 
@@ -228,10 +286,12 @@ t_TcpConnectionParameters* TcpConnectionParameters;
 
 int NoParameters();
 void PrintTitle();
-void PrintUsageAndEnd();
+void PrintUsageAndEnd(bool printLongUsage);
 void Terminate(const char* errorMessage);
 void CheckDosVersion();
 void InitializeTcpipUnapi();
+void CheckTcpipCapabilities();
+bool LongHelpRequested();
 void ProcessParameters();
 void ProcessUrl(char* url, byte isRedirection);
 void ProcessOptions();
@@ -291,7 +351,7 @@ void PrepareLocalFileForAppend();
 void DoDirectDatatransfer();
 void DoChunkedDataTransfer();
 long GetNextChunkSize();
-void GetUnapiImplementationName();
+void GetUnapiImplementationNameAndVersion();
 void CheckIfLocalFileIsConsole();
 int FirstParameterIsExistingfileName();
 void ReadUrlFromFile();
@@ -312,22 +372,31 @@ void ReadUrlFromConsole();
 /**********************
  ***  MAIN is here  ***
  **********************/
-  
+
 int main(char** argv, int argc)
 {
+	useHttps = false;
+	mustCheckCertificate = true;
+	mustCheckHostName = true;
+	TlsIsSupported = false;
     arguments = argv;
     argumentsCount = argc;
 
     PrintTitle();
     if(NoParameters()) {
-        PrintUsageAndEnd();
+        PrintUsageAndEnd(false);
+    }
+    if(LongHelpRequested()) 
+    {
+        PrintUsageAndEnd(true);
     }
 
     DisableAutoAbort();
     InitializeBufferPointers();
     CheckDosVersion();
     InitializeTcpipUnapi();
-    GetUnapiImplementationName();
+    GetUnapiImplementationNameAndVersion();
+    CheckTcpipCapabilities();
     ProcessParameters();
     CheckNetworkConnection();
 
@@ -337,13 +406,13 @@ int main(char** argv, int argc)
         PrintNewLine();
     }
     PrintNewLine();
-    
+
     print("* Press ESC at any time to cancel the process\r\n\r\n");
-    
+
     DoHttpWork();
 
     Terminate(NULL);
-    return 0;    
+    return 0;
 }
 
 
@@ -372,9 +441,10 @@ void PrintTitle()
 }
 
 
-void PrintUsageAndEnd()
+void PrintUsageAndEnd(bool printLongUsage)
 {
-    print(strUsage);
+    print(strShortUsage);
+    print(printLongUsage ? strLongUsage : strUseQuestionMarkForHelp);
     DosCall(0, &regs, REGS_MAIN, REGS_NONE);
 }
 
@@ -389,7 +459,7 @@ void Terminate(const char* errorMessage)
     CloseLocalFile();
 
     RestoreDefaultAbortRoutine();
-    
+
     regs.Bytes.B = (errorMessage == NULL ? 0 : 1);
     DosCall(_TERM, &regs, REGS_NONE, REGS_NONE);
 }
@@ -422,13 +492,7 @@ void InitializeTcpipUnapi()
         Terminate("No TCP/IP UNAPI implementations found");
     }
     UnapiBuildCodeBlock(NULL, 1, codeBlock);
-    
-    regs.Bytes.B = 1;
-    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
-    if((regs.Bytes.L & (1 << 3)) == 0) {
-        Terminate("This TCP/IP implementation does not support active TCP connections.");
-    }
-    
+
     regs.Bytes.B = 0;
     UnapiCall(codeBlock, TCPIP_TCP_ABORT, &regs, REGS_MAIN, REGS_MAIN);
 
@@ -440,8 +504,38 @@ void InitializeTcpipUnapi()
 }
 
 
-void ProcessParameters()
+void CheckTcpipCapabilities()
 {
+    regs.Bytes.B = 1;
+    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
+    if((regs.Bytes.L & (1 << 3)) == 0) {
+        Terminate("This TCP/IP implementation does not support active TCP connections.");
+    }
+
+    TlsIsSupported = false;
+    safeTlsIsSupported = false;
+
+    if(tcpIpSpecificationVersionMain == 0 || (tcpIpSpecificationVersionMain == 1 && tcpIpSpecificationVersionSecondary == 0))
+        return; //TCP/IP UNAPI <1.1 has no TLS support at all
+
+    if(regs.Bytes.D & TCPIP_CAPAB_VERIFY_CERTIFICATE)
+		safeTlsIsSupported = true;
+
+    regs.Bytes.B = 4;
+    UnapiCall(codeBlock, TCPIP_GET_CAPAB, &regs, REGS_MAIN, REGS_MAIN);
+    if(regs.Bytes.H & 1)
+        TlsIsSupported = true;
+}
+
+
+bool LongHelpRequested()
+{
+    return strcmpi(arguments[0], "?") == 0;
+}
+
+
+void ProcessParameters()
+{		
     if(strcmpi(arguments[0], "con") == 0) {
         ReadUrlFromConsole();
         printf("URL to download: %s\r\n", domainName);
@@ -454,8 +548,8 @@ void ProcessParameters()
         *domainName = '\0';
         ProcessUrl(arguments[0], 0);
     }
-    
-    ProcessOptions();
+	
+	ProcessOptions();
 }
 
 
@@ -481,16 +575,16 @@ void ReadUrlFromFile()
     if(error != 0) {
         TerminateWithDosErrorCode("Error when opening URL file: ", error);
     }
-    
+
     amount = 255;
     error = ReadFromFile(tempFileHandle, domainName, &amount);
     if(error != 0) {
         TerminateWithDosErrorCode("Error when reading URL file: ", error);
     }
     domainName[amount] = 13;
-    
+
     CloseFile(tempFileHandle);
-    
+
     pointer = domainName;
     pointer--;
     do {
@@ -500,7 +594,7 @@ void ReadUrlFromFile()
             Terminate("ERROR: The specified URL file is not a valid text file.");
         }
     } while(!CharIsWhitespace(data));
-    
+
     if(pointer == domainName) {
         Terminate("ERROR: The specified URL file is empty.");
     }
@@ -516,7 +610,7 @@ byte ReadFromFile(byte fileHandle, byte* address, int* amount)
     DosCall(_READ, &regs, REGS_MAIN, REGS_MAIN);
     *amount = regs.Words.HL;
     return regs.Bytes.A;
-} 
+}
 
 
 int CharIsWhitespace(char ch)
@@ -528,7 +622,7 @@ int CharIsWhitespace(char ch)
 void ProcessUrl(char* url, byte isRedirection)
 {
     char* pointer;
-    
+
     if(url[0] == '/') {
         if(isRedirection) {
             redirectionUrlIsNewDomainName = 0;
@@ -536,15 +630,44 @@ void ProcessUrl(char* url, byte isRedirection)
             Terminate(strInvParam);
         }
     } else if(StringStartsWith(url, "http://")) {
+		TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
+		TcpConnectionParameters->flags = 0 ;
         if(isRedirection) {
-            redirectionUrlIsNewDomainName = 1;
+			if (useHttps)
+				redirectionUrlIsNewDomainName = 1;
+			else
+			{
+				pointer = FindFirstSlash(url+7);
+				if ((pointer)&&(strncmpi(url+7, domainName, (pointer-url-7))))
+					redirectionUrlIsNewDomainName = 1;
+				else
+					redirectionUrlIsNewDomainName = 0;
+			}
         }
         strcpy(domainName, url + 7);
+		useHttps = false;
+    } else if((TlsIsSupported)&&(StringStartsWith(url, "https://"))) {
+        if(isRedirection) {
+			if (!useHttps)
+				redirectionUrlIsNewDomainName = 1;
+			else
+			{
+				pointer = FindFirstSlash(url+8);
+				if ((pointer)&&(strncmpi(url+8, domainName, (pointer-url-8))))
+					redirectionUrlIsNewDomainName = 1;
+				else
+					redirectionUrlIsNewDomainName = 0;
+			}
+        }
+        strcpy(domainName, url + 8);
+		useHttps = true;
+		TcpConnectionParameters->remotePort = HTTPS_DEFAULT_PORT;
+		TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_USE_TLS ;		
     } else if(ContainsProtocolSpecifier(url)) {
         if(isRedirection) {
-            Terminate("Redirection request received, but the new URL protocol is not HTTP.");
+            Terminate("Redirection request to HTTPS received, but this TCP/IP doesn't support TLS.");
         } else {
-            Terminate("This application supports the HTTP protocol only.");
+            Terminate("This TCP/IP implementation supports the HTTP protocol only.");
         }
     } /*else if(domainName[0]=='\0') {
         if(isRedirection) {
@@ -558,7 +681,7 @@ void ProcessUrl(char* url, byte isRedirection)
         }
         strcpy(domainName, url);
     }
-    
+
     if(url[0] == '/') {
         strcpy(remoteFilePath, url);
     } else {
@@ -569,13 +692,13 @@ void ProcessUrl(char* url, byte isRedirection)
             *pointer = '\0';
             strcpy(remoteFilePath+1, pointer+1);
         }
-        
+
         ExtractPortNumberFromDomainName();
     }
-    
+
     debug2("URL: %s", domainName);
     debug2("Remote resource: %s", remoteFilePath);
-    
+
     debug2("Port number: %i", TcpConnectionParameters->remotePort);
 }
 
@@ -589,13 +712,16 @@ int ContainsProtocolSpecifier(char* url)
 void ExtractPortNumberFromDomainName()
 {
     char* pointer;
-    
+
     pointer = FindFirstSemicolon(domainName);
     if(pointer == NULL) {
-        TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
+		if (!useHttps)
+			TcpConnectionParameters->remotePort = HTTP_DEFAULT_PORT;
+		else
+			TcpConnectionParameters->remotePort = HTTPS_DEFAULT_PORT;
         return;
     }
-    
+
     *pointer = '\0';
     pointer++;
     TcpConnectionParameters->remotePort = atoi(pointer);
@@ -615,6 +741,14 @@ void ProcessOptions()
         if(ArgumentIs(arguments[i], "v")) {
             verboseMode = 1;
             debug("Verbose mode");
+        } else if(ArgumentIs(arguments[i], "u")) {
+            mustCheckCertificate = false;
+			mustCheckHostName = false;
+            debug("UNSAFE TLS");
+        } else if(ArgumentIs(arguments[i], "n")) {
+            mustCheckCertificate = true;
+			mustCheckHostName = false;
+            debug("TLS won't check host name");
         } else if(ArgumentIs(arguments[i], "c")) {
             continueDownloading = 1;
             debug("Continue downloading");
@@ -623,20 +757,20 @@ void ProcessOptions()
             debug("Headers only");
         } else if(ArgumentIs(arguments[i], "l")) {
             strcpy(localFileName, SkipInitialColon(arguments[i] + 2));
-            debug2("Specified local filename: %s", localFileName);            
+            debug2("Specified local filename: %s", localFileName);
         } else if(ArgumentIs(arguments[i], "a")) {
             credentials = SkipInitialColon(arguments[i] + 2);
-            debug2("Credentials: %s", credentials);        
+            debug2("Credentials: %s", credentials);
         } else if(ArgumentIs(arguments[i], "x")) {
             strcpy(extraHeadersFilePath, SkipInitialColon(arguments[i] + 2));
         } else {
             Terminate(strInvParam);
         }
     }
-    
+
     GetLocalFilePathIfNecessary();
     GetExsitingFileInfo();
-    
+
     if(extraHeadersFilePath[0] != '\0') {
         error = CheckIfFileExists(extraHeadersFilePath);
         if(error != 0) {
@@ -666,7 +800,7 @@ void GetLocalFilePathIfNecessary()
     if(localFileName[0] != '\0') {
         return;
     }
-  
+
     pointer = FindLastSlash(remoteFilePath);
     if(pointer == NULL || pointer[1] == '\0') {
         pointer = strDefaultFilename;
@@ -674,7 +808,7 @@ void GetLocalFilePathIfNecessary()
     } else {
         strcpy(localFileName, pointer + 1);
     }
-    
+
     debug2("Calculated local filename: %s", localFileName);
 }
 
@@ -713,7 +847,7 @@ void InitializeVariables()
 char* FindLastSlash(char* string)
 {
     char* pointer;
-    
+
     pointer = string + strlen(string);
     while(pointer >= string) {
         if(*pointer == '/') {
@@ -721,7 +855,7 @@ char* FindLastSlash(char* string)
         }
         pointer--;
     }
-    
+
     return NULL;
 }
 
@@ -741,11 +875,12 @@ char* FindFirstSemicolon(char* string)
 void DoHttpWork()
 {
     authenticationRequested = 0;
+	redirectionRequests = 0;
 
     ResetTcpBuffer();
     ResolveServerName();
     OpenTcpConnection();
-    
+
     do {
         InitializeHttpVariables();
         SendHttpRequest();
@@ -763,26 +898,27 @@ void DoHttpWork()
             DiscardBogusHttpContent();
         }
     } while(continueReceived || redirectionRequested || authenticationRequested);
-    
+
     if(headersOnly) {
         return;
     }
-    
+
     if(isChunkedTransfer) {
         print("Content size is unknown (chunked data transfer)\r\n\r\n");
+		DownloadHttpContents();
     } else if(contentLength != 0) {
         PrintLongLength("Content size: ", contentLength, 0);
         PrintNewLine();
         PrintNewLine();
+		DownloadHttpContents();
     }
-    
-    DownloadHttpContents();
+
 }
 
 
 void PrintRedirectionInformation()
 {
-    printf("* Redirecting to: %s\r\n\r\n", redirectionFullLocation);
+    printf("* Redirecting to: %s\r\n\r\n", redirectionFullLocation);	
 }
 
 
@@ -790,13 +926,13 @@ void PrintLongLength(char* message, long length, byte showOnlyKBytes)
 {
     long kbytes;
     int bytes;
-    
+
     if(showOnlyKBytes) {
         print(message);
     } else {
         printf("%s%s bytes", message, ltoa(length, Buffer));
     }
-    
+
     if(showOnlyKBytes || length >= 1024*10) {
         kbytes = length / 1024;
         bytes = length % 1024;
@@ -845,7 +981,7 @@ void SendHttpRequest()
     SendLineToTcp(TcpOutputData);
     sprintf(TcpOutputData, "Host: %s\r\n", domainName);
     SendLineToTcp(TcpOutputData);
-    sprintf(TcpOutputData, "User-Agent: HGET/1.1 (MSX-DOS %s; TCP/IP UNAPI; %s)\r\n", dosVersion, unapiImplementationName);
+    sprintf(TcpOutputData, "User-Agent: HGET/1.3 (MSX-DOS %s; TCP/IP UNAPI; %s)\r\n", dosVersion, unapiImplementationName);
     SendLineToTcp(TcpOutputData);
     SendCredentialsIfNecessary();
     SendPartialRequestIfNecessary();
@@ -873,7 +1009,7 @@ void SendExtraHeadersIfNecessary()
     if(error != 0) {
         TerminateWithDosErrorCode("Error when opening extra headers file: ", error);
     }
-    
+
     while(1) {
         amount = TCP_BUFFER_SIZE;
         error = ReadFromFile(tempFileHandle, TcpOutputData, &amount);
@@ -892,7 +1028,7 @@ void SendExtraHeadersIfNecessary()
             if(data == 10 && verboseMode) {
                 print("--> ");
             }
-            
+
             data = *pointer;
             if(data == 0x1A) {
                 break;
@@ -901,17 +1037,17 @@ void SendExtraHeadersIfNecessary()
             if(verboseMode) {
                 putchar(data);
             }
-            
+
             SendTcpData(pointer, 1);
             pointer++;
             amount--;
         }
-        
+
         if(data == 0x1A) {
             break;
         }
     }
-    
+
     CloseFile(tempFileHandle);
 }
 
@@ -945,14 +1081,14 @@ void ReadResponseHeaders()
 {
     emptyLineReaded = 0;
     zeroContentLengthAnnounced = false;
-    
+
     ReadResponseStatus();
-    
+
     while(!emptyLineReaded) {
         ReadNextHeader();
         ProcessNextHeader();
     }
-    
+
     ProcessResponseStatus();
 }
 
@@ -981,16 +1117,19 @@ void ProcessResponseStatus()
             authenticationRequested = 1;
         }
         return;
-    } 
-    
+    }
+
     authenticationRequested = 0;
-    
+
     if(responseStatusCodeFirstDigit == 1) {
         continueReceived = 1;
     } else if(responseStatusCodeFirstDigit == 3) {
         redirectionRequested = 1;
+		++redirectionRequests;
+		if (redirectionRequests>MAX_REDIRECTIONS)
+			Terminate ("ERROR: Too many redirects!\r\n");
     } else if(responseStatusCodeFirstDigit == 2 && continueDownloading && responseStatusCode != 206) {
-        Terminate("ERROR: Resume donwload was requested, but the server started a new download.");
+        Terminate("ERROR: Resume download was requested, but the server started a new download.");
     } else if(responseStatusCodeFirstDigit != 2) {
         TerminateWithHttpError();
     }
@@ -1029,7 +1168,7 @@ void ReadNextHeader()
     }
     *pointer = data;
     pointer++;
-    
+
     do {
         data = GetInputByte();
         if(data == 13) {
@@ -1040,7 +1179,7 @@ void ReadNextHeader()
             pointer++;
         }
     } while(data != 13);
-    
+
     if(headersOnly) {
         printf("%s\r\n", headerLine);
     } else if(verboseMode) {
@@ -1062,7 +1201,7 @@ void ProcessNextHeader()
     }
 
     ExtractHeaderTitleAndContents();
-    
+
     if(HeaderTitleIs("Content-Length")) {
         contentLength = atol(headerContents);
         if(contentLength == 0) {
@@ -1070,7 +1209,7 @@ void ProcessNextHeader()
         }
         return;
     }
-    
+
     if(HeaderTitleIs("Transfer-Encoding")) {
         if(HeaderContentsIs("Chunked")) {
             isChunkedTransfer = 1;
@@ -1079,7 +1218,7 @@ void ProcessNextHeader()
         }
         return;
     }
-    
+
     if(HeaderTitleIs("WWW-Authenticate") && !StringStartsWith(headerContents, "Basic")) {
         pointer = headerContents;
         SkipCharsUntil(pointer, ' ');
@@ -1087,14 +1226,14 @@ void ProcessNextHeader()
         sprintf(Buffer, "ERROR: Unknown authentication method requested: '%s'", headerContents);
         Terminate(Buffer);
     }
-    
+
     if(HeaderTitleIs("Location")) {
         strcpy(redirectionFullLocation, headerContents);
         newLocationReceived = 1;
         ProcessUrl(headerContents, 1);
         return;
     }
-    
+
     if(HeaderTitleIs("Accept-Ranges") && HeaderContentsIs("none")) {
         acceptsPartialDownloads = 0;
     }
@@ -1105,17 +1244,17 @@ void ExtractHeaderTitleAndContents()
 {
     char* pointer;
     pointer = headerLine;
-    
+
     SkipCharsWhile(pointer, ' ');
     headerTitle = headerLine;
     SkipCharsUntil(pointer, ':');
-    
+
     *pointer = '\0';
     pointer++;
     SkipCharsWhile(pointer, ' ');
-    
+
     headerContents = pointer;
-    
+
     debug3("Header title: %s, contents: %s", headerTitle, headerContents);
 }
 
@@ -1125,7 +1264,7 @@ void CheckHeaderErrors()
     if(contentLength == 0 && !zeroContentLengthAnnounced && !isChunkedTransfer) {
         print("WARNING: Unknown transfer length. Will retrieve data until connection is closed.\r\n");
     }
-    
+
     if(redirectionRequested && !newLocationReceived) {
         Terminate("ERROR: Redirection was requested, but the new location was not provided.");
     }
@@ -1133,7 +1272,7 @@ void CheckHeaderErrors()
     if(authenticationRequested && credentials == NULL) {
         Terminate("ERROR: Server requires authentication, but no credentials were provided.");
     }
-    
+
     if(continueDownloading && !acceptsPartialDownloads && responseStatusCodeFirstDigit == 2) {
         Terminate("ERROR: Resume download requested, but the server does not support partial downloads.");
     }
@@ -1160,7 +1299,7 @@ void SendLineToTcp(char* string)
         print("--> ");
         print(string);
     }
-    
+
     len = strlen(string);
     SendTcpData(string, len);
 }
@@ -1170,20 +1309,23 @@ void EnsureThereIsTcpDataAvailable()
 {
     ticksWaited = 0;
 
-    while(remainingInputData == 0) {
-        sysTimerHold = *SYSTIMER;
-        LetTcpipBreathe();
-        while(*SYSTIMER == sysTimerHold);
-        ticksWaited++;
-        if(ticksWaited >= TICKS_TO_WAIT) {
-            Terminate("No more data received");
-        }
-        
-        ReadAsMuchTcpDataAsPossible();
-        if(remainingInputData == 0) {
-            EnsureTcpConnectionIsStillOpen();
-        }
-    }
+	sysTimerHold = *SYSTIMER;
+	while(remainingInputData == 0) {						
+		LetTcpipBreathe();
+		if (sysTimerHold != *SYSTIMER)
+		{
+			ticksWaited++;
+			sysTimerHold = *SYSTIMER;
+		}
+		if(ticksWaited >= TICKS_TO_WAIT) {
+			Terminate("No more data received");
+		}
+
+		ReadAsMuchTcpDataAsPossible();
+		if(remainingInputData == 0) {
+			EnsureTcpConnectionIsStillOpen();
+		}
+	}
 }
 
 
@@ -1230,7 +1372,7 @@ int DestinationFileExists()
     byte error;
 
     error = CheckIfFileExists(localFileName);
-    
+
     if(error == _NOFIL) {
         return 0;
     } else if(error != 0) {
@@ -1251,7 +1393,6 @@ byte CheckIfFileExists(char* path)
     return regs.Bytes.A;
 }
 
-
 void DownloadHttpContents()
 {
     if(continueDownloading) {
@@ -1260,19 +1401,17 @@ void DownloadHttpContents()
     } else {
         CreateLocalFile();
     }
- 
     if(isChunkedTransfer) {
         DoChunkedDataTransfer();
     } else {
         DoDirectDatatransfer();
     }
-    
+
     if(!localFileIsConsole) {
         printf("\r\n\r\nDownload complete. Generated file: %s", localFileName);
     }
     Terminate(NULL);
 }
-
 
 void DoDirectDatatransfer()
 {
@@ -1280,10 +1419,17 @@ void DoDirectDatatransfer()
         print("Content size: 0 bytes");
         return;
     }
-
+	print(" ");
+	if (contentLength)
+	{
+		blockSize = contentLength/25;
+		currentBlock = 0;
+		isFirstUpdate = true;
+	}
     while(contentLength == 0 || receivedLength < contentLength) {
         EnsureThereIsTcpDataAvailable();
         receivedLength += remainingInputData;
+		currentBlock += remainingInputData;
         UpdateReceivingMessage();
         WriteContentsToFile(inputDataPointer, remainingInputData);
         ResetTcpBuffer();
@@ -1296,7 +1442,13 @@ void DoChunkedDataTransfer()
     int chunkSizeInBuffer;
 
     currentChunkSize = GetNextChunkSize();
-
+	print(" ");
+	if (contentLength)
+	{
+		blockSize = contentLength/25;
+		currentBlock = 0;
+		isFirstUpdate = true;
+	}
     while(1) {
         if(currentChunkSize == 0) {
             GetInputByte(); //Chunk data is followed by an extra CRLF
@@ -1306,7 +1458,7 @@ void DoChunkedDataTransfer()
                 break;
             }
         }
-        
+
         if(remainingInputData == 0) {
             EnsureThereIsTcpDataAvailable();
         }
@@ -1328,7 +1480,7 @@ long GetNextChunkSize()
     byte validHexDigit = 1;
     char data;
     long value = 0;
-    
+
     while(validHexDigit) {
         data = (char)GetInputByte();
         ToLowerCase(data);
@@ -1340,13 +1492,13 @@ long GetNextChunkSize()
             validHexDigit = 0;
         }
     }
-    
+
     do {
         data = GetInputByte();
     } while(data != 10);
 
     debug2("Chunk size: %s", ltoa(value, Buffer));
-    
+
     return value;
 }
 
@@ -1409,9 +1561,29 @@ void CreateLocalFile()
 
 void UpdateReceivingMessage()
 {
+	static int sti=0;
+	unsigned char advance[4][3] = {"\r-","\r\\","\r|","\r/"};
+	static unsigned char ui = 0;
+
     if(!localFileIsConsole) {
-        PrintLongLength("\rDownloaded ", receivedLength, 1);
-        print(" ...");
+		if (contentLength)
+		{			
+			if (isFirstUpdate)
+			{
+				isFirstUpdate=false;
+				print("\r[                         ]\r\x1c");
+			}
+			while (currentBlock>=blockSize)
+			{
+				currentBlock-=blockSize;
+				print("=");
+			}			
+		}
+		else
+		{
+			print(advance[ui%4]);
+			++ui;
+		}
     }
 }
 
@@ -1474,14 +1646,14 @@ void ResolveServerName()
         sprintf(Buffer, "Unknown error when resolving the host name (code %i)", regs.Bytes.A);
         Terminate(Buffer);
     }
-    
+
     do {
         AbortIfEscIsPressed();
         LetTcpipBreathe();
         regs.Bytes.B = 0;
         UnapiCall(codeBlock, TCPIP_DNS_S, &regs, REGS_MAIN, REGS_MAIN);
     } while (regs.Bytes.A == 0 && regs.Bytes.B == 1);
-    
+
     if(regs.Bytes.A != 0) {
         if(regs.Bytes.B == 2) {
             Terminate("DNS server failure");
@@ -1500,14 +1672,29 @@ void ResolveServerName()
             Terminate(Buffer);
         }
     }
-    
+
     TcpConnectionParameters->remoteIP[0] = regs.Bytes.L;
     TcpConnectionParameters->remoteIP[1] = regs.Bytes.H;
     TcpConnectionParameters->remoteIP[2] = regs.Bytes.E;
     TcpConnectionParameters->remoteIP[3] = regs.Bytes.D;
-    
+
+	if (useHttps)
+	{
+		if (mustCheckCertificate)
+			TcpConnectionParameters->flags = TcpConnectionParameters->flags | TCPFLAGS_VERIFY_CERTIFICATE ;
+		if (mustCheckHostName)
+			TcpConnectionParameters->hostName =  (int)domainName;
+		else
+			TcpConnectionParameters->hostName =  0;
+	}
+	else
+	{
+		TcpConnectionParameters->flags = 0 ;
+		TcpConnectionParameters->hostName =  0;
+	}
+
     print(" Ok\r\n");
-    
+
     #ifdef DEBUG
     printf("--- Server IP: %i.%i.%i.%i\r\n", TcpConnectionParameters->remoteIP[0], TcpConnectionParameters->remoteIP[1], TcpConnectionParameters->remoteIP[2], TcpConnectionParameters->remoteIP[3]);
     #endif
@@ -1526,15 +1713,22 @@ void OpenTcpConnection()
         regs.Words.HL = (int)TcpConnectionParameters;
         UnapiCall(codeBlock, TCPIP_TCP_OPEN, &regs, REGS_MAIN, REGS_MAIN);
     }
-    
+
     if(regs.Bytes.A == (byte)ERR_NO_NETWORK) {
         Terminate(strNoNetwork);
     } else if(regs.Bytes.A != 0) {
         sprintf(Buffer, "Unexpected error when opening TCP connection (%i)", regs.Bytes.A);
+		if (regs.Bytes.A == ERR_NO_CONN) //C should have the reason
+		{
+			if (regs.Bytes.C >= TCP_CONN_FAILURE_KNOWN_REASONS)
+				printf("\r\n%s",strConnFailureReasons[TCP_CONN_FAILURE_KNOWN_REASONS]);
+			else
+				printf("\r\n%s",strConnFailureReasons[regs.Bytes.C]);
+		}
         Terminate(Buffer);
     }
     conn = regs.Bytes.B;
-    
+
     ticksWaited = 0;
     do {
         AbortIfEscIsPressed();
@@ -1549,12 +1743,19 @@ void OpenTcpConnection()
         regs.Words.HL = 0;
         UnapiCall(codeBlock, TCPIP_TCP_STATE, &regs, REGS_MAIN, REGS_MAIN);
     } while((regs.Bytes.A) == 0 && (regs.Bytes.B != 4));
-    
+
     if(regs.Bytes.A != 0) {
         debug2("Error connecting: %i\r\n", regs.Bytes.A);
         Terminate("Could not establish a connection to the server");
-    }
-    
+		if (regs.Bytes.A == ERR_NO_CONN)
+		{
+			if (regs.Bytes.C >= TCP_CONN_FAILURE_KNOWN_REASONS)
+				printf("\r\n%s",strConnFailureReasons[TCP_CONN_FAILURE_KNOWN_REASONS]);
+			else
+				printf("\r\n%s",strConnFailureReasons[regs.Bytes.C]);
+		}
+    }	
+
     print("OK\r\n\r\n");
 }
 
@@ -1602,7 +1803,7 @@ void SendTcpData(byte* data, int dataSize)
         dataSize -= TCPOUT_STEP_SIZE;
         data += regs.Words.HL;   //Unmodified since REGS_AF was used for output
     } while(dataSize > 0 && regs.Bytes.A == 0);
-    
+
     if(regs.Bytes.A == ERR_NO_CONN) {
         Terminate("Connection lost while sending data");
     } else if(regs.Bytes.A != 0) {
@@ -1692,7 +1893,7 @@ char* ltoa(unsigned long num, char *string)
     int nonZeroProcessed = 0;
     unsigned long power = 1000000000;
     unsigned char digit = 0;
-    
+
     while(power > 0) {
         digit = num / power;
         num = num % power;
@@ -1704,30 +1905,33 @@ char* ltoa(unsigned long num, char *string)
         }
         power /= 10;
     }
-    
+
     if(!nonZeroProcessed) {
         *pointer++ = '0';
     }
-    
+
     *pointer = '\0';
-    
+
     return string;
 }
 
 
-void GetUnapiImplementationName()
+void GetUnapiImplementationNameAndVersion()
 {
     byte readChar;
     byte versionMain;
     byte versionSec;
     uint nameAddress;
     char* pointer = unapiImplementationName;
-    
+
     UnapiCall(codeBlock, UNAPI_GET_INFO, &regs, REGS_NONE, REGS_MAIN);
     versionMain = regs.Bytes.B;
     versionSec = regs.Bytes.C;
     nameAddress = regs.UWords.HL;
-    
+
+    tcpIpSpecificationVersionMain = regs.Bytes.D;
+    tcpIpSpecificationVersionSecondary = regs.Bytes.E;
+
     while(1) {
         readChar = UnapiRead(codeBlock, nameAddress);
         if(readChar == 0) {
@@ -1736,7 +1940,7 @@ void GetUnapiImplementationName()
         *pointer++ = readChar;
         nameAddress++;
     }
-    
+
     sprintf(pointer, " v%u.%u", versionMain, versionSec);
 }
 
@@ -1758,7 +1962,7 @@ in these cases.
 void DisableAutoAbort() __naked
 {
     __asm
-    
+
     push    ix
     ld  de,#ABORT_CODE
     ld  c,#_DEFAB
@@ -1776,7 +1980,7 @@ ABORT_CODE:
     jp  z,_TerminateWithCtrlCOrCtrlStop
 
     pop hl  ;This causes the program to continue instead of terminating
-    
+
     ld  c,a ;Return the secondary error code if present,
     ld  a,b ;instead of the generic "Operation aborted" error
     or  a
