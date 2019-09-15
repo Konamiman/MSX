@@ -19,6 +19,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "asm.h"
 
 #define LowerCase(c) ((c) | 32)
@@ -87,13 +88,14 @@ const char* strPresentation=
     "\r\n";
 
 const char* strUsage=
-    "Usage: sntp [<host>] [/z <time zone>] [/d] [/v] [/h]\r\n"
+    "Usage: sntp [<host>] [/z <time zone>] [/r <retries>] [/d] [/v] [/h]\r\n"
     "\r\n"
     "<host>: Name or IP address of the SNTP time server.\r\n"
     "        If nothing is specified, the environment item TIMESERVER will be used.\r\n"
     "/z <time zone>: Formatted as [+|-]hh:mm where hh=00-12, mm=00-59\r\n"
     "    This value will be added or substracted from the received time.\r\n"
     "    The time zone can also be specified in the environment item TIMEZONE.\r\n"
+    "/r <retries>: Number of retries to get information from time server (Default:1)\r\n"
     "/d: Do not change MSX clock, only display the received value\r\n"
     "/v: Verbose mode\r\n"
     "/h: This help\r\n"
@@ -104,6 +106,7 @@ const char* strUsage=
 const char* strInvalidParameter = "Invalid parameter(s)";
 const char* strNoNetwork = "No network connection available";
 const char* strInvalidTimeZone = "Invalid time zone";
+const char* strInvalidRetriesSize = "Retries must be between 0 and 10";
 const char* strOK = "OK\r\n";
 
 Z80_registers regs;
@@ -123,6 +126,7 @@ uint timeZoneHours;
 uint timeZoneMinutes;
 int ticksWaited;
 int sysTimerHold;
+int retries;
 
 byte* timeServerBuffer;
 byte timeZoneBuffer[8];
@@ -163,6 +167,7 @@ int main(char** argv, int argc)
     timeServerString = TimeServerEnv();
     buffer = BUFFER;
     conn = 0;
+    retries = 1;
 
     //* Parse parameters after the host name
 
@@ -181,6 +186,12 @@ int main(char** argv, int argc)
                 verbose = 1;
             } else if(paramLetter == 'd') {
                 displayOnly = 1;
+            } else if(paramLetter == 'r') {
+                retries = atoi(argv[param + 1]);
+                skipNext = 1;
+                if(retries < 0 || retries > 10) {
+                    Terminate(strInvalidRetriesSize);
+                }
             } else if(paramLetter == 'z') {
                 timeZoneString = argv[param + 1];
                 skipNext = 1;
@@ -402,11 +413,9 @@ char* TimeZoneEnv()
 
 void getTime()
 {
-    int retries;
     int queryErrorCode;
     int currentTry;
 
-    retries = 1;
     currentTry = 0;
 
     PrintIfVerbose("Querying the time server...");
