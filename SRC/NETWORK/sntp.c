@@ -84,7 +84,8 @@ enum TcpipErrorCodes {
 };
 
 const char* strPresentation=
-    "SNTP time setter for the TCP/IP UNAPI 1.1\r\n"
+    "SNTP Time Setter v1.2\r\n"
+    "for the TCP/IP UNAPI 1.1\r\n"
     "\r\n";
 
 const char* strUsage=
@@ -100,8 +101,7 @@ const char* strUsage=
     "/v: Verbose mode\r\n"
     "/h: This help\r\n"
     "\r\n"
-    "by Oduvaldo\r\n"
-    "based on SNTP 1.0 by Konamiman\r\n";
+    "original by Konamiman\r\n";
 
 const char* strInvalidParameter = "Invalid parameter(s)";
 const char* strNoNetwork = "No network connection available";
