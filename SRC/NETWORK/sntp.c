@@ -210,6 +210,12 @@ int main(char** argv, int argc)
 
     PrintIfVerbose(strPresentation);
 
+    i = UnapiGetCount("TCP/IP");
+    if(i==0) {
+        Terminate("No TCP/IP UNAPI implementations found");
+    }
+    UnapiBuildCodeBlock(NULL, i, &codeBlock);
+
     if(timeServerString[0] == '\0') {
         Terminate("No time server specified and no TIMESERVER environment item was found.");
     }
@@ -236,13 +242,11 @@ int main(char** argv, int argc)
 
     //* Initialize TCP/IP, close transient UDP connections, open connection for time server port
 
-    i = UnapiGetCount("TCP/IP");
-    if(i==0) {
-        Terminate("No TCP/IP UNAPI implementations found");
-    }
-    UnapiBuildCodeBlock(NULL, i, &codeBlock);
-
     CloseConnection();
+
+    if(regs.Bytes.A == ERR_NOT_IMP) {
+        Terminate("This TCP/IP UNAPI implementation does not support UDP connections");
+    }
 
     regs.Words.HL = SNTP_PORT;
     regs.Bytes.B = 0;
@@ -654,8 +658,4 @@ void CloseConnection()
 {
     regs.Bytes.B = conn;
     UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
-
-    if(regs.Bytes.A == ERR_NOT_IMP) {
-        Terminate("This TCP/IP UNAPI implementation does not support UDP connections");
-    }
 }
