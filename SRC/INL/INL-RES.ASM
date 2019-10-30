@@ -43,7 +43,7 @@ LINK:	equ	1
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	2
+INL_VER2:	equ	3
 TCPIP_VER1:	equ	1
 TCPIP_VER2:	equ	1
 
@@ -4438,6 +4438,7 @@ TCPOPTOK2:
 	and	%10
 	jr	z,TCP_NOEX
 
+    ld de,(IN_BUFFER+26)    ;Destination port
 	call	SEARCH_LISTEN	;Appropriate connection exists?
 	cp	#FF
 	jr	z,TCP_NOEX
@@ -8516,9 +8517,9 @@ STCP_TEMP:	ds	8
 
 ;--- SEARCH_LISTEN: Search a TCP connection in LISTEN state
 ;    with unespecified remote socket
-;    Input:  -
+;    Input:  DE = Local port (with endianness inverted)
 ;    Output: A = Connection, 0 a 3 (#FF if not found)
-;    Modifies: AF, BC, DE, HL
+;    Modifies: AF, BC, DE, HL, IX
 
 SEARCH_LISTEN:
 	ld	hl,TCBS+TCB_SIZE*3
@@ -8528,12 +8529,21 @@ SLST_LOOP:	ld	a,(hl)
 	cp	LISTEN
 	jr	nz,SLST_NEXT
 
-	push	hl,bc
+	push	hl,de,bc
 	inc	hl
 	ld	de,ZERO32
 	call	COMP32
-	pop	bc,hl
+	pop	bc,de,hl
 	jr	nz,SLST_NEXT
+
+    push hl
+    pop ix
+    ld a,(ix+7)
+    cp d
+    jr nz,SLST_NEXT
+    ld a,(ix+8)
+    cp e
+    jr nz,SLST_NEXT
 
 	ld	a,b	;Connection found
 	dec	a
@@ -8541,9 +8551,12 @@ SLST_LOOP:	ld	a,(hl)
 
 	;Next connection, if any
 
-SLST_NEXT:	ld	de,TCB_SIZE
+SLST_NEXT:	
+    push bc
+    ld	bc,TCB_SIZE
 	or	a
-	sbc	hl,de
+	sbc	hl,bc
+    pop bc
 	djnz	SLST_LOOP
 	ld	a,#FF	;If this point is reached, no more connections available
 	ret
@@ -8644,7 +8657,7 @@ TCP_IS_ZERO:
 	ret
 
 ;--- SET_TCP_PORTS: Returns remote IP in L.H.E.D,
-;    local port en IY, and remote port en IX
+;    local port in IY, and remote port in IX
 
 SET_TCP_PORTS:
     push af
@@ -14344,7 +14357,7 @@ TCB_TEMP:	equ	TCBS-TCB_MAX_SIZE
 TCP_STATE:	equ	TCB_TEMP	;TCP state
 REMOTE_IP:	equ	TCP_STATE+1	;Remote IP
 REMOTE_PORT:	equ	REMOTE_IP+4	;Remote port (Big-Endian)
-LOCAL_PORT:	equ	REMOTE_PORT+2	;Remote port (Big-Endian)
+LOCAL_PORT:	equ	REMOTE_PORT+2	;Local port (Big-Endian)
 PASSIVE_OPEN:	equ	LOCAL_PORT+2	;0/#FF for connection active/passive
 
 SND_UNA:	equ	PASSIVE_OPEN+1	;First non ACKed sequence number

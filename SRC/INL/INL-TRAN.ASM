@@ -1390,12 +1390,12 @@ INIT_S:
 	db	"InterNestor Lite for the Ethernet UNAPI"
 	endif
 
-	db	" v2.2: TCP/IP stack for MSX-DOS",13,10
+	db	" v2.3: TCP/IP stack for MSX-DOS",13,10
 
 	if	USETIMI=0
 	db	"*** NO TIMER!!",13,10
 	endif
-	db	"By Konamiman, 8/2019",13,10,13,10,"$"
+	db	"By Konamiman, 11/2019",13,10,13,10,"$"
 
 INFO_S:	db	"Frequently used options:",13,10,13,10
 
