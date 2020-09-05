@@ -2325,7 +2325,7 @@ void BuildWelcomeMessage()
 		"220-\r\n"
         "220-You are talking to a MSX%s computer running MSX-DOS %s\r\n"
         "220-The TCP/IP implementation is %s\r\n"
-		"220-Please note that I can serve only onle client at a time.\r\n"
+		"220-Please note that I can serve only one client at a time.\r\n"
         "220-Any user name and password combination will be accepted.\r\n"
         "220 You will be disconnected after 5 minutes of inactivity.\r\n";
 
