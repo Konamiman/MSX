@@ -7,7 +7,7 @@ NestorBASIC is a set of machine code routines, integrated in a single file. It i
 - Storage of BASIC programs in the mapped RAM, which can be executed without losing the existing variables.
 - Access to disk files and direct access to physical sectors, with read/write to RAM/VRAM feature. File search, directory management. 
 - Graphic compression and decompression.
-- Moonblaster music playback. Samplekit load.
+- Moonblaster music playback. Samplekit loading.
 - PSG sound effects playback.
 - Execution of machine code routines placed on BIOS, SUB-BIOS, normal BASIC memory, system work area, or a mapped RAM segment.
 - Machine code routines execution, from BIOS or from any RAM segment. User defined interrupts.
