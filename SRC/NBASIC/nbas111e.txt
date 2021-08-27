@@ -17,11 +17,11 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 - Access to disk files and direct access to physical sectors, with
   reading/writing directly to/from mapped RAM and VRAM feature. File search,
   directory management. 
-- Graphic compression and decompression.
+- Graphics compression and decompression.
 - Moonblaster music playback. Samplekit loading.
 - PSG sound effects playback.
-- Execution of machine code routines placed on BIOS, SUB-BIOS, normal BASIC 
-  memory, system work area, or a mapped RAM segment.
+- Execution of machine code routines placed on BIOS, SUB-BIOS, standard BASIC 
+  memory, system code area, or a mapped RAM segment.
 - Machine code routines execution, from BIOS or from any RAM segment. User 
   defined interrupts.
 - NestorMan functions, InterNestor Suite and InterNestor Lite routines 
