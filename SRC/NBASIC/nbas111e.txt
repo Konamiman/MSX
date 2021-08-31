@@ -32,7 +32,7 @@ parameter array, therefore they are fully TurboBASIC compatibles. In fact,
 the TurboBASIC compiler itself is included into the NestorBASIC file, and it 
 is automatically loaded when NestorBASIC is installed.
 
-NestorBASIC is loaded in a RAM segment not used by BASIC, so only a small 
+NestorBASIC is loaded in a RAM segment hidden to BASIC, so only a small 
 amount of the BASIC main RAM (aprox. 500 bytes) is needed for a jump routine. 
 The rest of the BASIC main RAM remains available for the BASIC program.
 
