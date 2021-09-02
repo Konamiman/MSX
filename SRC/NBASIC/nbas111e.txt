@@ -44,7 +44,7 @@ When DOS 2 is installed, at least one free segment is needed in the primary
 mapper (at least two if the music player will be used. See section 8 for 
 details).
 
-To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. Nor preceeding, neither following
+To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. Nor preceding, neither following
 CLEAR or DEFUSR is required. If installation was successfull, we get the following:
 
 - NestorBASIC and TurboBASIC have been loaded, each one in a different RAM 
