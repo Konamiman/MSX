@@ -30,7 +30,7 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 All of these functions are available through a single USR and an integer 
 parameter array, therefore they are fully TurboBASIC compatibles. In fact, 
 the TurboBASIC compiler itself is included into the NestorBASIC file, and it 
-is automatically loaded when NestorBASIC is installed.
+is automatically loaded when NestorBASIC is installed resident.
 
 NestorBASIC is loaded in a RAM segment hidden to BASIC, so only a small 
 amount of the BASIC main RAM (aprox. 500 bytes) is needed for a jump routine. 
