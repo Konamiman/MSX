@@ -45,10 +45,10 @@ mapper (at least two if the music player will be used. See section 8 for
 details).
 
 To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. Nor preceding, neither following
-CLEAR or DEFUSR is required. If installation was successfull, we get the following:
+CLEAR or DEFUSR is required. If no errors occured, we get the following:
 
-- NestorBASIC and TurboBASIC have been loaded, each one in a different RAM 
-segment. Both are ready for use.
+- NestorBASIC and TurboBASIC loaded, each one in a different RAM segment.
+Both are ready for use.
 
 - The amount of free BASIC main RAM has been decreased in aprox. 500 bytes, 
 which are occuped by a routine that jumps to the NestorBASIC segment.
