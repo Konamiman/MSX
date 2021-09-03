@@ -10,12 +10,12 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 
 - Full access to all the available memory of the computer (all existing memory
   in the case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
-- Access to VRAM, with data block exchange between VRAM and between RAM and 
+- Access to all VRAM, with data block exchange within VRAM and between RAM and 
   VRAM feature.
 - Storage of BASIC programs in the mapped RAM, with the capability to jump
   from one program to another without loosing variables.
 - Access to disk files and direct access to physical sectors, with
-  reading/writing directly to/from mapped RAM and VRAM feature. File search,
+  direct read/write to/from mapped RAM and VRAM feature. File search,
   directory management. 
 - Graphics compression and decompression.
 - Moonblaster music playback. Samplekit loading.
