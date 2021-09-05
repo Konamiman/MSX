@@ -28,7 +28,7 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
   execution.
 
 All of these functions are available through a single USR and an integer 
-parameter array, therefore they are fully TurboBASIC compatibles. In fact, 
+parameter array, therefore they are fully TurboBASIC compatible. In fact, 
 the TurboBASIC compiler itself is included into the NestorBASIC file, and it 
 is automatically loaded when NestorBASIC is installed resident.
 
@@ -76,7 +76,7 @@ The number of available RAM segments will be always at least 5. A smaller
 number in P(0) means an error code that has aborted the installation of 
 NestorBASIC:
 
-0: The computer has not mapped RAM, or has only 64K of mapped RAM.
+0: The computer has no mapped RAM, or has only 64K of mapped RAM.
 1: Disk error when reading NestorBASIC or TurboBASIC from NBASIC.BIN.
 2: No free segments are available in the primary mapper. This error may 
    appear only under DOS 2.
