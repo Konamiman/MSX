@@ -135,7 +135,7 @@ When NestorBASIC is installed, all the exisiting slots are scanned for
 available RAM (all the existing RAM in the case of DOS 1, all the free RAM in 
 the case of DOS 2), and a segment table is built. In this table, all the 
 found segments are registered as a couple slot+segment number (under DOS 2, 
-all the segments are first allocated). NestorBASIC identifies each of these 
+the segments are first allocated). NestorBASIC identifies each of these 
 couples with his index number in the table. This number is named logical 
 segment number, and allows the user to manage all the RAM segments in an easy 
 and ordered way, without having to care about the slot(s) in which the RAM is 
