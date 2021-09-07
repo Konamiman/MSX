@@ -21,7 +21,7 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 - Moonblaster music playback. Samplekit loading.
 - PSG sound effects playback.
 - Execution of machine code routines placed on BIOS, SUB-BIOS, standard BASIC 
-  memory, system code area, or a mapped RAM segment.
+  memory, system working area, or a mapped RAM segment.
 - Machine code routines execution, from BIOS or from any RAM segment. User 
   defined interrupts.
 - NestorMan functions, InterNestor Suite and InterNestor Lite routines 
@@ -44,8 +44,9 @@ When DOS 2 is installed, at least one free segment is needed in the primary
 mapper (at least two if the music player will be used. See section 8 for 
 details).
 
-To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. Nor preceding, neither following
-CLEAR or DEFUSR is required. If no errors occured, we get the following:
+To load NestorBASIC, just do BLOAD"NBASIC.BIN",R. Neither preceding nor
+posterior CLEAR or DEFUSR is required. If no errors occured, you get the
+following:
 
 - NestorBASIC and TurboBASIC loaded, each one in a different RAM segment.
 Both are ready for use.
@@ -165,7 +166,7 @@ function description).
 only if you will not use the compiler.
 
 - Segment 2 is always connected to page 2 (addreses &H8000 to &HBFFF), and 
-contains the BASIC program being executed and maybe some variables.
+contains the BASIC program being executed and part of its' variables.
 
 - Segment 3 is always connected to page 3 (addresses &HC000 to &HFFFF), and 
 contains the MSX work area and part of the BASIC program variables. Be 
