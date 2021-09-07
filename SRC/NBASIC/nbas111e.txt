@@ -191,8 +191,8 @@ RAM.
 When using the data block exchange functions, be careful for not surpassing 
 the address &H3FFF when adding the block length to the destination address 
 (for example, don't try to transfer &H2000 bytes specifying address &H3000 as 
-destination address). In such a case, segment 0 or segment 3 is overwrited, 
-and then the result is unpredictable.
+destination address). In this case, segment 0 or segment 3 will be overwriten, 
+and the result will be unpredictable.
 
 Note: using function 80 it is possible to force NestorBASIC to allocate less 
 memory segments than the total amount available. This is useful under DOS 2 
