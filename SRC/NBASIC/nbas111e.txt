@@ -178,7 +178,7 @@ NestorBASIC functions. See section 10 or appendix 1 to know which functions
 use this segment.
 
 - If it exists, segment 5 is initially free, and is not used by NestorBASIC. 
-But when the music replayer is loaded, it is stored in this segment. See 
+But when the music player is loaded, it is stored in this segment. See 
 section 8 for details.
 
 All other existing segments are completely available for the user.
