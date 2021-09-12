@@ -28,7 +28,7 @@ NestorBASIC это набор подпрограмм(функций,процед
 Собственно, сам компилятор TurboBASIC содержится в файле NestorBASIC, и
 автоматически загружается при резидентной установке NestorBASIC.
 
-NestorBASIC загружается в сегмент ОЗУ, не используемый БЕЙСИКом, так что нужен
+NestorBASIC загружается в сегмент ОЗУ, не используемый BASIC'ом, так что нужен
 лишь небольшой объем основной памяти BASIC'a (примерно 500 байт) для программы 
 перехода. Остальная основная память BASIC'а свободна для программы на БЕЙСИКе.
 
@@ -207,3 +207,50 @@ NestorBASIC позволяет использовать VRAM для ваших �
 программисту при освобождении сегментов VRAM, соответствующих области отображения:
 это будет последний сегмент, при работе в текстовом режиме или при использовании лишь
 одной страницы в графическом режиме.
+
+Вернемся к предыдущему примеру: компьютеру с 72 сегментами RAM and 
+128K VRAM. If the program works in text mode, only the first 2000 bytes of 
+VRAM are used: this VRAM area corresponds to the last VRAM segment, with 
+number 79. Then, the user can use freely the segments 72 to 78, and the range 
+of available segments becomex 0 to 78, without having to discard any 
+intermediate segment. If the program works in SCREEN 5 and uses only graphic 
+page 0, the range is 0 to 77; in SCREEN 7, it is 0 to 75, and so on.
+
+Of course, NestorBASIC also includes functions for accessing VRAM with direct 
+addressing specification, useful when the VRAM must be treated as VRAM and 
+not as emulated RAM.
+
+WARNING: VRAM segments can be used as normal RAM segments in order to store 
+data and BASIC programs; also, data block exchange functions and disk access 
+funtions are available when using VRAM segments. But note that the VRAM 
+segments can't be used for the following purposes:
+
+- Graphic compression/decompression
+- Machine code routines execution
+- User defined interrupt execution
+- PSG sound effects replay
+- Music replay
+
+If you try to use VRAM segments for any of these purposes, the called 
+function will return the "non existing segment" error.
+
+
+3.3. THE SEGMENT 255
+
+The logical segment number 255 has a special meaning. It does not refer to a 
+concrete RAM or VRAM segment, but to the BASIC main RAM, that is, the RAM 
+used by BASIC at addresses &H8000 to &HFFFF (in this case, addresses are not 
+converted to the range &H0000-&H3FFF). This segment number is useful for 
+example to exchange data between any segment and a BASIC variable or array:
+
+ 1 'Copy 10 bytes from segment 7, begin address &H1000,
+ 2 'to integer array D.
+ 3 '(See section 10 for detailed functions specification)
+ 4 '
+10 DEFINT D:DIM D(4) '5 integer data = 10 bytes
+20 P(0)=7	     'Source segment
+30 P(1)=&H1000	     'Source begin address
+40 P(2)=255	     'Destination segment=BASIC main RAM
+50 P(3)=VARPTR(D(0)) 'Destination begin address=D array
+60 P(4)=10	     'length
+70 J=USR(10)	     'Call to function 10 (block transfer between segments)
