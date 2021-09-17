@@ -213,15 +213,14 @@ NestorBASIC позволяет использовать VRAM для ваших �
 соответствует последнему сегменту VRAM, под номером 79. В этом случае, программист может
 свободно использовать сегменты с 72 по 78, и диапазон доступных сегментов будет 0 - 78,
 без необходимости пропускать какой-либо сегмент внутри этой последовательности. 
-If the program works in SCREEN 5 and uses only graphic 
-page 0, the range is 0 to 77; in SCREEN 7, it is 0 to 75, and so on.
+Если программа работает в SCREEN 5 и использует только графическую страницу 0, диапазон
+сегментов будет с 0 по 77; в SCREEN 7 он будет с 0 по 75, и т.д.
 
-Of course, NestorBASIC also includes functions for accessing VRAM with direct 
-addressing specification, useful when the VRAM must be treated as VRAM and 
-not as emulated RAM.
+Конечно, NestorBASIC также имеет функции для работы с VRAM напрямую, без эмуляции в ней 
+сегментов RAM. Эти функции позволяют пересылать данные VRAM<-->RAM и VRAM<-->файл. 
 
-WARNING: VRAM segments can be used as normal RAM segments in order to store 
-data and BASIC programs; also, data block exchange functions and disk access 
+Внимание: сегменты VRAM могут использоваться так же, как и обычные сегменты RAM, для  
+размещения данных и программ на БЕЙСИКе, а также для also, data block exchange functions and disk access 
 funtions are available when using VRAM segments. But note that the VRAM 
 segments can't be used for the following purposes:
 
