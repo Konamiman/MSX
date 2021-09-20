@@ -260,16 +260,16 @@ VRAM<-->RAM и VRAM<-->файл.
 
 3.4. КАРТА СЕГМЕНТОВ 
 
-Резюмируя данный раздел, here is a list of the available segments and 
-its description. S is the number of available segments, given by NestorBASIC 
-when it is installed or when using function 1.
+Резюмируя данный раздел, предоставим весь список имеющихся сегментов и их описание.
+S это количество сегментов, возвращаемое в P(0) при резидентной загрузке NestorBASIC 
+или при вызове функции 1.
 
-0: NestorBASIC segment
-1: Turbo-BASIC segment
-2: BASIC main RAM, page 2 (&H8000-&HBFFF)
-3: BASIC main RAM, page 3 (&HC000-&HFFFF)
-4: Internal buffer segment
-5 to S-1: Available RAM for the user (if S>5)
+0: Сегмент NestorBASIC'а
+1: Сегмент Turbo-BASIC'а
+2: Основное ОЗУ BASIC'а, страница 2 (&H8000-&HBFFF)
+3: Основное ОЗУ BASIC'а, страница 3 (&HC000-&HFFFF)
+4: Сегмент служебного буфера
+5 по S-1: Память, доступная для программы пользователя!!! (if S>5)
    If the music replayer is loaded,
    it is stored in segment 5. See section 8.
 S:   VRAM, addresses &H1C000-&H1FFFF (64K VRAM: &HC000-&HFFFF)
