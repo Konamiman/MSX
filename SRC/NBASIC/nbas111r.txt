@@ -240,7 +240,7 @@ VRAM<-->RAM и VRAM<-->файл.
 
 3.3. СЕГМЕНТ 255
 
-Логический сегмент 255 имеет особое предназначение. Он соотносится не с
+Логический сегмент 255 имеет особое предназначение. Он соотносится не с       
 каким-то конкретным сегментом RAM или VRAM, а с основной памятью BASIC'а, то
 есть - c ОЗУ, используемым MSX-BASIC'ом, по адресам &H8000-&HFFFF (к нему, в
 отличие от других сегментов, не применяются ни ограничения, ни преобразования 
@@ -271,7 +271,7 @@ VRAM<-->RAM и VRAM<-->файл.
 2: Основное ОЗУ BASIC'а, страница 2 (&H8000-&HBFFF)
 3: Основное ОЗУ BASIC'а, страница 3 (&HC000-&HFFFF)
 4: Сегмент служебного буфера
-5 по S-1: Память, доступная для программы пользователя (if S>5)
+5 по S-1: Память, доступная программе пользователя (if S>5)
    Если загружен музыкальный плейер,
    он находится в сегменте 5. См. раздел 8.
 S:   VRAM, адреса &H1C000-&H1FFFF (64K VRAM: &HC000-&HFFFF)
@@ -294,8 +294,3 @@ S+8 to 254: Отсутствуют (если S+8<255)
 &HFFFF в компьютерах с 64K VRAM, или если был указан сегмент VRAM или 255-й
 сегмент в функциях, которые поддерживают только обычные RAM-сегменты.
 
-Todas las funciones de acceso a segmentos y/o VRAM devuelven el error -1 si 
-se especifica un segmento inexistente, si se intenta acceder a una direcci¢n 
-VRAM superior a &HFFFF en un ordenador con £nicamente 64K de VRAM, o si se 
-especifica un segmento de VRAM o el segmento 255 en funciones que s¢lo 
-soportan segmentos normales.
