@@ -305,7 +305,7 @@ RAM segments.
 
 4. DISK ACCESS
 
-NestorBASIC has functions for disk files management and for the use of other 
+NestorBASIC has functions that operate with disk files and for the use of other 
 MSX-DOS capabilities:
 
 * Create/delete/rename/search files.
