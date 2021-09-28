@@ -269,9 +269,9 @@ example to exchange data between any segment and a BASIC variable or array:
 
 3.4. SEGMENTS MAP
 
-As a summary of this section, here is a list of the available segments and 
-its description. S is the number of available segments, given by NestorBASIC 
-when it is installed or when using function 1.
+As a summary of this section, here is a list of available segments and          
+its descriptions. S is the number of present segments, returned by NestorBASIC 
+after it was resident-loaded or on function 1 execution.
 
 0: NestorBASIC segment
 1: Turbo-BASIC segment
@@ -296,7 +296,7 @@ S+8 to 254: Not available (if S+8<255)
 
 3.5. ERRORS
 
-All the functions which perform RAM and/or VRAM access returns the error code 
+All the functions which perform RAM and/or VRAM access returns the error code   
 -1 if any non existing RAM segment or VRAM address (addresses above &HFFFF in 
 computers with 64K VRAM) is specified in any input parameter, or if any VRAM 
 segment or the 255 segment is specified and the function supports only normal 
@@ -305,7 +305,7 @@ RAM segments.
 
 4. DISK ACCESS
 
-NestorBASIC has functions that work with files on disk and implement other 
+NestorBASIC includes functions that work with disk files and use other        
 MSX-DOS capabilities:
 
 * Create/delete/rename/search files.
