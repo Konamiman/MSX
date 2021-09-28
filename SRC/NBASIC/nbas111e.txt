@@ -298,9 +298,9 @@ S+8 to 254: Not available (if S+8<255)
 
 All the functions which perform RAM and/or VRAM access return the error code   
 -1 if any non existing RAM segment or VRAM address (addresses above &HFFFF in 
-computers with 64K VRAM) is passed to a function, or if any VRAM
-segment or segment 255 is specified as input parameter for a function that
-supports normal RAM segments only.
+computers with 64K VRAM) is passed to a function, or if any VRAM segment or
+segment 255 is specified as input parameter for a function that supports normal
+RAM segments only.
 
 
 4. DISK ACCESS
