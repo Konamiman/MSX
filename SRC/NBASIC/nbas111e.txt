@@ -203,29 +203,28 @@ the functions' description.
 
 3.2. USING VRAM AS LOGICAL SEGMENTS
 
-NestorBASIC allows you to use the VRAM for emulate extra RAM segments. If 
-NestorBASIC founds a number S of segments, segment numbers 0 to S-1 refers to 
-RAM segments, as explained above. But segments S to S+7 or S+3 (according to 
-the VRAM capacity, 128K or 64K) are also available, and they refer to VRAM.
+NestorBASIC allows you to use VRAM to emulate extra RAM segments. If NestorBASIC
+found a number S of segments, segments 0 to S-1 correspond to RAM segments,
+as explained above. But segments S to S+7 or S+3 (depending on VRAM capacity,
+128K or 64K) are also available, and they refer to VRAM.
 
-Let's return to the previos sample. When installing NestorBASIC, the number 
-of available segments is 72. Then, segments 72 to 79 (if the computer has 
-128K VRAM) or 72 to 75 (if the computer has 64K VRAM) are available for VRAM 
-access.
+Let's go back to previos example. When NestorBASIC is installed resident, the   
+returned number of segments value is 72. Thus, segments 72 to 79 (if computer
+has 128K VRAM) or 72 to 75 (if computer has 64K VRAM) are VRAM segments.
 
-The correspondence between segments and VRAM address is reversed: the 
-segments with the lowest number refers to the highest VRAM addresses. This is 
-done in this way in order to help the user when discarding the VRAM segments 
-corresponding to the screen visualization: these segments will be the last 
+The correspondence between segments and VRAM addresses is reverse: the segments 
+with lower numbers refer to the higher VRAM addresses. It is designed this way
+to facilitate the task for a user when discarding the VRAM segments
+corresponding to screen visualization area: those segments will be the last 
 ones when working in text mode, or when using the page 0 in graphic modes.
 
-Let's return to the previous sample: the computer with 72 RAM segments and 
+Let's return to the given example: the computer with 72 RAM segments and 
 128K VRAM. If the program works in text mode, only the first 2000 bytes of 
-VRAM are used: this VRAM area corresponds to the last VRAM segment, with 
-number 79. Then, the user can use freely the segments 72 to 78, and the range 
-of available segments becomex 0 to 78, without having to discard any 
-intermediate segment. If the program works in SCREEN 5 and uses only graphic 
-page 0, the range is 0 to 77; in SCREEN 7, it is 0 to 75, and so on.
+VRAM are used: this VRAM area corresponds to highest VRAM segment, with 
+number 79. Thus, the user program can freely use segments 72 to 78, and the
+range of available segments becomes 0 to 78, without having to discard any 
+in-between segments. If the program works in SCREEN 5 and uses graphic page 0
+only, the range is 0 to 77; in SCREEN 7, it is 0 to 75, and so on.
 
 Of course, NestorBASIC also includes functions for accessing VRAM with direct 
 addressing specification, useful when the VRAM must be treated as VRAM and 
@@ -242,16 +241,16 @@ segments can't be used for the following purposes:
 - PSG sound effects replay
 - Music replay
 
-If you try to use VRAM segments for any of these purposes, the called 
-function will return the "non existing segment" error.
+If you try to use VRAM segments for these purposes, the called function will    
+return the "non existing segment" error.
 
 
 3.3. THE SEGMENT 255
 
-The logical segment number 255 has a special meaning. It does not refer to a 
+The logical segment number 255 has a special purpose. It does not refer to a    
 concrete RAM or VRAM segment, but to the BASIC main RAM, that is, the RAM 
 used by BASIC at addresses &H8000 to &HFFFF (in this case, addresses are not 
-converted to the range &H0000-&H3FFF). This segment number is useful for 
+converted to range &H0000-&H3FFF). This segment number is useful for 
 example to exchange data between any segment and a BASIC variable or array:
 
  1 'Copy 10 bytes from segment 7, begin address &H1000,
@@ -271,7 +270,7 @@ example to exchange data between any segment and a BASIC variable or array:
 
 As a summary of this section, here is a list of available segments and          
 its descriptions. S is the number of present segments, returned by NestorBASIC 
-after it was resident-loaded or on function 1 execution.
+after it is resident-loaded, or on function 1 execution.
 
 0: NestorBASIC segment
 1: Turbo-BASIC segment
@@ -297,7 +296,7 @@ S+8 to 254: Not available (if S+8<255)
 3.5. ERRORS
 
 All the functions which perform RAM and/or VRAM access return the error code   
--1 if any non existing RAM segment or VRAM address (addresses above &HFFFF in 
+-1 if any nonexistent RAM segment or VRAM address (addresses above &HFFFF in 
 computers with 64K VRAM) is passed to a function, or if any VRAM segment or
 segment 255 is specified as input parameter for a function that supports normal
 RAM segments only.
