@@ -4,15 +4,15 @@ By Nestor Soriano (Konami Man), December 2.004
 
 1. WHAT IS NESTORBASIC?
 
-NestorBASIC is a set of machine code routines, integrated in a single file. 
+NestorBASIC is a set of machine code routines, integrated in a single file.     
 It is intended for being used within MSX-BASIC programs. Without losing 
 Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 
-- Full access to all the available memory of the computer (all existing memory
-  in the case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
+- Full access to all the available memory of the computer (all existing memory  
+in case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
 - Access to all VRAM, with data block exchange within VRAM and between RAM and 
   VRAM feature.
-- Storage of BASIC programs in the mapped RAM, with the capability to jump
+- Allocating BASIC programs in the mapped RAM, with the capability to jump
   from one program to another without losing variables.
 - Access to disk files and direct access to physical sectors, with
   direct read/write to/from mapped RAM and VRAM feature. File search,
@@ -20,9 +20,8 @@ Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 - Graphics compression and decompression.
 - Moonblaster music playback. Samplekit loading.
 - PSG sound effects playback.
-- Execution of machine code routines placed on BIOS, SUB-BIOS, standard BASIC 
-  memory, system working area, or a mapped RAM segment.
-- Machine code routines execution, from BIOS or from any RAM segment. User 
+- Executing machine code routines located in BIOS, SUB-BIOS, main BASIC 
+  memory, system working area, or a mapped RAM segment. User 
   defined interrupts.
 - NestorMan functions, InterNestor Suite and InterNestor Lite routines 
   execution.
@@ -551,7 +550,7 @@ be executed.
 - SCREEN 0 blink mode management.
 - User defined interrupts definition (machine code routines which will be 
 executed, from any RAM segment, in each 50/60 Hz timer interrupt).
-- SEE 3.xx PSG sound effects replay.
+- SEE 3.xx PSG sound effects playback.
 
 Some of these functions need a srtrings array, named F$, for passing 
 parameters and returning results, in addition to the integer array P. See 
