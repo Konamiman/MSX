@@ -648,7 +648,7 @@ code can be used:
 10000 'Disk error E handling routine
 ...
 
-WARNING: A Moonblaster Wave music can start at any address of a segment, if 
+NOTE: A Moonblaster Wave music can start at any address of a segment, if 
 it continues at the beginning of the next segment. However the first 800 
 bytes of the music, containing pattern table and various pointers, must be 
 entirely stored in the first segment.
@@ -3005,7 +3005,7 @@ routines and variables and its meanings are described.
 None of these routines modify the interrupts state, except PUTSLOT0, which
 disables interrupts before finishing.
 
-WARNING: Logical segment 255 refers always to the memory switched to pages 2 
+NOTE: Logical segment 255 refers always to the memory switched to pages 2 
 and 3 when the segment is referred to. While an user machine code routine or 
 an user interrupt routine is being executed, page 2 DOES NOT contain the 
 BASIC main RAM segment, but the segment of the routine itself. So, to 
