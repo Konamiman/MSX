@@ -310,21 +310,21 @@ MSX-DOS capabilities:
 * Read/write files to/from RAM or VRAM.
 * Under DOS 2, move files and get/set file attributes.
 * Read/write disk sectors to/from RAM or VRAM.
-* Get/set the default drive/directory.
+* Get/set the current working drive/directory.
 * Obtain the disk size and free space.
-* Under DOS 2, get size/set the RAM disk.
+* Under DOS 2, get size of/create the RAM disk.
 
 
 4.1. THE ARRAY F$
 
-For passing filenames and pathnames to these functions, a string array named 
-F$ is used. The functions for search, rename and move files, and for parse a 
-pathname need two strings are needed, so F$ must be defined with two elements 
-[DIM F$(1)]. The rest of disk access functions need only one string; 
-therefore, if none of the four functions mentioned above are needed, it is 
-recommended to define the array with only one element [DIM F$(0)], due to the 
-string storage method of TurboBASIC: each string uses 256 bytes in RAM, 
-regardless of its real length.
+For passing filenames and pathnames to these functions, a string array named  
+F$ is used. Functions for search, renaming and moving files, and for parsing  
+pathname require two strings, so F$ of two elements has to be declared
+[DIM F$(1)]. Rest of the functions require just one string, therefore, if none
+of that four functions mentioned above are needed, you can define the array
+with only one element [DIM F$(0)]. It is especially recommended in case of
+using TurboBASIC, because inside turbo-blocks each string takes 256 bytes of
+RAM, regardless of its real length.
 
 Also, remember that if you define a turbo-block, the F$ array must be defined 
 in the first line:
