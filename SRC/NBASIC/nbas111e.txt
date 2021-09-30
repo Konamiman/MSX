@@ -97,10 +97,10 @@ when NestorBASIC is installed is given by:
 Also, remember that the CLEAR statement, as well as the 
 load/erase/modification of any BASIC program, delete all the variables. In 
 such case, the P array must be redefined with DEFINT P:DIM P(15), and this 
-must be done out of turbo-blocks. Also, the F array must be redefined if 
+must be done out of turbo blocks. Also, the F array must be redefined if 
 needed (see section 4 for details about the array F). Watch out: if you need 
-to define the F array inside of a turbo-block, you must do it in the first 
-line of the turbo-block:
+to define the F array inside of a turbo block, you must do it in the first 
+line of the turbo block:
 
 10 'save"autoexec.bas"
 20 BLOAD"nbasic.bin",R:IF P(0)<5 THEN PRINT "Error!":END
@@ -323,19 +323,19 @@ pathname require two strings, so F$ of two elements has to be declared
 [DIM F$(1)]. Rest of the functions require just one string, therefore, if none
 of that four functions mentioned above are needed, you can define the array
 with only one element [DIM F$(0)]. It is especially recommended in case of
-using TurboBASIC, because inside turbo-blocks each string takes 256 bytes of
+using TurboBASIC, because inside turbo blocks each string takes 256 bytes of
 RAM, regardless of its real length.
 
-Also, remember that if you define a turbo-block, the F$ array must be defined 
-in the first line:
+Also, remember that if you define a turbo block, the array F$ must be defined 
+right in the beginning of it:
 
 1000 _TURBO ON(P())
 1010 DIM F$(1) or DIM F$(0)
 ...
 65000 _TURBO OFF
 
-IMPORTANT: String variables defined outside a turboblock, as well as the 
-other variables, are not usable from inside the turboblock, and are restored 
+IMPORTANT: String variables defined outside a turbo block, as well as the 
+other variables, are not usable from inside the turbo block, and are restored 
 when it finishes. For example:
 
 10 A$="Outside"
@@ -348,13 +348,13 @@ Inside
 Outside
 
 With NestorBASIC this still being true, but F$() strings need an additional 
-caution. If F$ array has been used outside the turboblock and it will be used 
+caution. If F$ array has been used outside the turbo block and it will be used 
 again inside, the following line must be placed before CALL TURBO ON:
 
 F$(0)=F$(0)+"":F$(1)=F$(1)+""
 
 This caution is not needed if you don't care about the old contents of F$, or 
-if F$ will not be defined inside the turboblock.
+if F$ will not be defined inside the turbo block.
 
 Another restriction of F$(0) and F$(1) is that they are limited in length to 
 80 characters; exceeding characters will just be ignored by NestorBASIC 
@@ -1200,7 +1200,7 @@ biggest number is directly assigned to P(4), an overflow error will be
 generated.
 
 Since TurboBASIC manages floating point variables in a special way, if you 
-use this method inside a turbo-block, L must be an integer multiply of 256.
+use this method inside a turbo block, L must be an integer multiply of 256.
 
 
 * Function 24: Fill a VRAM zone with a byte
@@ -1574,7 +1574,7 @@ and to obtain the new pointer P:
 P=P(4)-(65536*(P(4)<0))+65536!*P(5)
 
 Since TurboBASIC manages floating point variables in a special way, if you 
-use these expressions inside a turbo-block, D must be an integer multiply of 
+use these expressions inside a turbo block, D must be an integer multiply of 
 256.
 
 To obtain the current file pointer position, just use this function with 
@@ -1860,8 +1860,8 @@ P(0) segment, with the following format:
 
 All the exisiting numeric variables of the caller BASIC program will be 
 transferred to the new program. You can use this function from inside a 
-turbo-block, but in such case the only transferred variables will be the 
-integer variables defined outside of the turbo-block and passed to it with 
+turbo block, but in such case the only transferred variables will be the 
+integer variables defined outside of the turbo block and passed to it with 
 CALL TURBO ON (variable, ..., array(), ...).
 
 The string variables stored in the BASIC string area will also be 
