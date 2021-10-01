@@ -334,9 +334,9 @@ right in the beginning of it:
 ...
 65000 _TURBO OFF
 
-IMPORTANT: String variables defined outside a turbo block, as well as the 
-other variables, are not usable from inside the turbo block, and are restored 
-when it finishes. For example:
+IMPORTANT: String variables defined outside a turbo block, as well as other   
+variables are not accessible from within a turbo block, and get restored 
+on its completion. For example:
 
 10 A$="Outside"
 20 _TURBO ON
@@ -347,7 +347,7 @@ run
 Inside
 Outside
 
-With NestorBASIC this still being true, but F$() strings need an additional 
+With NestorBASIC this still being true, but F$() strings need an additional   
 caution. If F$ array has been used outside the turbo block and it will be used 
 again inside, the following line must be placed before CALL TURBO ON:
 
