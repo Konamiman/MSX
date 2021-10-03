@@ -347,26 +347,26 @@ run
 Inside
 Outside
 
-With NestorBASIC this still being true, but F$() strings need an additional   
-caution. If F$ array has been used outside the turbo block and it will be used 
-again inside, the following line must be placed before CALL TURBO ON:
+With NestorBASIC this still being true, but F$() strings demand extra care.   
+If F$ array has been used outside of turbo blocks, and it's gonna be then used
+inside one, the following line must be placed before CALL TURBO ON:
 
 F$(0)=F$(0)+"":F$(1)=F$(1)+""
 
-This caution is not needed if you don't care about the old contents of F$, or 
-if F$ will not be defined inside the turbo block.
+This precaution is not needed if you don't care about the old contents of F$,
+or if F$ will not be defined within the turbo block.
 
 Another restriction of F$(0) and F$(1) is that they are limited in length to 
 80 characters; exceeding characters will just be ignored by NestorBASIC 
 functions having these strings as input parameters. All these restrictions 
-are not present for indexes higher than 1 if F$ is defined with more 
+do not apply for indexes higher than 1 if F$ is defined with more 
 elements; that is, you can define F$ with more than two elements and use 
 F$(2), F$(3)... normally.
 
 
 4.2. ERRORS
 
-In addition to error -1, described in section 3, the disk access functions 
+Besides the error -1, described in section 3, the disk access functions 
 have its own error codes.
 
 The following errors can appear only under DOS 1:
@@ -383,8 +383,7 @@ conditions:
    - Root directory full.
    - Function not available under DOS 1.
 
-Under DOS 2, each one of the errors mentioned above have its own error codes, 
-which is never 1.
+Under DOS 2, each of these errors has its own error code, which is never 1. 
 
 2: Invalid file number (no opened file has this number assigned).
 3: Too many opened files. The maximum number of files that can be opened 
