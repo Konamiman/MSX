@@ -389,8 +389,8 @@ Under DOS 2, each of these errors has its own error code, which is never 1.
 3: Too many opened files. The maximum number of files that can be opened 
    simultaneously under DOS 1 can be checked by using function 1.
 
-The following errors can appear under DOS 1 and DOS 2, and have the same 
-error code that their BASIC equivalents:
+The following errors are same for DOS 1 and DOS 2, and share the same       
+error codes with their BASIC equivalents:
 
 60: Bad FAT.
 62: Invalid drive (when changing the default drive).
