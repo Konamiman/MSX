@@ -425,8 +425,8 @@ The DOS 2 error codes are the following:
      the file attribute with direct filename specification).
 199: End of file is found (when reading from a file).
 196: Too many opened files (when opening a file).
-195: Invalid file number (greatest than 63).
-194: Invalid file number (never assigned to an opened file).
+195: Invalid file number (greater than 63).
+194: Invalid file number (not assigned to any opened file).
 188: RAM disk already exists (when creating RAM disk).
 187: RAM disk does not exist (when removing RAM disk).
 
