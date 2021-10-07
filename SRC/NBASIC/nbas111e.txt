@@ -416,10 +416,10 @@ The DOS 2 error codes are the following:
 208: The directory is not empty (when deleting a directory).
 207: Invalid attributes (when changing the attributes of a file/directory).
 206: Invalid "." or ".." operation.
-205: System file exists (when creating a file, any previous existing file is
-     automatically deleted, except the files having the system
+205: System file exists (when creating a file, any previously existing file is
+     automatically deleted, except for the files having 'system'
      attribute set).
-204: System directory exists (same as above).
+204: Directory already exists (same as with 'system' files).
 203: File already exists (when creating a directory).
 202: File is open (when deleting, renaming or moving a file, or when changing
      the file attribute with direct filename specification).
