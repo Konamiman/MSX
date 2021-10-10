@@ -461,23 +461,23 @@ byte-based and is as follows:
 
   &B11000000 = &HC0
 
-The (de)compression is performed through consecutive segments; that is, after 
+The (de)compression is performed through consecutive segments; that is, after   
 (de)compressing from/to address &H3FFF of segment S, the process continues in 
 address &H0000 of segment S+1.
 
 
 5.1 ERRORS
 
-The following error codes can be returned by the graphic compresssion and 
+The following error codes can be returned by the graphics compression and       
 decompression functions:
 
 -1: Error when compressing or decompressing. The specified segment does not
     exist, refers to VRAM or is the 255. Also, this error appears when an
     invalid VRAM address is specified in any input parameter.
- 5: Error when compressing. Segments have been exhausted before having
+ 5: Error when compressing. Segments have been depleted before having
     compressed all the required graphic data.
- 6: Error when decompressing. An invalid data is found, or segments have been
-    exhausted before finding the end of data mark.
+ 6: Error when decompressing. Invalid data found, or segments have been
+    depleted without having the 'end of data' mark met.
 
 
 6. ALLOCATING AND RUNNING BASIC PROGRAMS IN RAM 
