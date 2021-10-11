@@ -485,10 +485,25 @@ POKE &HF676,4
 POKE &H8003,0
 NEW
 
-- Из программы на Бейсике. Этот способ лучше, так как Вы можете использовать эту
-же программу для последующей загрузки NestorBASIC'а. Первая строка программы
-должна быть такой:
+- Из программы на Бейсике. Этот способ лучше, так как в этой же программе можно,
+следом, загрузить NestorBASIC. Первая строка программы должна быть такой:
 
 1 'program.bas
 10 IF PEEK(&HF676)<>4 THEN POKE &HF676,4:POKE &H8003,0:RUN"program.bas"
 20 'From here, you can load NestorBASIC
+
+Когда Вы активируете или запускаете программу, размещенную в сегменте,          
+NestorBASIC сохраняет все переменные и массивы в сегменте 4; затем, копируется
+программа из желаемого сегмента в основную память MSX-BASIC, и все ранее
+сохраненные переменные помещаются после программы, после чего обновляются
+соответствующие указатели в рабочей области MSX-BASIC. 
+Последним шагом будет исполнение программы с первой строки, либо переход в
+прямой режим -  в зависимости от используемой функции (запуск или актуализация).
+
+If a BASIC program is intended for being stored in a segment and executed or 
+activated with these functions, it must be stored with a special header with 
+information about its length, which is needed in the process of concatenating 
+the existing variables to the new program. There is a function that saves the 
+current BASIC program with this header; later, just load this generated file 
+in any segment with the disk access functions, and then you have the program 
+stored and ready for being executed or activated.
