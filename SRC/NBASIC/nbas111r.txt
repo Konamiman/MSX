@@ -516,8 +516,34 @@ NestorBASIC'а, которая позволяет сохранить в файл
 которая актуализирует или запускает другую BASIC-программу, то это означает, что
 мы находимся в состоянии ошибки. Возможна одна из двух ошибок:
 
-- Ошибка -1, если заданный сегмент не существует. Есть функции, которые
-  поддерживают VRAM-сегменты, но не сегмент 255.
+- Ошибка -1, если заданный сегмент не существует. Эти функции поддерживают
+VRAM-сегменты, но не сегмент 255.
 - Ошибка -2, если памяти MSX-BASIC не достаточно для новой программы и переменных.
   Случается, если актуализируемая/запускаемая программа больше, чем исходная.
 
+7. РАЗЛИЧНЫЕ ПРОЧИЕ ФУНКЦИИ
+
+В этой группе собраны функции, предназначенные для:
+
+- Вызова подпрограмм в машинном коде, находящихся в BIOS, SUB-BIOS, в основной     
+  памяти BASIC'а, рабочей области системы или в сегменте ОЗУ (так называемые
+  "пользовательские подпрограммы").
+- Размещение строковых переменных в сегментах RAM и извлечение их оттуда.
+- Вывод на экран строковых переменных в графическом режиме.
+- Управление мигающими блоками (blink mode) в SCREEN 0.
+- Назначение пользовательских прерываний (программы в машинном коде, находящиеся в 
+  сегменте RAM, выполняемые каждое прерывание по таймеру 50/60 Гц).
+- Воспроизведение звуковых эффектов на PSG(AY-3-8910), созданных в SEE версий 3.xx
+
+Some of these functions need a srtrings array, named F$, for passing 
+parameters and returning results, in addition to the integer array P. See 
+section 4 for more details about array F$.
+
+Some of the NestorBASIC internal machine code routines can be used by the 
+user machine code routines and by the user defined interrupt. See appendix 2 
+for a detailed description about the use of these routines.
+
+The PSG sound effects editor SEE was created by Fuzzy Logic, and the use of 
+the sound effects created with this editor in commercial programs implies the 
+pay of a small amount of money to the authors. See appendix 4 for more 
+details.
