@@ -513,7 +513,7 @@ BASIC work area are updated. The last step is the execution of the new BASIC
 program from the first line, or a jump to the direct mode, depending on the 
 called function (execution or activation of the program).
 
-If a BASIC program is intended for being stored in a segment and executed or 
+If a BASIC program is intended for being stored in a segment and executed or    
 activated with these functions, it must be stored with a special header with 
 information about its length, which is needed in the process of concatenating 
 the existing variables to the new program. There is a function that saves the 
@@ -524,15 +524,15 @@ stored and ready for being executed or activated.
 
 6.1 ERRORS
 
-Obviously, if BASIC commands or lines, following the USR-call that performs 
+Obviously, if BASIC commands or lines, following the USR-call that performs     
 execution or activation of another BASIC program, are being executed - 
-an error is encountered. Two possible error codes can then be returned:
+an error is encountered. Two errors are possible with the following codes:
 
 - Error -1, if the specified segment does not exist. These functions work 
 with VRAM segments, but not with segment 255.
-- Error -2, if the BASIC main RAM has not enough size for storing the new 
-progam and the existing variables. Such situation can arise if the new 
-program is biggest than the previous one.
+- Error -2, if there's not enough BASIC main RAM for a new program combined
+with the preexisting variables. This can happen if new program is bigger than
+previous one.
 
 
 7. MISCELLANEOUS FUNCTIONS
