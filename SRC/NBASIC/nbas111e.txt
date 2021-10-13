@@ -528,11 +528,11 @@ Obviously, if BASIC commands or lines, following the USR-call that performs
 execution or activation of another BASIC program, are being executed - 
 an error is encountered. Two errors are possible with the following codes:
 
-- Error -1, if the specified segment does not exist. These functions work 
-with VRAM segments, but not with segment 255.
+- Error -1, if specified segment does not exist. These functions work with VRAM 
+  segments, but not with segment 255.
 - Error -2, if there's not enough BASIC main RAM for a new program combined
-with the preexisting variables. This can happen if new program is bigger than
-previous one.
+  with the preexisting variables. This can happen if new program is bigger than
+  the previous one.
 
 
 7. MISCELLANEOUS FUNCTIONS
