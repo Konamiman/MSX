@@ -545,7 +545,7 @@ be executed.
 - Storage of string variables in RAM segments.
 - Screen print of a string variable in graphic mode.
 - SCREEN 0 blink mode management.
-- User defined interrupts definition (machine code routines which will be 
+- Defining user interrupts (machine code routines which will be 
 executed, from any RAM segment, in each 50/60 Hz timer interrupt).
 - SEE 3.xx PSG sound effects playback.
 
