@@ -535,15 +535,16 @@ VRAM-сегменты, но не сегмент 255.
   сегменте RAM, выполняемые каждое прерывание по таймеру 50/60 Гц).
 - Воспроизведение звуковых эффектов на PSG(AY-3-8910), созданных в SEE версий 3.xx
 
-Some of these functions need a srtrings array, named F$, for passing 
-parameters and returning results, in addition to the integer array P. See 
-section 4 for more details about array F$.
+Некоторые из этих функций требуют строковый массив F$ для передачи параметров и    
+возврата результатов, в дополнение к целочисленному массиву P. Больше подробностей
+о массиве F$ см. в разделе 4.
 
-Some of the NestorBASIC internal machine code routines can be used by the 
-user machine code routines and by the user defined interrupt. See appendix 2 
-for a detailed description about the use of these routines.
+Некоторые из внутренних процедур NestorBASIC'а могут вызываться из других          
+машинных подпрограмм пользователя и использоваться прерыванием, определяемым
+пользователем. См. приложение 2 для детального описания использования этих
+процедур.
 
-The PSG sound effects editor SEE was created by Fuzzy Logic, and the use of 
-the sound effects created with this editor in commercial programs implies the 
-pay of a small amount of money to the authors. See appendix 4 for more 
-details.
+Редактор SEE для создания звуковых эффектов под PSG был разработан группой         
+Fuzzy Logic, и использование звуковых эффектов, сделанных в этом редакторе,
+в коммерческих продуктах подразумевает отчисление небольшой суммы авторам.
+Больше деталей в приложении 4.
