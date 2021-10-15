@@ -549,38 +549,37 @@ In this group there are various functions for the following purposes:
   executed, from any RAM segment, in each 50/60 Hz timer interrupt).
 - SEE 3.xx PSG sound effects playback.
 
-Some of these functions need a srtrings array, named F$, for passing 
-parameters and returning results, in addition to the integer array P. See 
-section 4 for more details about array F$.
+Some of these functions need a strings array, named F$, to pass parameters and  
+return results, in addition to the integer array P. See section 4 for more
+details about array F$.
 
-Some of the NestorBASIC internal machine code routines can be used by the 
-user machine code routines and by the user defined interrupt. See appendix 2 
-for a detailed description about the use of these routines.
+Some of the NestorBASIC internal machine code routines can be used by user's    
+machine language routines and by user defined 50/60Hz timer interrupt. See
+appendix 2 for a detailed description of these routines usage.
 
-The PSG sound effects editor SEE was created by Fuzzy Logic, and usage of the
-sound effects created in this editor inside the commercial products implies
-a small fee payment to the authors. See appendix 4 for more 
-details.
+The PSG sound effects editor SEE was created by Fuzzy Logic, and including the  
+sound effects generated using this editor into commercial products implies
+a small fee in favor of the authors. See appendix 4 for more details.
 
 
-8. MUSIC PLAYER
+8. MUSIC PLAYBACK
 
 8.1. PLAYER INITIALIZATION
 
-NestorBASIC includes Moonblaster 1.4 and Moonblaster Wave version 1.05 for
+NestorBASIC includes Moonblaster 1.4 and Moonblaster Wave version 1.05 for      
 MoonSound musical players.
 
-These players are not automatically loaded when NestorBASIC is loaded: due 
-to its big length, they don't fit in the NestorBASIC RAM segment, and must be 
-loaded in a separate segment. Thus, for using a replayer, it must be 
-explicitly loaded. Only one replayer can be loaded at the same time.
+These players are not automatically loaded along with NestorBASIC: due to       
+its size, they don't fit into RAM segment of NestorBASIC, and must be 
+loaded into a separate segment. Thus, to use a player, you have to load it
+explicitly. Only one player can be loaded at the same time.
 
-Function 71 loads and initializes the desired replayer, leaving it ready for 
-use. This function checks if segment 5 exists and belongs to the primary 
-mapper: in this case, the replayer is loaded in this segment, which is no 
-longer available for the user. If segment 5 does not exist or does not belong 
-to primary mapper, the replayer will not be loaded, and an error will be 
-returned by the function.
+Function 71 loads and initializes the desired player, leaving it ready for use. 
+This function checks if segment 5 exists and belongs to the primary 
+mapper: in this case, player gets loaded into this segment, which will no 
+longer be available for the user program. If segment 5 does not exist or does
+not belong to primary mapper, player will not be loaded, and the function will
+returned an error.
 
 NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
 is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
