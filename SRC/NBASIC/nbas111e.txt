@@ -537,16 +537,16 @@ an error is encountered. Two errors are possible with the following codes:
 
 7. MISCELLANEOUS FUNCTIONS
 
-In this group there are various functions for the following purposes:
+In this group there are various functions for the following purposes:           
 
-- Machine code routines execution. Routines placed in BIOS, SUB-BIOS, BASIC 
-main RAM, system work area or any segment (so called "user routines") may 
-be executed.
+- Machine code routines execution. Routines placed in BIOS, SUB-BIOS, BASIC     
+  main RAM, system work area or any segment (so called "user routines") may 
+  be executed.
 - Storage of string variables in RAM segments.
 - Screen print of a string variable in graphic mode.
 - SCREEN 0 blink mode management.
 - Defining user interrupts (machine code routines which will be 
-executed, from any RAM segment, in each 50/60 Hz timer interrupt).
+  executed, from any RAM segment, in each 50/60 Hz timer interrupt).
 - SEE 3.xx PSG sound effects playback.
 
 Some of these functions need a srtrings array, named F$, for passing 
@@ -557,20 +557,20 @@ Some of the NestorBASIC internal machine code routines can be used by the
 user machine code routines and by the user defined interrupt. See appendix 2 
 for a detailed description about the use of these routines.
 
-The PSG sound effects editor SEE was created by Fuzzy Logic, and the use of 
-the sound effects created with this editor in commercial programs implies the 
-pay of a small amount of money to the authors. See appendix 4 for more 
+The PSG sound effects editor SEE was created by Fuzzy Logic, and usage of the
+sound effects created in this editor inside the commercial products implies
+a small fee payment to the authors. See appendix 4 for more 
 details.
 
 
-8. THE MUSIC REPLAYER
+8. MUSIC PLAYER
 
-8.1. INITIALIZATION OF THE REPLAYER
+8.1. PLAYER INITIALIZATION
 
-NestorBASIC includes Moonblaster 1.4 and Moonblaster for MoonSound Wave 
-version 1.05 music replayers.
+NestorBASIC includes Moonblaster 1.4 and Moonblaster Wave version 1.05 for
+MoonSound musical players.
 
-These replayers are not automatically loaded when NestorBASIC is loaded: due 
+These players are not automatically loaded when NestorBASIC is loaded: due 
 to its big length, they don't fit in the NestorBASIC RAM segment, and must be 
 loaded in a separate segment. Thus, for using a replayer, it must be 
 explicitly loaded. Only one replayer can be loaded at the same time.
