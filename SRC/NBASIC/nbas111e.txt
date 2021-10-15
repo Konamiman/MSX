@@ -540,7 +540,7 @@ an error is encountered. Two errors are possible with the following codes:
 In this group there are various functions for the following purposes:
 
 - Machine code routines execution. Routines placed in BIOS, SUB-BIOS, BASIC 
-main RAM, system work area or any segment (called then "user routines") may 
+main RAM, system work area or any segment (so called "user routines") may 
 be executed.
 - Storage of string variables in RAM segments.
 - Screen print of a string variable in graphic mode.
