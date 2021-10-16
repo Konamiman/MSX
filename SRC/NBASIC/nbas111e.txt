@@ -579,7 +579,7 @@ This function checks if segment 5 exists and belongs to the primary
 mapper: in this case, player gets loaded into this segment, which will no 
 longer be available for the user program. If segment 5 does not exist or does
 not belong to primary mapper, player will not be loaded, and the function will
-returned an error.
+return an error.
 
 NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
 is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
