@@ -561,21 +561,21 @@ NestorBASIC включает музыкальные проигрыватели M
 загружаться в отдельный сегмент. Поэтому, чтобы использовать плейер, его нужно
 загружать директивно. Одновременно может быть загружен лишь один плейер.
 
-Функция 71 загружает и инициализирует желаемый плейер, оставляя его готовым к
-работе. Эта функция проверяет наличие 5-го сегмента and belongs to the primary 
-mapper: in this case, the replayer is loaded in this segment, which is no 
-longer available for the user. If segment 5 does not exist or does not belong 
-to primary mapper, the replayer will not be loaded, and an error will be 
-returned by the function.
+Функция 71 загружает и инициализирует желаемый плейер, оставляя его готовым к      
+работе. Эта функция проверяет наличие 5-го сегмента и принадлежность его к
+первичному мапперу: если это так, то плейер загружается в этот сегмент, и он
+далее становится недоступен для программы пользователя. Если сегмент 5 не
+существует или подключен не к первичному мапперу, плейер не будет загружен, и 
+функция выдаст ошибку.
 
-NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
-is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
-mode. If the computer is a Turbo-R, NestorBASIC decides the version to be 
-loaded according to the processor switched when function 71 is called. Note 
-that if a processor change is performed, this function must be called again 
-in order to load the appropriate replayer: Z80 version does not work in R800 
-mode, and R800 version makes the system slower in Z80 mode.
+Файл NBASIC.BIN содержит два варианта проигрывателя Moonblaster Wave: один для     
+MSX2/2+ и Turbo-R в режиме Z80, а другой для Turbo-R в режиме R800. Если компьютер
+это Turbo-R, то NestorBASIC определяет, какой вариант загружать, в соответствии с 
+тем, в каком режиме работает процессор в момент вызова функции 71. Заметьте, что
+если произведено переключение режима процессора, эту функцию нужно вызвать заново, 
+чтобы загрузить соответствующий плейер: вариант для Z80 не работае в режиме R800,
+а вариант для R800 привносит ненужное замедление системы в режиме Z80.
 
-When the replayer is installed, a sound chips search is done, and all found 
-chips are marked as enabled. See funtion 73 description for more details 
-about enabling and disabling the sound chips.
+После того, как плейер загружен, происходит поиск аудиочипов, и все найденные 
+помечаются как активные. Подробности о включении и отключении аудиочипов см. в
+описании функции 73.
