@@ -553,16 +553,16 @@ VRAM-сегменты, но не сегмент 255.
 
 8.1. ИНИЦИАЛИЗАЦИЯ МУЗЫКАЛЬНОГО ПЛЕЙЕРА
 
-NestorBASIC включает музыкальные проигрыватели Moonblaster 1.4 и Moonblaster Wave
+NestorBASIC включает музыкальные проигрыватели Moonblaster 1.4 и Moonblaster Wave  
 для MoonSound версии 1.05 .
 
-Эти плейеры не загружаются автоматически вместе с NestorBASIC'ом: вследствие  
-своего большого размера, они не помещаются в сегмент ОЗУ NestorBASIC'а, и должны
+Эти плейеры не загружаются автоматически вместе с NestorBASIC'ом: вследствие своего
+большого размера, они не помещаются в сегмент ОЗУ NestorBASIC'а, и должны
 загружаться в отдельный сегмент. Поэтому, чтобы использовать плейер, его нужно
 загружать директивно. Одновременно может быть загружен лишь один плейер.
 
-Function 71 loads and initializes the desired replayer, leaving it ready for 
-use. This function checks if segment 5 exists and belongs to the primary 
+Функция 71 загружает и инициализирует желаемый плейер, оставляя его готовым к
+работе. Эта функция проверяет наличие 5-го сегмента and belongs to the primary 
 mapper: in this case, the replayer is loaded in this segment, which is no 
 longer available for the user. If segment 5 does not exist or does not belong 
 to primary mapper, the replayer will not be loaded, and an error will be 
