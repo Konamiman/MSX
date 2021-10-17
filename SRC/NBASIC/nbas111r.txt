@@ -579,3 +579,37 @@ MSX2/2+ и Turbo-R в режиме Z80, а другой для Turbo-R в реж
 После того, как плейер загружен, происходит поиск аудиочипов, и все найденные 
 помечаются как активные. Подробности о включении и отключении аудиочипов см. в
 описании функции 73.
+
+8.2. ВОЗМОЖНОСТИ ПЛЕЙЕРА
+
+Once the replayer is loaded, you can use the functions that NestorBASIC 
+includes for the following purposes:
+
+- Start playing a music stored in any RAM segment (VRAM segments are 
+not supported).
+- Stop playing a music being played.
+- Pause/continue the music being played.
+- Fade out the music being played, with specification of the fading speed.
+- Obtain various information about the music being played (segment and 
+begin address in which the music is stored, songname and samplekit or 
+wavekit, current position and step).
+- Obtain the sound chips found.
+- Disable the sound chips, which in this case will not be used even if they 
+have been detected.
+- Load a Music Module samplekit or a Moonsound wavekit from a file.
+
+While a music is being replayed, all the NestorBASIC functions can be used 
+normally, including the PSG sound effects replay and the use of user defined 
+interrupts. If NestorBASIC is uninstalled, the music being replayed will be 
+automatically stopped.
+
+Moonblaster 1.4 replayer fits in 4.5K, therefore the space between addresses 
+&H1200 and &H3FFF on segment 5 remains free and can be used, for example, for 
+storing the music to be replayed. This does not occur with Moonblaster Wave 
+replayer, which uses itself the whole segment 5.
+
+Moonblaster 1.4 musics must be stored in a single segment, so its maximum 
+length is 16K. Moonblaster Wave musics can be stored through consecutive 
+segments, maximum 3: when reading music data during the replaying, if 
+address &H3FFF of a segment is reached, the process continues in address 0 of 
+the next segment.
