@@ -604,9 +604,9 @@ not supported).
 - Stop playing a music being played.
 - Pause/continue the music being played.
 - Fade out the music being played, with specification of the fading speed.
-- Obtain various information about the music being played (segment and 
-begin address in which the music is stored, songname and samplekit or 
-wavekit, current position and step).
+- Obtain various information about the music being played (segment and the
+beginning address, where music is stored, songname and samplekit or 
+wavekit, current position and tempo).
 - Obtain the sound chips found.
 - Disable the sound chips, which in this case will not be used even if they 
 have been detected.
