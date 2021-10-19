@@ -524,9 +524,10 @@ stored and ready for being executed or activated.
 
 6.1 ERRORS
 
-Obviously, if BASIC commands or lines, following the USR-call that performs     
-execution or activation of another BASIC program, are being executed - 
-an error is encountered. Two errors are possible with the following codes:
+Clearly, if BASIC commands or lines following the USR-call that performs       
+execution or activation of another BASIC program are being executed - it
+means an error encountered. Two errors are possible with the following
+codes:
 
 - Error -1, if specified segment does not exist. These functions work with VRAM 
   segments, but not with segment 255.
@@ -621,11 +622,11 @@ Moonblaster 1.4 player fits in 4.5K, therefore the memory space from &H1200 to
 of a sound track to be played. This is not the case with Moonblaster Wave player
 which itself occupies the whole segment 5.
 
-Moonblaster 1.4 musics must be stored in a single segment, so its maximum 
-length is 16K. Moonblaster Wave musics can be stored through consecutive 
-segments, maximum 3: when reading music data during the replaying, if 
-address &H3FFF of a segment is reached, the process continues in address 0 of 
-the next segment.
+Moonblaster 1.4 soundtracks must be stored in a single segment, so its maximum  
+length is 16K. Moonblaster Wave music can be stored through consecutive 
+segments, maximum of 3: if in the process of parsing the soundtrack's data to
+play, NestorBASIC hits the address &H3FFF of a segment, it proceeds with 0
+address of the next segment.
 
 In order to load a music through consecutive segments, the following sample 
 code can be used:
