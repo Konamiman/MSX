@@ -616,10 +616,10 @@ While music is playing, all NestorBASIC functions can be used normally,
 including the PSG sound effects playback and user defined interrupts.
 If you unload NestorBASIC, the music playing at the moment stops automatically.   
 
-Moonblaster 1.4 replayer fits in 4.5K, therefore the space between addresses 
-&H1200 and &H3FFF on segment 5 remains free and can be used, for example, for 
-storing the music to be replayed. This does not occur with Moonblaster Wave 
-replayer, which uses itself the whole segment 5.
+Moonblaster 1.4 player fits in 4.5K, therefore the memory space from &H1200 to  
+&H3FFF of segment 5 remains free and can be used, for example, to store the data
+of a sound track to be played. This is not the case with Moonblaster Wave player
+which itself occupies the whole segment 5.
 
 Moonblaster 1.4 musics must be stored in a single segment, so its maximum 
 length is 16K. Moonblaster Wave musics can be stored through consecutive 
