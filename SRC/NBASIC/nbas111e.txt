@@ -608,7 +608,7 @@ not supported).
 - Obtain various information about the music being played (segment and the
 beginning address, where music is stored, songname and samplekit or 
 wavekit, current position and tempo).
-- Obtain the sound chips found.
+- Get the info on sound chips found.
 - Disable the sound chips, which in this case will not be used even if they 
 have been detected.
 - Load a Music Module samplekit or a Moonsound wavekit from a file.
