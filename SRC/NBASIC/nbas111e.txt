@@ -568,7 +568,7 @@ a small fee in favor of the authors. See appendix 4 for more details.
 8.1. PLAYER INITIALIZATION
 
 NestorBASIC includes Moonblaster 1.4 and Moonblaster Wave version 1.05 for      
-MoonSound musical players.
+Moonsound musical players.
 
 These players are not automatically loaded along with NestorBASIC: due to       
 its size, they don't fit into RAM segment of NestorBASIC, and must be 
@@ -628,7 +628,7 @@ segments, maximum of 3: if in the process of parsing the soundtrack's data to
 play, NestorBASIC hits the address &H3FFF of a segment, it proceeds with 0
 address of the next segment.
 
-In order to load a music through consecutive segments, the following sample 
+In order to load a music through consecutive segments, the following sample     
 code can be used:
 
 1000 'Loading a music through consecutive segments,
@@ -643,7 +643,7 @@ code can be used:
 10000 'Disk error E handling routine
 ...
 
-NOTE: A Moonblaster Wave music can start at any address of a segment, if 
+NOTE: A Moonblaster Wave music can start at any address of a segment, if        
 it continues at the beginning of the next segment. However the first 800 
 bytes of the music, containing pattern table and various pointers, must be 
 entirely stored in the first segment.
@@ -651,38 +651,38 @@ entirely stored in the first segment.
 
 8.3 ERRORS
 
-The following error codes can be returned by the music replay functions:
+The following error codes can be returned by the music playback functions:      
 
-- Error 7, returned by the sound chips activation function, pause function 
-and fade out function, if any of the input parameters is invalid.
-- Error 12, returned by the play start function and sound chips enabling 
-function, if the replayer is not installed. The rest of the functions will 
-simply do nothing in such case.
+- Error 7, returned by sound chips activation function, pause function
+and fade out function, if any input parameter is invalid.
+- Error 12, returned by start playback function and sound chips enabling 
+function, if player is not installed. The rest of the functions will not report
+any error, they'll just do nothing in this case.
 
-The following errors can be returned by the replay start function:
+The following errors can be returned by the start playback function:
 
 -1: The specified segment does not exist, refers to VRAM or is the 255.
-12: The replayer is not installed.
-13: The music was saved in EDIT mode and can't be replayed
-    (Moonblaster 1.4 replayer).
-    In the specified address there is no Moonblaster Wave music,
-    or there is a Moonblaster Wave music not saved in USER mode.
-    (Moonblaster Wave replayer).
-14: Other music is currently being replayed.
+12: Player is not loaded.
+13: The music was saved in EDIT mode and can't be played
+    (Moonblaster 1.4 player).
+    At the specified address there is no Moonblaster Wave music,
+    or there is a Moonblaster Wave music saved in EDIT mode.
+    (Moonblaster Wave player).
+14: Other music is currently playing.
 
-MoonSound wavekit load function can return the following error, apart from 
-the disk access errors:
+Moonsound wavekit load function can return the following error, apart from      
+disk access errors:
 
-15: In the current position of the specified file there is not placed a
-    Moonblaster wavekit, or there is placed a wavekit not saved in USER mode.
+15: There's no Moonblaster wavekit in the current position of a specified file, 
+or there is no wavekit saved in USER mode.
 
-NOTE: Moonblaster 1.4 replayer can't detect if the data starting in the 
-specified address is actually a Moonblaster 1.4 music, and relies only in the 
-first byte for deciding if data is a Moonblaster EDIT music. Moonblaster Wave 
-replayer has not these restriction.
+NOTE: In fact, Moonblaster 1.4 player is unable to tell if the data at a given  
+address is actually a Moonblaster 1.4 soundtrack, and relies totally on the
+first byte to detect whether this data is a Moonblaster music, saved in
+EDIT mode. Moonblaster Wave player doesn't have that flaw.
 
-The replayer initialization function returns the same error codes as the disk 
-access functions, and the error code -1 if the segment 5 does not exists or 
+The player initialization function returns the same error codes as the disk 
+access functions, and the error code -1 if the segment 5 does not exist or 
 does not belong to the primary mapper.
 
 
@@ -2319,7 +2319,7 @@ Input:	 P(0)  = Replayer to be loaded:
 		 0: Moonblaster 1.4
 		 1: Moonblaster Wave 1.05
 		 3: Autodetect:
-		    Load Moonblaster Wave replayer if MoonSound is present,
+		    Load Moonblaster Wave replayer if Moonsound is present,
 		    otherwise load Moonblaster 1.4 replayer.
                 -1: Uninstall the loaded replayer
 Output:  P(0)  = Replayer loaded (0, 1 or -1, as above).
@@ -2567,7 +2567,7 @@ successfully loaded, P(7) will not return 32824 but -32712, due to the BASIC
 integer variables range (-32768 to 32767).
 
 
-* Function 79: Load a MoonSound wavekit (S4)
+* Function 79: Load a Moonsound wavekit (S4)
 
 Input:	 P(0) = File number
 Output:  P(6):P(7) = Number of readed bytes
@@ -2586,11 +2586,11 @@ F$(0)="wavkit.mwk":?USR(31):?USR(79):?USR(32)
 
 If a disk error occurs, the function will return the appropriate error code, 
 and you can look for the number of bytes that have been readed from the file 
-in P(6):P(7). In this case MoonSound sample RAM can have been modified, but 
+in P(6):P(7). In this case Moonsound sample RAM can have been modified, but 
 work area will not have been updated, so a partial wavekit load can't be 
 supposed.
 
-If the Moonblaster Wave replayer was not initialized or if no MoonSound is 
+If the Moonblaster Wave replayer was not initialized or if no Moonsound is 
 found, this functon will do nothing, but will not return error. If the whole 
 samplekit is successfully loaded, P(6):P(7) will contain the wavekit size 
 (same as the file size if you just load a .MWK file).
@@ -2969,7 +2969,7 @@ functions are: 0, 26-28, 30, 33-41, 55-57, 71, 78, and 79.
 * Function 76: Pause and continue the music
 * Function 77: Fade out the music
 * Function 78: Load a Music Module samplekit (S4)
-* Function 79: Load a MoonSound wavekit (S4)
+* Function 79: Load a Moonsound wavekit (S4)
 
 --- Segments usage control
 
