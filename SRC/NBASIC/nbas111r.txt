@@ -667,3 +667,19 @@ Moonblaster Wave, который занимает 5 сегмент полнос�
 Функция загрузки плейера выдает такие же коды ошибок, как и функции для работы    
 с диском, а также код -1 - если сегмент 5 не существует или не принадлежит
 первичному мапперу.
+
+9. ВЗАИМОДЕЙСТВИЕ С NESTORMAN И INTERNESTOR SUITE/LITE
+
+NestorBASIC has special functions that allow interaction with NestorMan 
+(resident dynamic memory manager for MSX-DOS 2), InterNestor Suite (TCP/IP 
+stack for MSX-DOS 2) and InterNestor Lite (TCP/IP 
+stack for MSX-DOS 1/2), if these programs are installed. Therefore it is 
+possibole to develop BASIC applications that use dynamic memory blocks and 
+chained lists, as well as Internet based applications. To check if NestorMan 
+and InterNestor Suite are installed, use function 81. The procedure for 
+checking if InterNestor Lite is installed is detailed in section 9.4.
+
+Note: NestorMan and InterNestor Suite/Lite have their own manuals describing 
+the 
+functions and routines provided by each one. These programs are available for 
+download at http://msx.konamiman.com
