@@ -691,3 +691,34 @@ InterNestor Suite (стэк TCP/IP для MSX-DOS 2) и InterNestor Lite (стэ
 ВНИМАНИЕ: NestorMan и InterNestor Suite/Lite имеют собственную документацию,
 описывающую их функции и процедуры. Эти программы доступны для скачивания на
 http://msx.konamiman.com
+
+9.1. СЕГМЕНТЫ NESTORBASIC И СЕГМЕНТЫ NESTORMAN
+
+NestorMan реализует систему логических сегментов, очень похожую на ту, что 
+применяется в NestorBASIC. Оба пространства сегментов, NestorBASIC'а и NestorMan'а,
+полностью независимы друг от друга, и не пересекаются, за исключениемwith the following exceptions:
+
+- Segments 0, 1, 2 and 3 are common to NestorBASIC and NestorMan (in 
+NestorMan's manual these segments are referred to as "TPA segments").
+
+- If NestorMan is present at NestorBASIC installation time, NestorBASIC 
+logical segment 4 is not allocated using DOS 2 mapper support routines, as 
+are the other segments. Instead, NestorMan function 7 is used for this; this 
+way, NestorBASIC segment 4 has a NestorMan segment number assigned as well 
+(this number can be obtained using NestorBASIC function 81). This segment is 
+reserved with the "exclusive" attribute set, therefore it is not used by 
+NestorMan for memory block reservations.
+
+If NestorMan and/or InterNestor Suite will be used together with NestorBASIC, 
+it is recommended to limit the amount of RAM segments that NestorBASIC will 
+use (use function 80 for this). Otherwise NestorBASIC will allocate for 
+itself all the available RAM segments, and therefore NestorMan will not be 
+able to perform RAM segments allocation (this is needed for memory block 
+reservations, chained lists creation, and for sending/receiving data to/from 
+Internet).
+
+To call NestorMan functions you can use function 82; or you can use function 
+58 specifying the extended BIOS hook (&HFFCA) as the calling address, &H2202 
+in the registers pair DE, and the functin number in register C. See section 
+10 for the functions de
+scription.
