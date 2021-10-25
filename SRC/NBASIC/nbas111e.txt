@@ -730,9 +730,8 @@ Internet).
 
 To call NestorMan functions you can use function 82; or you can use function 
 58 specifying the extended BIOS hook (&HFFCA) as the calling address, &H2202 
-in the registers pair DE, and the functin number in register C. See section 
-10 for the functions de
-scription.
+in the registers pair DE, and the function number in register C. See section 
+10 for the functions description.
 
 
 9.2. DATA EXCHANGE BETWEEN NESTORBASIC AND NESTORMAN
