@@ -688,37 +688,35 @@ InterNestor Suite (стэк TCP/IP для MSX-DOS 2) и InterNestor Lite (стэ
 и InterNestor Suite, можно воспользоваться функцией 81. Процедура проверки наличия
 загруженного InterNestor Lite детально описана в разделе 9.4.
 
-ВНИМАНИЕ: NestorMan и InterNestor Suite/Lite имеют собственную документацию,
+ВНИМАНИЕ: NestorMan и InterNestor Suite/Lite имеют собственную документацию,      
 описывающую их функции и процедуры. Эти программы доступны для скачивания на
 http://msx.konamiman.com
 
 9.1. СЕГМЕНТЫ NESTORBASIC И СЕГМЕНТЫ NESTORMAN
 
-NestorMan реализует систему логических сегментов, очень похожую на ту, что 
-применяется в NestorBASIC. Оба пространства сегментов, NestorBASIC'а и NestorMan'а,
-полностью независимы друг от друга, и не пересекаются, за исключениемwith the following exceptions:
+NestorMan реализует систему логических сегментов, очень похожую на ту, что        
+применяется в NestorBASIC. Оба пространства сегментов, NestorBASIC'а
+и NestorMan'а, полностью независимы друг от друга, за несколькими исключениями:
 
-- Segments 0, 1, 2 and 3 are common to NestorBASIC and NestorMan (in 
-NestorMan's manual these segments are referred to as "TPA segments").
+- Сегменты 0, 1, 2 и 3 являются общими для NestorBASIC и NestorMan (в документации
+к NestorMan's эти сегменты называются "TPA segments").
 
-- If NestorMan is present at NestorBASIC installation time, NestorBASIC 
-logical segment 4 is not allocated using DOS 2 mapper support routines, as 
-are the other segments. Instead, NestorMan function 7 is used for this; this 
-way, NestorBASIC segment 4 has a NestorMan segment number assigned as well 
-(this number can be obtained using NestorBASIC function 81). This segment is 
-reserved with the "exclusive" attribute set, therefore it is not used by 
-NestorMan for memory block reservations.
+- Если, при резидентной загрузке NestorBASIC, NestorMan запущен - тогда логический
+сегмент 4 NestorBASIC'а аллоцируется не с использованием механизмов DOS 2, как
+остальные сегменты. Вместо этого, используется функция 7 NestorMan; таким образом,
+4-му сегменту NestorBASIC'а присваивается, в свою очередь, номер сегмента
+NestorMan (этот номер можно узнать посредством 81-й функции NestorBASIC'а). Этот
+сегмент зарезервирован установкой аттрибута "exclusive", и поэтому не используется
+NestorMan для выделения блоков памяти.
 
-If NestorMan and/or InterNestor Suite will be used together with NestorBASIC, 
-it is recommended to limit the amount of RAM segments that NestorBASIC will 
-use (use function 80 for this). Otherwise NestorBASIC will allocate for 
-itself all the available RAM segments, and therefore NestorMan will not be 
-able to perform RAM segments allocation (this is needed for memory block 
-reservations, chained lists creation, and for sending/receiving data to/from 
-Internet).
+Если NestorMan и/или InterNestor Suite будут использоваться вместе с NestorBASIC, 
+рекомендуется ограничить, с помощью функции 80, количество RAM сегментов, которые
+будут использоваться NestorBASIC'ом. В противном случае, NestorBASIC зарезервирует
+для себя все доступные сегменты, и NestorMan не сможет задействовать резервы ОЗУ
+(необходимые для выделения блоков памяти, создания связанных списков и для
+отправки/получения данных в/из Интернета).
 
-To call NestorMan functions you can use function 82; or you can use function 
-58 specifying the extended BIOS hook (&HFFCA) as the calling address, &H2202 
-in the registers pair DE, and the functin number in register C. See section 
-10 for the functions de
-scription.
+Для вызыва функций NestorMan можно использовать 82-ю функцию; или можно           
+использовать 58-ю функцию, указав хук расширенного BIOS (&HFFCA) в качестве адреса
+перехода, занеся &H2202 в регистровую пару DE, и номер функции в регистр C.
+См. описание функций в разделе 10.
