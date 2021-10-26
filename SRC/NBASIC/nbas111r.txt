@@ -720,3 +720,31 @@ NestorMan для выделения блоков памяти.
 использовать 58-ю функцию, указав хук расширенного BIOS (&HFFCA) в качестве адреса
 перехода, занеся &H2202 в регистровую пару DE, и номер функции в регистр C.
 См. описание функций в разделе 10.
+
+9.2. ОБМЕН ДАННЫМИ МЕЖДУ NESTORBASIC И NESTORMAN
+
+При использовании NestorMan из NestorBASIC'a, обычно Вам придется осуществлять    
+передачу данных между сегментом NestorBASIC'а и сегментом NestorMan. Есть три
+способа сделать это:
+
+1) Если сегмент источника или назначения - это сегмент TPA (номер сегмента        
+от 0 до 3), достаточно использовать соответствующую функцию NestorMan для
+для передачи блока данных (функция номер 14), поскольку NestorMan и так видит 
+эти сегменты.
+
+2) Можно использовать сегмент 4 NestorBASIC'а как промежуточный буфер для         
+пересылки. Например, предположим пересылку из NestorBASIC в NestorMan. S1 это
+сегмент NestorBASIC'а, источник, S2 is NestorMan destination segment, and S3 is 
+NestorMan segment number of NestorBASIC segment 4. Then, first you do a 
+transfer S1->4 using NestorBASIC data transfer function (function number 10), 
+and then you do a transfer S3->S2 using NestorMan data transfer function 
+(function number 14).
+
+3) NestorBASIC functions 83 and 84 are for data transfer from a NestorMan 
+segment to a NestorBASIC segment and vice-versa. To read or write only one 
+byte of data on a NestorMan segment, the easiest way is to use the functions 
+that NestorMan provides for this purpose (function numbers 12 and 13).
+
+Remember that some NestorBASIC functions use segment 4 as a temporary data 
+storage buffer. Refer to section 10 or appendix 1 to know which are these 
+functions.
