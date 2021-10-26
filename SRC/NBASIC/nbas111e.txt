@@ -736,7 +736,7 @@ in the registers pair DE, and the function number in register C. See section
 
 9.2. DATA EXCHANGE BETWEEN NESTORBASIC AND NESTORMAN
 
-When using NestorMan through NestorBASIC, normally you will need to perform 
+When using NestorMan from within NestorBASIC, normally you will need to perform 
 data transfers between a NestorBASIC segment and a NestorMan segment. There 
 are three ways to do this:
 
