@@ -691,6 +691,8 @@ InterNestor Suite (стэк TCP/IP для MSX-DOS 2) и InterNestor Lite (стэ
 ВНИМАНИЕ: NestorMan и InterNestor Suite/Lite имеют собственную документацию,      
 описывающую их функции и процедуры. Эти программы доступны для скачивания на
 http://msx.konamiman.com
+InterNestor Suite это устаревшее ПО и не рекомендуется к использованию. Если Вам
+нужен рабочий TCP/IP стэк, возьмите InterNestor Lite.
 
 9.1. СЕГМЕНТЫ NESTORBASIC И СЕГМЕНТЫ NESTORMAN
 
