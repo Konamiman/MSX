@@ -734,17 +734,18 @@ NestorMan для выделения блоков памяти.
 
 2) Можно использовать сегмент 4 NestorBASIC'а как промежуточный буфер для         
 пересылки. Например, предположим пересылку из NestorBASIC в NestorMan. S1 это
-сегмент NestorBASIC'а, источник, S2 is NestorMan destination segment, and S3 is 
-NestorMan segment number of NestorBASIC segment 4. Then, first you do a 
-transfer S1->4 using NestorBASIC data transfer function (function number 10), 
-and then you do a transfer S3->S2 using NestorMan data transfer function 
-(function number 14).
+источник - сегмент NestorBASIC'а, S2 это назначение - сегмент NestorMan, и S3 это
+номер сегмента NestorMan, соответствующий 4 сегменту NestorBASIC'a. Тогда, сначала 
+делается пересылка S1->4 с помощью функции NestorBASIC'а (функция 10), 
+и затем делается пересылка S3->S2 с использованием функции NestorMan (функция 14).
 
-3) NestorBASIC functions 83 and 84 are for data transfer from a NestorMan 
-segment to a NestorBASIC segment and vice-versa. To read or write only one 
-byte of data on a NestorMan segment, the easiest way is to use the functions 
-that NestorMan provides for this purpose (function numbers 12 and 13).
+3) Функции 83 и 84 NestorBASIC'а осуществляют блочное копирование данных из       
+сегмента NestorMan в сегмент NestorBASIC и наоборот.
 
-Remember that some NestorBASIC functions use segment 4 as a temporary data 
-storage buffer. Refer to section 10 or appendix 1 to know which are these 
-functions.
+Чтобы прочитать или записать единственный байт данных из/в сегмент NestorMan,     
+проще всего использовать соответствующие функции, которые предоставляет NestorMan
+(функции 12 и 13).
+
+Помните, что некоторые функции NestorBASIC используют сегмент 4 как служебный     
+буфер для временного размещения данных. См. раздел 10 или приложение 1, чтобы
+узнать эти функции.
