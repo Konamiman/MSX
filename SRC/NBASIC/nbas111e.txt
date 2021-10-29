@@ -791,26 +791,26 @@ ensemble use of NestorBASIC and InterNestor Suite.
 
 9.4. USING INTERNESTOR LITE
 
-InterNestor Lite is much simpler than InterNestor Suite, hence using it from 
-NestorBASIC is also a simpler task. Only one function is provided (function 
-86), allowing the execution of any routine of the InterNestor Lite code 
-segment. To read or write in its data segment, you must use the GET_VAR, 
-SET_VAR and COPY_DATA routines of the code segment.
+InterNestor Lite is much simpler than InterNestor Suite, thus it's also easier
+to use it from within the NestorBASIC. Only one function is provided (function 
+86), allowing the execution of any routine from InterNestor Lite code segment.
+To read or write to its data segment, you must use the GET_VAR, SET_VAR and
+COPY_DATA routines of the code segment.
 
-To know whether InterNestor Lite is installed or not, use function 58 issue a 
-call to the extended BIOS hook (address &HFFCA), passing A=0 and DE=&H2203. 
-If A<>0 at return, then InterNestor Lite is installed. See the description of 
-function 86 for details.
+To determine whether InterNestor Lite is being run or not, use function 58 to   
+issue a call to the extended BIOS hook (address &HFFCA), passing A=0 and
+DE=&H2203. If A<>0 at return, then InterNestor Lite being run. See the
+description of function 86 for details.
 
-Many of the InterNestor Lite routines use TPA addresses as the source or 
+Many of the InterNestor Lite routines use TPA addresses as the source or        
 destination when exchanging data with applications. For these routines you 
 can specify addresses above &H8000, that will refer to the BASIC main memory 
 and the system work area; or addresses below &H4000, that will refer to 
-NestorBASIC segment (segmento number 0).
+NestorBASIC segment (segment number 0).
 
-At the end of the NestorBASIC segment there is a free area, whose size 
-depends on the NestorBASIC version but will never be smaller than 600 bytes, 
-which can be used as a temporary buffer for exchanging data with InterNestor 
+At the end of the NestorBASIC segment there is a free area, the size of which   
+varies depending on NestorBASIC version, but will never be less than 600 bytes,
+and it can be used as a temporary buffer for exchanging data with InterNestor 
 Lite. In other words, you can use the space between H3DA8 and &H3FFF as the 
 source or destination TPA area for a data exchange between NestorBASIC and 
 InterNestor Lite.
