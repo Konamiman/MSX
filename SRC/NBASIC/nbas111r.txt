@@ -798,12 +798,11 @@ InterNestor Lite это гораздо более простая програм�
 NestorBASIC'а (сегмент 0).
 
 В конце сегмента NestorBASIC есть свободная область, размер которой варьируется,  
-в зависимости от версии  size 
-depends on the NestorBASIC version but will never be smaller than 600 bytes, 
-which can be used as a temporary buffer for exchanging data with InterNestor 
-Lite. In other words, you can use the space between H3DA8 and &H3FFF as the 
-source or destination TPA area for a data exchange between NestorBASIC and 
-InterNestor Lite.
+в зависимости от версии NestorBASIC'а, но никогда не бывает меньше, чем 600 байт.
+Эта область может быть использована как временный буфер для обмена данными с
+InterNestor Lite. Другими словами, можно использовать диапазон от H3DA8 до &H3FFF
+в качестве TPA области - источника или приемника для обмена данными между
+NestorBASIC'ом и InterNestor Lite.
 
-The sample program TCPCON-L.BAS, supplied with NestorBASIC, illustrates the 
-ensemble use of NestorBASIC and InterNestor Lite.
+Пример программы TCPCON-L.BAS, поставляемый с NestorBASIC'ом, иллюстрирует        
+использование NestorBASIC'а совместно с InterNestor Suite.
