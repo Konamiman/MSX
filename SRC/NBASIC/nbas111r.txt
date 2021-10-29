@@ -717,7 +717,7 @@ NestorMan для выделения блоков памяти.
 отправки/получения данных в/из Интернета).
 
 Для вызыва функций NestorMan можно использовать 82-ю функцию; или можно           
-использовать 58-ю функцию, указав хук расширенного BIOS (&HFFCA) в качестве адреса
+использовать 58-ю функцию, указав хук EXTBIO (&HFFCA) в качестве адреса
 перехода, занеся &H2202 в регистровую пару DE, и номер функции в регистр C.
 См. описание функций в разделе 10.
 
@@ -771,8 +771,39 @@ NestorMan для выделения блоков памяти.
 Этого достаточно для размещения стандартной датаграммы до 576 байт длинной (или
 для размещения блока данных TCP до 600 байт включительно).
 
-Пример программы TCPCON-S.BAS, поставляемый с NestorBASIC'ом, иллюстрирует            
+Пример программы TCPCON-S.BAS, поставляемый с NestorBASIC'ом, иллюстрирует        
 использование NestorBASIC'а совместно с InterNestor Suite.
 
 ВНИМАНИЕ: InterNestor Suite это устаревшее ПО и не рекомендуется к использованию. 
-Если Вам нужен рабочий TCP/IP стэк, обратите свой взор на InterNestor Lite.
+Если Вам нужен рабочий TCP/IP стэк, посмотрите в сторону InterNestor Lite.
+
+9.4. ИСПОЛЬЗОВАНИЕ INTERNESTOR LITE
+
+InterNestor Lite это гораздо более простая программа, чем InterNestor Suite,      
+поэтому использовать её из NestorBASIC'а также проще. Предоставляется
+единственная функция (функция 86), которая позволяет выполнять несколько процедур 
+из сегмента кода InterNestor Lite. Чтобы читать или писать в его сегмент данных,
+необходимо использовать процедуры GET_VAR, SET_VAR и COPY_DATA, которые находятся
+в сегменте кода.
+
+Чтобы узнать, запущен InterNestor Lite или нет, используйте функцию 58 для вызова 
+хука EXTBIO (адрес &HFFCA), передав A=0 и DE=&H2203. Если подпрограмма
+вернула A<>0, значит InterNestor Lite запущен. Больше подробностей в описании
+функции 86.
+
+Многие из процедур InterNestor Lite используют адреса TPA как источник либо       
+назначение для обмена данными с приложениями. Для таких процедур можно указать 
+адреса выше &H8000, которые соответствуют основной памяти MSX-BASIC и рабочей 
+области системы; или адреса ниже &H4000, которые соответствуют сегменту
+NestorBASIC'а (сегмент 0).
+
+В конце сегмента NestorBASIC есть свободная область, размер которой варьируется,  
+в зависимости от версии  size 
+depends on the NestorBASIC version but will never be smaller than 600 bytes, 
+which can be used as a temporary buffer for exchanging data with InterNestor 
+Lite. In other words, you can use the space between H3DA8 and &H3FFF as the 
+source or destination TPA area for a data exchange between NestorBASIC and 
+InterNestor Lite.
+
+The sample program TCPCON-L.BAS, supplied with NestorBASIC, illustrates the 
+ensemble use of NestorBASIC and InterNestor Lite.
