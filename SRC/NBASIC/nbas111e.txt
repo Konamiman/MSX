@@ -822,11 +822,11 @@ ensemble use of NestorBASIC and InterNestor Lite.
 9.5. ERRORS
 
 Function 86 (InterNestor Lite routine execution)returns error -1 if 
-InterNestor Lite is not installed.
+InterNestor Lite is not resident-loaded.
 
 Function 85 (InterNestor Suite routine execution) returns error -1 if 
-InterNestor Suite is not installed, or if an invalid module number is 
-specified in P(0) (valid segment numbers are 1 to 4).
+InterNestor Suite is not loaded, or if an invalid module number is 
+specified in P(0) (valid module numbers are 1 to 4).
 
 Functions 83 and 84 (data transfer between a NestorMan segment and a 
 NestorBASIC segment) return error -1 if a non existing NestorMan or 
