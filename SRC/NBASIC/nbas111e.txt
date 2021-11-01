@@ -840,13 +840,14 @@ Functions 80, 81 and 82 never return error.
 
 10.1. GENERAL DESCRIPTION
 
-All the NestorBASIC functions available for the user are identified by the 
+All the NestorBASIC functions available for the user are identified by the      
 number passed as a parameter to the USR command. That is, for using the 
-function with number F you just do USR(F)M remember that if F is a variable 
-and not an immediate number, it must be variable of integer type. Parameters 
-for the function must be set in the array P (and, in some cases, also in the 
-array F$) before calling the function. Once executed, the results of the 
-function will be returned in the same arrays, P and/or F.
+function with number F you just do USR(F), having in count that in case of using
+a variable and not an immediate number to specify the function, it must be the
+variable of integer type. Parameters for the function must be set in the array P
+(and, in some cases, also in the array F$) before calling the function.
+Once executed, the results of the function will be returned in the same arrays,
+P and/or F.
 
 Items of P and F$ not explicitly mentioned in the results list of each 
 funtion are not modified, except the segment addresses; these are converted 
