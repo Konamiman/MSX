@@ -849,14 +849,14 @@ variable of integer type. Parameters for the function must be set in the array P
 Once executed, the results of the function will be returned in the same arrays,
 P and/or F.
 
-Items of P and F$ not explicitly mentioned in the results list of each 
-function are not modified, except the segment addresses; these are converted 
-to the range &H0000-&H3FFF (except in the case of the segment 255). When a 
-function returns an error, the results will not be valid (P and F$ are not 
-modified), except if otherwise is specified in the description of the 
+Items of P and F$ matrices, not mentioned explicitly in the results list of a   
+given function, are returned unmodified, except for the segment addresses; these
+are converted to the range &H0000-&H3FFF (except for the segment 255). If
+function returned an error, results will not be valid (P and F$ remain 
+unmodified), unless otherwise is stated in the description of the 
 function.
 
-"VRAM block" refers to 64K lower VRAM (block 0) or to 64K upper VRAM (block 
+"VRAM block" refers to 64K lower VRAM (block 0) or to 64K upper VRAM (block     
 1). VRAM addresses have the range &H0000-&HFFFF. If any VRAM address surpass 
 &HFFFF after an autoincrement, the new address will be &H0000 and the VRAM 
 block will be reversed (from 0 to 1, or from 1 to 0).
