@@ -851,7 +851,7 @@ P and/or F.
 
 Items of P and F$ matrices, not mentioned explicitly in the results list of a   
 given function, are returned unmodified, except for the segment addresses; these
-are converted to the range &H0000-&H3FFF (except for the segment 255). If
+are converted to the range &H0000-&H3FFF (but not for the segment 255). If
 function returned an error, results will not be valid (P and F$ remain 
 unmodified), unless otherwise is stated in the description of the 
 function.
