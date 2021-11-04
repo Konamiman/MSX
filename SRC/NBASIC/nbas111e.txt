@@ -841,28 +841,27 @@ Functions 80, 81 and 82 never return error.
 10.1. GENERAL DESCRIPTION
 
 All the NestorBASIC functions available for the user are identified by the      
-number passed as a parameter to the USR command. That is, for using the 
-function with number F you just do USR(F), having in count that in case of using
-a variable and not an immediate number to specify the function, it must be the
+number passed as a parameter to the USR command. That is, to use the function
+number F, you just do USR(F), having in count that in case of using
+a variable and not an immediate value to specify the function, it has to be a
 variable of integer type. Parameters for the function must be set in the array P
-(and, in some cases, also in the array F$) before calling the function.
-Once executed, the results of the function will be returned in the same arrays,
-P and/or F.
+(and, in some cases, also in the array F$) before calling the function. Once
+executed, the function returns its results in that same arrays, P and/or F.
 
 Items of P and F$ matrices, not mentioned explicitly in the results list of a   
 given function, are returned unmodified, except for the segment addresses; these
 are converted to the range &H0000-&H3FFF (but not for the segment 255). If
 function returned an error, results will not be valid (P and F$ remain 
-unmodified), unless otherwise is stated in the description of the 
-function.
+unmodified), unless otherwise is stated in the description of the function.
 
-"VRAM block" refers to 64K lower VRAM (block 0) or to 64K upper VRAM (block     
-1). VRAM addresses have the range &H0000-&HFFFF. If any VRAM address surpass 
-&HFFFF after an autoincrement, the new address will be &H0000 and the VRAM 
-block will be reversed (from 0 to 1, or from 1 to 0).
+"VRAM block" corresponds to 64K lower VRAM (block 0) or to 64K upper VRAM       
+(block 1). VRAM addresses are in range of &H0000-&HFFFF. If VRAM address
+surpasses &HFFFF due to an autoincrement, new address will be &H0000 and VRAM
+block will be inversed (from 0 to 1, or from 1 to 0).
 
-The USR command will return an error code, or 0 if there is not error. 
-Specific error codes for each functions group are detailed in each section.
+The USR command returns an error code, or 0 if there is no error. The errors,
+related to each specific group of functions, are described in their
+corresponding sections of this document.
 
 Appendix 1 contains a list of all available functions. Use it as a quick 
 reference.
