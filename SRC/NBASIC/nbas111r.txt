@@ -859,16 +859,18 @@ P и/или F.
 
 * Функция 0: резидентная выгрузка NestorBASIC'а  (S4)
 
-Input:	 P(0) = 0 -> Don't free BASIC main RAM area reserved by NestorBASIC
-	 P(0) <>0 -> Free the BASIC main RAM area reserved by NestorBASIC
-Out:	 -
+Вход:	 P(0) = 0 -> Не освобождать область основной памяти MSX-BASIC,
+         зарезервированную NestorBASIC'ом
+	 P(0) <>0 -> Освободить область основной памяти MSX-BASIC,
+	 зарезервированную NestorBASIC'ом
+Выход:	 -
 
-This function uninstalls NestorBASIC: makes the USR unusable and, in the case 
-of DOS 2, frees all the reserved segments. Also, all interrupt process (user 
-defined interrupt, PSG sound effects replay and music replay) are stopped. 
-NestorBASIC should always be uninstalled before returning to DOS; otherwise, 
-all the allocated RAM segments will not be freed, and will therefore be 
-unusable until the computer is reset.
+Эта функция выгружает NestorBASIC: высвобождает USR и, в случае DOS 2, освобождает
+все выделенные сегменты. Также, останавливаются все процессы, завязанные на
+прерывания (прерывания определяемые пользователем, проигрывание звуковых эффектов
+PSG и музыки). Всегда следует выгружать NestorBASIC прежде чем вернуться в DOS;
+в противном случае, все выделенные сегменты ОЗУ не будут высвобождены, и,
+следовательно, не смогут быть использованы до перезагрузки компьютера.
 
 Before uninstalling NestorBASIC, check that no files still open. Else, if you 
 have done file writings, you can lost some data in the internal DOS buffers.
