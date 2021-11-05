@@ -857,7 +857,7 @@ P и/или F.
 
 10.2. ОСНОВНЫЕ ФУНКЦИИ
 
-* Функция 0: резидентная выгрузка NestorBASIC'а  (S4)
+* Функция 0: выгрузка NestorBASIC'а из памяти (S4)
 
 Вход:	 P(0) = 0 -> Не освобождать область основной памяти MSX-BASIC,
          зарезервированную NestorBASIC'ом
@@ -872,7 +872,7 @@ PSG и музыки). Всегда следует выгружать NestorBASIC
 в противном случае, все выделенные сегменты ОЗУ не будут высвобождены, и,
 следовательно, не смогут быть использованы до перезагрузки компьютера.
 
-Before uninstalling NestorBASIC, check that no files still open. Else, if you 
+Перед uninstalling NestorBASIC, check that no files still open. Else, if you 
 have done file writings, you can lost some data in the internal DOS buffers.
 
 If P(0)=0 is specified, the BASIC main RAM zone ocuped by the jump routine 
