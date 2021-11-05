@@ -859,14 +859,14 @@ unmodified), unless otherwise is stated in the description of the function.
 surpasses &HFFFF due to an autoincrement, new address will be &H0000 and VRAM
 block will be inversed (from 0 to 1, or from 1 to 0).
 
-The USR command returns an error code, or 0 if there is no error. The errors,
-related to each specific group of functions, are described in their
-corresponding sections of this document.
+The USR command returns an error code, or 0 if there is no errors. The errors,  
+related to each specific group of functions, are described in their respective
+sections of the document.
 
-Appendix 1 contains a list of all available functions. Use it as a quick 
+Appendix 1 contains a list of all available functions. Use it as a quick        
 reference.
 
-Functions that use segment 4 have a "(S4)" mark after their name. These 
+Functions that use segment 4 have a "(S4)" mark after their name. These         
 functions are: 0, 26-28, 30, 33-41, 55-57, 71, 78, and 79.
 
 
@@ -874,23 +874,24 @@ functions are: 0, 26-28, 30, 33-41, 55-57, 71, 78, and 79.
 
 * Function 0: NestorBASIC uninstallation (S4)
 
-Input:	 P(0) = 0 -> Don't free BASIC main RAM area reserved by NestorBASIC
-	 P(0) <>0 -> Free the BASIC main RAM area reserved by NestorBASIC
+Input:	 P(0) = 0 -> Don't free BASIC main RAM area reserved by NestorBASIC     
+         P(0) <>0 -> Free BASIC main RAM area reserved by NestorBASIC
 Out:	 -
 
-This function uninstalls NestorBASIC: makes the USR unusable and, in the case 
-of DOS 2, frees all the reserved segments. Also, all interrupt process (user 
-defined interrupt, PSG sound effects replay and music replay) are stopped. 
-NestorBASIC should always be uninstalled before returning to DOS; otherwise, 
-all the allocated RAM segments will not be freed, and will therefore be 
-unusable until the computer is reset.
+This function unloads NestorBASIC: releases USR and, in the case of DOS 2,      
+deallocates all the segments reserved. Also, all interrupt-driven processes
+(user defined interrupt, PSG sound effects and music playback) are stopped.
+NestorBASIC should always be unloaded before returning to DOS; otherwise,
+all the allocated RAM segments will not be freed, and will therefore be
+unavailable until computer restart.
 
-Before uninstalling NestorBASIC, check that no files still open. Else, if you 
-have done file writings, you can lost some data in the internal DOS buffers.
+Before resident-unloading NestorBASIC, make sure that no files are still open.  
+Otherwise, if you performed any file writing, you can lose some data in the
+internal DOS buffers.
 
-If P(0)=0 is specified, the BASIC main RAM zone ocuped by the jump routine 
-(aprox. 500 bytes) is not freed; then, any memory reservation done with the 
-CLEAR statement after the installation of NestorBASIC remains valid. If 
+If P(0)=0 is specified, MSX-BASIC main RAM area occupied by jump routine        
+(aprox. 500 bytes) will not be freed; thus, any memory reservation done with
+CLEAR statement after resident-loading NestorBASIC will remain valid. If 
 P(0)<>0 is specified, a new CLEAR statement is automatically executed, and 
 the highest RAM address usable for BASIC programs and variables becomes the 
 same as before the NestorBASIC installation; that is, FRE(0) returns the same 
