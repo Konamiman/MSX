@@ -237,8 +237,8 @@ be used for the following purposes:
 - Graphic compression/decompression
 - Machine code routines execution
 - User defined interrupt execution
-- PSG sound effects replay
-- Music replay
+- PSG sound effects playback
+- Music playback
 
 If you try to use VRAM segments for these purposes, the called function will    
 return the "non existing segment" error.
@@ -277,7 +277,7 @@ after it is resident-loaded, or on function 1 execution.
 3: BASIC main RAM, page 3 (&HC000-&HFFFF)
 4: Internal buffer segment
 5 to S-1: Available RAM for the user (if S>5)
-   If the music replayer is loaded,
+   If the music player is loaded,
    it is stored in segment 5. See section 8.
 S:   VRAM, addresses &H1C000-&H1FFFF (64K VRAM: &HC000-&HFFFF)
 S+1: VRAM, addresses &H18000-&H1BFFF (64K VRAM: &H8000-&HBFFF)
@@ -885,17 +885,18 @@ NestorBASIC should always be unloaded before returning to DOS; otherwise,
 all the allocated RAM segments will not be freed, and will therefore be
 unavailable until computer restart.
 
-Before resident-unloading NestorBASIC, make sure that no files are still open.  
+When you resident-unload NestorBASIC, make sure that no files are still open.   
 Otherwise, if you performed any file writing, you can lose some data in the
-internal DOS buffers.
+internal DOS buffers. Moreover, in case of DOS 2, file descriptors are left
+open needlessly.
 
 If P(0)=0 is specified, MSX-BASIC main RAM area occupied by jump routine        
 (aprox. 500 bytes) will not be freed; thus, any memory reservation done with
-CLEAR statement after resident-loading NestorBASIC will remain valid. If 
-P(0)<>0 is specified, a new CLEAR statement is automatically executed, and 
-the highest RAM address usable for BASIC programs and variables becomes the 
-same as before the NestorBASIC installation; that is, FRE(0) returns the same 
-value as before the installation of NestorBASIC. Note that in this case, 
+CLEAR statement after resident-loading NestorBASIC remains valid. If P(0)<>0
+is specified, a new CLEAR statement is automatically executed, and the
+highest RAM address available for BASIC programs and variables becomes the
+same as before NestorBASIC loading; that is, FRE(0) returns the same 
+value as before loading NestorBASIC. Note that in this case 
 variables are initialized.
 
 This function never returns error.
@@ -2178,12 +2179,12 @@ not be shown.
 
 Input:	 -
 Output:  P(0) = -1 if any interrupt process is active
-	          (user defined interrupt, PSG sound effect or music replay)
+	          (user defined interrupt, PSG sound effect or music playback)
 	 P(1) = -1 if an user defined interrupt is active
 	 P(2) = User defined interrupt segment
 	 P(3) = User defined interrupt begin address
-	 P(4) = -1 if a PSG sound effect is being replayed
-	 P(5) = -1 if a music is being replayed
+	 P(4) = -1 if a PSG sound effect is being played
+	 P(5) = -1 if a music is being played
 
 P(2) and P(3) will return the user interrupt definition, even if it is 
 stopped. If no user interrupt has never been defined, both results will be 
@@ -2239,9 +2240,9 @@ or -1 in P(0), an error 7 will be returned.
 * Function 67: Obtain information about the PSG sound effects
 
 Input:	 P(0) = New maximum volume (0 to 15, -1 to leave it unchanged)
-Output:  P(1) = -1 if a sound effect is being replayed
-	 P(2) = Number of the SFX being replayed, or the last one replayed
-	 P(3) = Priority of the SFX being replayed, or the last one replayed
+Output:  P(1) = -1 if a sound effect is being played
+	 P(2) = Number of the SFX being played, or the last one played
+	 P(3) = Priority of the SFX being played, or the last one played
 	 P(4) = Segment of the sound effects set
 	 P(5) = Start address of the sound effects set
 	 P(6) = Highest defined sound effect number
@@ -2279,20 +2280,20 @@ Input:	 P(0) = Effect number
 	 P(1) = Priority (0: low, <>0: high)
 Output:  -
 
-This function begins the replay of the specified sound effect; the sound 
+This function begins the playback of the specified sound effect; the sound 
 effects set must have been created with the editor SEE v3.xx, by Fuzzy Logic. 
 If the sound effects set has not been initialized with function 68, the 
 result is unpredictable.
 
 P(1) handles the priority in the case of executing this function when
-another sound effect is being replayed, in the following way:
+another sound effect is being played, in the following way:
 
-- If the SFX being replayed and the new one have the same priority, the SFX 
-being replayed is stopped, and the new one is played.
-- If the SFX being replayed has low priority and the new one has high 
+- If the SFX being played and the new one have the same priority, the SFX 
+being played is stopped, and the new one is played.
+- If the SFX being played has low priority and the new one has high 
 priority, same as above occurs.
-- If the SFX being replayed has high priority and the new one has low
-priority, the old SFX stills being replayed, and the function returns the 
+- If the SFX being played has high priority and the new one has low
+priority, the old SFX keeps being played, and the function returns the 
 error code 11.
 
 If the sound effect specified in P(0) is not defined (the first track is left 
@@ -2301,97 +2302,97 @@ effect does not exist (its number is higher than the maximum effect number),
 the function will return the error code 10.
 
 
-* Function 70: Stop PSG sound effect replay
+* Function 70: Stop PSG sound effect playback
 
 Input:	 -
 Output:  -
 
-This function stops the PSG sound effect being replayed, and silences the 
+This function stops the PSG sound effect being played, and silences the 
 PSG. It never returns error.
 
 
-10.9. FUNCTIONS FOR MOONBLASTER MUSIC REPLAY
+10.9. FUNCTIONS FOR MOONBLASTER MUSIC PLAYBACK
 
 * Function 71: Load and initialization, or uninstall,
-	       of the Moonblaster replayer (S4)
+	       of the Moonblaster player (S4)
 
-Input:	 P(0)  = Replayer to be loaded:
+Input:	 P(0)  = Player to be loaded:
 		 0: Moonblaster 1.4
 		 1: Moonblaster Wave 1.05
 		 3: Autodetect:
-		    Load Moonblaster Wave replayer if Moonsound is present,
-		    otherwise load Moonblaster 1.4 replayer.
-                -1: Uninstall the loaded replayer
-Output:  P(0)  = Replayer loaded (0, 1 or -1, as above).
+		    Load Moonblaster Wave player if Moonsound is present,
+		    otherwise load Moonblaster 1.4 player.
+                -1: Uninstall the loaded player
+Output:  P(0)  = Player loaded (0, 1 or -1, as above).
 Output:  P(1)  = -1 -> No error
 	      <> -1 -> A disk error occurred, and NBASIC.BIN remains open
 		       with this number; look at the value returned by the
 		       USR command for the error code, as usual.
 
-This function loads the specified Moonblaster replayer in segment 5, leaving 
+This function loads the specified Moonblaster player in segment 5, leaving 
 it ready for use. Also, searches for all the existing sound chips in the 
 system, and leaves all the found chips enabled (see function 73 for more 
 details about the sound chips activation).
 
-The replayer can only be installed if the segment 5 exists and belongs to the 
+The player can only be installed if the segment 5 exists and belongs to the 
 primary mapper; otherwise, the function will return the error -1. If a disk 
 error occurs, the function will return the appropriate error code (see 
 section 4). If NBASIC.BIN remains opened due to a disk error, its associated 
 file number will be returned in P(1); otherwise, P(1) will be -1.
 
-NBASIC.BIN file contains two versions of the Moonblaster Wave replayer: one 
+NBASIC.BIN file contains two versions of the Moonblaster Wave player: one 
 is for MSX2/2+ and Turbo-R in Z80 mode, and the other is for Turbo-R in R800 
 mode. If the computer is a Turbo-R, NestorBASIC decides the version to be 
 loaded according to the processor switched when function 71 is called. Note 
 that if a processor change is performed, this function must be called again 
-in order to load the appropriate replayer: Z80 version does not work in R800 
+in order to load the appropriate player: Z80 version does not work in R800 
 mode, and R800 version makes the system slower in Z80 mode.
 
-To uninstall the replayer, use this function with P(0)=-1 at input; you don't 
-need to previously stop any music being replayed, since the function itsef 
+To uninstall the player, use this function with P(0)=-1 at input; you don't 
+need to previously stop any music being played, since the function itsef 
 will do this task. After uninstallation (which just consists on erasing the 
-sting "NestorPlayer" placed at the start of segment 5), segment 5 becomes 
+string "NestorPlayer" placed at the start of segment 5), segment 5 becomes 
 available again, just like any other segment. If you try to uninstall the 
-replayer when no replayer is actually loaded, the function will do nothing, 
+player when no player is actually loaded, the function will do nothing, 
 and no error will be returned.
 
-You can load, uninstall, and load again the Moonblaster replayer as many 
-times as necessary within a program's lifetime. If there is a replayer loaded 
+You can load, uninstall, and load again the Moonblaster player as many 
+times as necessary within a program's lifetime. If there is a player loaded 
 and you want to load another one, it is convenient to first uninstall the 
-loaded replayer.
+loaded player.
 
 
-* Function 72: Obtain information about the music being replayed
+* Function 72: Obtain information about the music being played
 
 Input:	 -
-Output:  P(0) = -1 if a music is being replayed or is paused
-	 P(1) = -1 if a Moonblaster 1.4 music is being replayed or paused
-	 P(2) = -1 if a Moonblaster Wave music is being replayed or paused
+Output:  P(0) = -1 if a music is being played or is paused
+	 P(1) = -1 if a Moonblaster 1.4 music is being played or paused
+	 P(2) = -1 if a Moonblaster Wave music is being played or paused
 	 P(3) = 0
 	 P(4) = -1 if the music is paused
-	 P(5) = Segment of the music being replayed,
-		or segment of the last replayed music
-	 P(6) = Begin address of the music being replayed,
-		or begin address of the last replayed music
+	 P(5) = Segment of the music being played,
+		or segment of the last played music
+	 P(6) = Begin address of the music being played,
+		or begin address of the last played music
 	 P(7) = Current position
 	 P(8) = Current step (0 to 15)
 	 P(9) = -1 if a MSX-MUSIC was detected
 	 P(10)= -1 if a MSX-AUDIO was detected
 	 P(11)= -1 if a OPL4 was detected
-	 P(12)= -1 if the replayer is initialized
-	 P(13)= Replayer installed (only if P(12)=-1):
+	 P(12)= -1 if the player is initialized
+	 P(13)= Player installed (only if P(12)=-1):
 		0: Moonblaster 1.4
 		1: Moonblaster Wave 1.05
-	 F$(0)= Songname (empty string if no music is being replayed)
+	 F$(0)= Songname (empty string if no music is being played)
 	 F$(1)= Samplekit or wavekit (empty string if no music is being
-		replayed)
+		played)
 
-If no Moonblaster replayer is loaded, P(12) will be zero the other results 
+If no Moonblaster player is loaded, P(12) will be zero the other results 
 will not be set (except for P(9) to P(11); the function will not return any 
-error. Use function 71 to initialize the replayer.
+error. Use function 71 to initialize the player.
 
-If no music is being replayed, P(5) and P(6) will return the position and the 
-step in which the last replayed music was stopped, and F$(0) and F$(1) will 
+If no music is being played, P(5) and P(6) will return the position and the 
+step in which the last played music was stopped, and F$(0) and F$(1) will 
 be empty strings. Otherwise, F$(0) will return the songname (always 40 
 characters for Moonblaster 1.4 musics, 50 for Moonblaster Wave musics) and 
 F$(1) will return the samplekit or wavekit that was loaded in Moonblaster 
@@ -2399,7 +2400,7 @@ when the music was saved, in capital letters and without extension ("NONE" if
 there was no samplekit loaded).
 
 P(9) to P(11) return information about the detected sound chips, even when no 
-replayer is loaded. To obtain information about the enabled sound chips, use 
+player is loaded. To obtain information about the enabled sound chips, use 
 function 73.
 
 
@@ -2438,24 +2439,24 @@ of a music in a computer with internal MSX-MUSIC.
 If P(0)=0, the function will only return information about the enabled sound 
 chips in P(4) to P(5), and will not change the current status of the chips. 
 If P(0)=2, all the found chips will be enabled (this is the default state 
-when the replayer is initialized). To obtain information about the found 
+when the player is initialized). To obtain information about the found 
 sound chips use function 72.
 
 If P(0)=1, the different sound chips will be enabled or disabled according to 
 the values passed in P(1) to P(3); attempts to enable chips that are not 
 present will be ignored. If MSX-AUDIO and MSX-MUSIC are both disabled 
-(Moonblaster 1.4 replayer) or if OPL4 is disabled (Moonblaster wave 
-replayer), function 74 (start the playing of a music) will do nothing but 
+(Moonblaster 1.4 player) or if OPL4 is disabled (Moonblaster Wave 
+player), function 74 (start the playing of a music) will do nothing but 
 will not return error.
 
 The changes done with this function will have not effect until the currently 
-being replayed music is stopped (function 75 or 77) and restarted (function 
-74). If no music is being replayed when you use this function, just start the 
+being played music is stopped (function 75 or 77) and restarted (function 
+74). If no music is being played when you use this function, just start the 
 music and you will note the changes.
 
 This function will return the error code 7 if any of the input parameters in 
 invalid (but if P(0)<>1 you don't need to set P(1) to P(3)), and error code 
-12 if the replayer is not installed.
+12 if the player is not installed.
 
 
 * Function 74: Start playing a Moonblaster music
@@ -2464,19 +2465,19 @@ Input:	 P(0) = Segment in which the music is stored
 	 P(1) = Music begin address
 Output:  -
 
-This function begins the replay of the specified Moonblaster music. If the 
+This function begins the playback of the specified Moonblaster music. If the 
 specified segment does not exist, refers to VRAM or is the 255, the error 
-code -1 will be returned. If the replayer has not been initialized, the error 
-code 12 will be returned (use function 71 to initialize the music replayer). 
+code -1 will be returned. If the player has not been initialized, the error 
+code 12 will be returned (use function 71 to initialize the music player). 
 Moonblter Wave musics can be stored through consecutive segments; see section 
 8.2 for more details.
 
 In the case of Moonblaster 1.4 music, this function examines the first byte 
 of the music in the specified address; if this byte is &HFF it means that the 
-music was saved in EDIT format, and therefore can't be replayed; in such case 
+music was saved in EDIT format, and therefore can't be played; in such case 
 the error code 13 will be returned. Otherwise, NestorBASIC assumes that in 
 the specified address a Moonblaster music saved in USER format begins, and 
-the replay starts without further checkings. If the specified RAM area does 
+the playback starts without further checkings. If the specified RAM area does 
 not contain a Moonblaster music, the result is unpredictable.
 
 Moonblaster Wave rapleyer has not these restrictions: it can detect if data 
@@ -2486,16 +2487,16 @@ USER mode. If not, error 13 is returned.
 If MSX-MUSIC and MSX-AUDIO were both disabled (Moonblaster 1.4 music) or OPL4 
 was disabled (Moonblaster Wave music) with function 73, this function will do 
 nothing, but no error will be returned. If another music is already being 
-replayed, an error code 14 will be returned.
+played, an error code 14 will be returned.
 
 
-* Function 75: Stop the music replay
+* Function 75: Stop the music playback
 
 Input:	 -
 Output:  -
 
-This function stops the replay of the being replayed music and silences the 
-sound chips. If no music is being replayed or if no music replayer was 
+This function stops the playback of the being played music and silences the 
+sound chips. If no music is being played or if no music player was 
 initialized, the function will do nothing. It never returns error.
 
 
@@ -2503,11 +2504,11 @@ initialized, the function will do nothing. It never returns error.
 
 Input:	 P(0) = 0 -> Pause music
 		1 -> Continue music
-	       -1 -> Reverse current status (replay <--> pause)
+	       -1 -> Reverse current status (play <--> pause)
 Output:  -
 
-This function pauses or continues the replay of a Moonblaster music. If no 
-music is being replayed or paused, or if the replayer was not initialized, 
+This function pauses or continues the playback of a Moonblaster music. If no 
+music is being played or paused, or if the player was not initialized, 
 the function will do nothing, but no error will be returned. If the specified 
 parameter is invalid, an error code 7 will be returned.
 
@@ -2520,7 +2521,7 @@ Input:	 P(0) = 0      -> Request for information only
 Output:  P(1) = -1 if a music is being faded
 	 P(2) = Current fade delay (-1 if the fade is paused)
 
-This function begins to fade out the music being replayed. The delay means 
+This function begins to fade out the music being played. The delay means 
 the number of clock cycles (of 1/50 or 1/60 seconds each) between fade 
 steps, so the smallest is the delay, the faster is the fade. Once the fade is 
 completed (the music main volume decreases to zero), the music will be 
@@ -2528,11 +2529,11 @@ automatically stopped: you don't need to stop it by yourself with function
 75.
 
 If P(0)=-1 the fade will be paused, that is, the music will remain being 
-normally replayed with the reached volume. To continue the fade, just execute 
+normally played with the reached volume. To continue the fade, just execute 
 again this function, specifying a new delay in P(0).
 
 If P(0)=0, this function will only set P(1) and P(2) with the specified 
-information. If no music is being replayed, or if the replayer was not 
+information. If no music is being played, or if the player was not 
 initialized, this function will do nothing. It never returns error.
 
 
@@ -2543,7 +2544,7 @@ Output:  P(7) = Number of readed bytes
 
 This function loads from the specified opened file a Music Module samplekit, 
 which must be saved in the Moonblaster format: 56 header bytes, which will be 
-copied into the appropriate zone of the replayer; and 32K of samples, which 
+copied into the appropriate zone of the player; and 32K of samples, which 
 will be transferred to the Music Module sample RAM.
 
 Data will be read from a previously opened file. This feature allows you to 
@@ -2561,7 +2562,7 @@ P(7). If this number is greatert than 16K, only the first 16K of the
 samplekit will have been transferred to the sample RAM. Otherwise, no data 
 will have been transferred to the sample RAM.
 
-If the replayer was not initialized or if no Music Module is found, this 
+If the player was not initialized or if no Music Module is found, this 
 functon will do nothing, but will not return error. If the whole samplekit is 
 successfully loaded, P(7) will not return 32824 but -32712, due to the BASIC 
 integer variables range (-32768 to 32767).
@@ -2590,7 +2591,7 @@ in P(6):P(7). In this case Moonsound sample RAM can have been modified, but
 work area will not have been updated, so a partial wavekit load can't be 
 supposed.
 
-If the Moonblaster Wave replayer was not initialized or if no Moonsound is 
+If the Moonblaster Wave player was not initialized or if no Moonsound is 
 found, this functon will do nothing, but will not return error. If the whole 
 samplekit is successfully loaded, P(6):P(7) will contain the wavekit size 
 (same as the file size if you just load a .MWK file).
@@ -2621,12 +2622,12 @@ segment allocation, like the DOS 2 RAM disk, NestorMan or InterNestor Suite.
 To solve this problem, use this function to let NestorBASIC know how many 
 segments we really need; the other segments will be freed and therefore will 
 become available for other programs. For example, if you will use a music 
-replayer (which will be installed on segment 5) and you need only one extra 
+player (which will be installed on segment 5) and you need only one extra 
 segment for data, then you should execute this function with P(0)=7; the 
 extra data segment will have number 6.
 
 If a number of segments lower than 6 is specified in P(0), NestorBASIC will 
-allocate 5 segments (see section 2), or 6 if a music replayer has been 
+allocate 5 segments (see section 2), or 6 if a music player has been 
 installed. If a number of segments higher than the total number of available 
 segments is specified, then as much segments as possible will be allocated 
 (up to 247), and P(0) will return the number of segments that have been 
@@ -2867,7 +2868,7 @@ functions are: 0, 26-28, 30, 33-41, 55-57, 71, 78, and 79.
 * Function 2: Read a byte from a segment
 * Function 3: Read a byte from a segment with address autoincrement
 * Function 4: Read an integer (2 bytes) from a segment
-* Function 5: Read an integr (2 bytes) from a segment
+* Function 5: Read an integer (2 bytes) from a segment
 	      with address autoincrement
 * Function 6: Write a byte to a segment
 * Function 7: Write a byte to a segment with address autoincrement
@@ -2951,21 +2952,21 @@ functions are: 0, 26-28, 30, 33-41, 55-57, 71, 78, and 79.
 * Function 65: Obtain information about interruptw
 * Function 66: Define or stop an user defined interrupt routine
 
---- PSG sound effects replay
+--- PSG sound effects playback
 
 * Function 67: Obtain information about the PSG sound effects
 * Function 68: Initialization of a PSG sound effects set
 * Function 69: Play a PSG sound effect
-* Function 70: Stop PSG sound effect replay
+* Function 70: Stop PSG sound effect playback
 
---- Moonblaster music replay
+--- Moonblaster music playback
 
 * Function 71: Load and initialization, or uninstall,
-	       of the Moonblaster replayer (S4)
-* Function 72: Obtain information about the music being replayed
+	       of the Moonblaster player (S4)
+* Function 72: Obtain information about the music being played
 * Function 73: Activation and deactivation of the sound chips
 * Function 74: Start playing a Moonblaster music
-* Function 75: Stop the music replay
+* Function 75: Stop the music playback
 * Function 76: Pause and continue the music
 * Function 77: Fade out the music
 * Function 78: Load a Music Module samplekit (S4)
@@ -3046,9 +3047,9 @@ Pointer to the segments table. The format of this table is as follows:
 Contains information about the NestorBASIC active interrupts:
 
 bit 0 = 1: User defined interrupt is active
-bit 1 = 1: PSG sound effect is being replayed
-bit 2 = 1: Moonblaster 1.4 music is being replayed
-bit 3 = 1: Moonblaster Wave music is being replayed
+bit 1 = 1: PSG sound effect is being played
+bit 2 = 1: Moonblaster 1.4 music is being played
+bit 3 = 1: Moonblaster Wave music is being played
 
 
 &H4113: PUTSLOT0
@@ -3332,24 +3333,24 @@ Returns information about the PSG sound effects.
 Input:	 A  = New maximum volume (-1 to leave it unchanged)
 Output:  A  = SFX set segment
 	 HL = SFX set begin address
-	 B  = Number of the SFX being replayed, or the last one replayed
-	 C  = Priority of the SFX being replayed, or the last one replayed
+	 B  = Number of the SFX being played, or the last one played
+	 C  = Priority of the SFX being played, or the last one played
 	 D  = Number of the highest existing sound effect
 	 E  = Maximum volume
 
 
 &H4161: GINFOMUS
 
-Returns information about the music being replayed and about the replayer.
+Returns information about the music being played and about the player.
 
 Input:	 -
-Output:  Cy = 1 -> No replayer is initialised,
+Output:  Cy = 1 -> No player is initialised,
 		   the other results are invalid.
-	 Cy = 0 -> Any replayer is initialised.
+	 Cy = 0 -> Any player is initialised.
 		   The other results are valid
-		   if a music is being replayed (see INT_DATA).
-	 A  = Logical segment of the music being replayed
-	 HL = Begin address of the music being replayed
+		   if a music is being played back (see INT_DATA).
+	 A  = Logical segment of the music being played
+	 HL = Begin address of the music being played
 	 B  = Found sound chips:
 	      bit 0 = 1 -> MSX-MUSIC found
 	      bit 1 = 1 -> MSX-AUDIO found
@@ -3365,14 +3366,14 @@ Output:  Cy = 1 -> No replayer is initialised,
 
 &H4164: REPTYPE
 
-This is a data byte that contains the type of the music replayer currently 
+This is a data byte that contains the type of the music player currently 
 loaded:
 
-0 = Moonblaster 1.4 replayer
-1 = Moonblaster Wave replayer
+0 = Moonblaster 1.4 player
+1 = Moonblaster Wave player
 
 Note that before looking for this information, you must check that actually 
-any replayer is loaded. Use function GINFOMUS (&H4161) for this.
+any player is loaded. Use function GINFOMUS (&H4161) for this.
 
 
 &H4165: GETF01
@@ -3442,7 +3443,7 @@ segment switching. In DOS 1 mode, the only way to do this is the use of a IN
 A,(&HFD) instruction, which in the Turbo-R computers does not work exactly in 
 the same way as in the MSX2/2+ computers.
 
-Thus, if you will use user interrupts, sound effects or music replay in your 
+Thus, if you will use user interrupts, sound effects or music play in your 
 program using NestorBASIC, it is recommended to do the following: check if 
 the computer is a Turbo-R (if PEEK(&H2D)=3) running in DOS 1 mode (use 
 function 1 to check this); in such case, show a message asking to reboot in 
