@@ -881,10 +881,35 @@ VRAM (блок 1). Адреса VRAM имеют диапазон &H0000-&HFFFF. 
 
 Если функции передано P(0)=0, то область основной памяти MSX-BASIC, занятая     
 обработчиком вызовов NestorBASIC (прим. 500 байт) не освобождается, что
-сохраняет резервирование памяти, сделанное командами CLEAR после загрузки
-NestorBASIC'а. Если функции передано P(0)<>0, резервирование памяти возвращается
-к параметрам, установленным до загрузки NestorBASIC'а. То есть, FRE(0)
+оставляет в силе схему распределения памяти, заданную командами CLEAR после
+загрузки NestorBASIC'а. Если функции передано P(0)<>0, схема распределения ОЗУ
+возвращается к параметрам, установленным до загрузки NestorBASIC'а. То есть, FRE(0)
 возвращает такое же значение, как до загрузки NestorBASIC'а. Учтите, что
 переменные в этом случае инициализируются.
 
 Эта функция никогда не выдает ошибки.
+
+* Функция 1: Получение общей информации о NestorBASIC'е и о логическом сегменте
+
+Вход:	 P(10)= Номер исследуемого сегмента
+Выход:  P(0) = Число доступных сегментов RAM segments
+	 P(1) = NestorBASIC main version
+	 P(2) = NestorBASIC secondary version, in BCD format
+		(must be shown in hexadecimal format)
+	 P(3) = MSX-DOS main version
+	 P(4) = MSX-DOS secondary version, in BCD format
+		(must be shown in hexadecimal format)
+	 P(5) = Amount of memory occuped in the BASIC main RAM
+		by the jump routine
+	 P(6) = VRAM size in K (64 or 128)
+	 P(7) = Begin address of the free area in segment 0
+                (&H3DA8 at most)
+	 P(8) = Number of last function called
+	 P(9) = Number of currently opened files
+	 P(10)= Maximum number of simultaneously opened files
+		(valid only under DOS 1)
+	 P(11)= Slot that contains the logical segment specified in P(0)
+		(255 if this segment does not exist or refers to VRAM)
+	 P(12)= Physical segment number of the logical segment
+		specified in P(0)
+	 F$(0)= Complete path of NBASIC.BIN file
