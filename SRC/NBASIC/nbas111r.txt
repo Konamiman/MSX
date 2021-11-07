@@ -892,24 +892,24 @@ VRAM (блок 1). Адреса VRAM имеют диапазон &H0000-&HFFFF. 
 * Функция 1: Получение общей информации о NestorBASIC'е и о логическом сегменте
 
 Вход:	 P(10)= Номер исследуемого сегмента
-Выход:  P(0) = Число доступных сегментов RAM segments
-	 P(1) = NestorBASIC main version
-	 P(2) = NestorBASIC secondary version, in BCD format
-		(must be shown in hexadecimal format)
-	 P(3) = MSX-DOS main version
-	 P(4) = MSX-DOS secondary version, in BCD format
-		(must be shown in hexadecimal format)
-	 P(5) = Amount of memory occuped in the BASIC main RAM
-		by the jump routine
-	 P(6) = VRAM size in K (64 or 128)
-	 P(7) = Begin address of the free area in segment 0
-                (&H3DA8 at most)
-	 P(8) = Number of last function called
-	 P(9) = Number of currently opened files
-	 P(10)= Maximum number of simultaneously opened files
-		(valid only under DOS 1)
-	 P(11)= Slot that contains the logical segment specified in P(0)
-		(255 if this segment does not exist or refers to VRAM)
-	 P(12)= Physical segment number of the logical segment
-		specified in P(0)
-	 F$(0)= Complete path of NBASIC.BIN file
+Выход:   P(0) = Число доступных сегментов ОЗУ
+	 P(1) = мажорная версия NestorBASIC
+	 P(2) = минорная версия NestorBASIC, в формате BCD (должна показываться 
+                в шестнадцатиричном формате)
+	 P(3) = Мажорная версия MSX-DOS
+         P(4) = Минорная версия MSX-DOS, в формате BCD (должна показываться 
+                в шестнадцатиричном формате)
+	 P(5) = Размер области памяти в основном ОЗУ MSX-BASIC,
+	        занятой обработчиком USR-вызовов NestorBASIC
+	 P(6) = Объем VRAM в Кб (64 или 128)
+	 P(7) = Адрес начала свободной области в сегменте 0
+                (&H3DA8 как максимум)
+	 P(8) = Номер последней вызванной функции
+	 P(9) = Число открытых файлов
+	 P(10)= Максимальное количество одновременно открытых файлов
+		(действительно только под DOS 1)
+	 P(11)= Слот, которому принадлежит логический сегмент, указанный в P(0)
+		(255, если сегмент не существует, или является сегментом VRAM)
+	 P(12)= Номер физического сегмента, соответствующего логическому сегменту,
+		указанному в P(0)
+	 F$(0)= Полный путь к файлу NBASIC.BIN
