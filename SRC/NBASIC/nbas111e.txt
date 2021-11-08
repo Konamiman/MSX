@@ -902,7 +902,7 @@ variables are initialized.
 This function never returns error.
 
 
-* Function 1: Summary information on NestorBASIC and a specific RAM segment
+* Function 1: Summary information on NestorBASIC and a specific RAM segment     
 
 Input:	 P(10)= Logical segment to investigate
 Output:  P(0) = Number of available RAM segments
@@ -927,9 +927,8 @@ Output:  P(0) = Number of available RAM segments
 		specified in P(0)
 	 F$(0)= Complete path to NBASIC.BIN file
 
-In the case of DOS 2, the maximum number of simultaneously opened files 
-depends on the state of the DOS internal memory, but will never be bigger 
-than 63.
+In case of DOS 2, the maximum number of simultaneously opened files depends     
+on the state of DOS internal memory, but will never exceed 63.
 
 This function returns an error code of -1 if the logical segment specified in 
 P(0) does not exist, refers to VRAM or is the 255. However, even in this case 
@@ -2169,9 +2168,9 @@ This function can only be used in SCREEN 0 mode with at least 41 columns;
 otherwise nothing will be done, but no error will be returned. If P(1)>79 
 and/or P(2)>27, an error -1 will be returned.
 
-This function does not check if the block surpasses the screen limits. If 
+This function does not check if the block exceeds screen dimensions. If 
 the block surpasses column 79, it will continue at the column 0 of the 
-next line. But if a part of the block surpasses line 27, this part will 
+next line. But if a part of the block exceeds line 27, this part will 
 not be shown.
 
 
