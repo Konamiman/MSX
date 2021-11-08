@@ -935,8 +935,8 @@ P(0) does not exist, refers to VRAM or is the 255. However, even in this case
 the results returned in P(0) to P(10) will be valid.
 
 The number returned in P(0) by this function is the same as the number 
-returned in P(0) by function 81; that is, it is the number of segments 
-allocated by NestorBASIC. By default (if function 81 has never been called 
+returned in P(0) by function 80; that is, it is the number of segments 
+allocated by NestorBASIC. By default (if function 80 has never been called 
 after installing NestorBASIC), NestorBASIC allocates for itself all the 
 available RAM segments (up to 247) at installation time.
 
