@@ -904,7 +904,7 @@ This function never returns error.
 
 * Function 1: Summary information on NestorBASIC and a specific RAM segment     
 
-Input:	 P(10)= Logical segment to investigate
+Input:	 P(0)= Logical segment to investigate
 Output:  P(0) = Number of available RAM segments
 	 P(1) = NestorBASIC major version
 	 P(2) = NestorBASIC minor version, in BCD format
