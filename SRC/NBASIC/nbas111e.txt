@@ -930,25 +930,25 @@ Output:  P(0) = Number of available RAM segments
 In case of DOS 2, the maximum number of simultaneously opened files depends     
 on the state of DOS internal memory, but will never exceed 63.
 
-This function returns an error code of -1 if the logical segment specified in 
+This function returns an error code of -1 if the logical segment specified in   
 P(0) does not exist, refers to VRAM or is the 255. However, even in this case 
 the results returned in P(0) to P(10) will be valid.
 
-The number returned in P(0) by this function is the same as the number 
+The number returned in P(0) by this function is the same as the number          
 returned in P(0) by function 80; that is, it is the number of segments 
 allocated by NestorBASIC. By default (if function 80 has never been called 
 after installing NestorBASIC), NestorBASIC allocates for itself all the 
 available RAM segments (up to 247) at installation time.
 
-F$(0) will be just a drive letter and a colon under DOS 1 (for example "A:"), 
+F$(0) will be just a drive letter and a colon under DOS 1 (for example "A:"),   
 and a drive+directory finished with "\" under DOS 2 (for example 
 "C:\UTILS\AMAZING\").
 
-Address returned in P(7) dependes on NestorBASIC version, but it will be 
-always equal to or smaller than &H3DA8; that is, at least 600 bytes will be 
-always available at the end of the NestorBASIC segment. This area may be 
-used, for example, for temporary storage of TCP data or a UDP datagram when 
-using InterNestor Suite with NestorBASIC.
+Address returned in P(7) depends on NestorBASIC version, but it will always     
+be less or equal to &H3DA8; that is, at least 600 bytes will be always available
+at the end of NestorBASIC segment. This area may be used, for example, for
+temporary storage of TCP data or a UDP datagram when using InterNestor Suite
+with NestorBASIC.
 
 P(8) returns the number of the last function called, but function 1 itself is 
 not counted. So if you call, for example, functions 64, 3, 10, 1, 1, 1 in 
