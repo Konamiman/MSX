@@ -962,14 +962,14 @@ functions were called other than function 1 since NestorBASIC was installed.
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Readed byte
+Output:  P(2) = Read byte
 
 
 * Function 3: Read a byte from a segment with address autoincrement
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Readed byte
+Output:  P(2) = Requested byte
 	 P(1) = P(1) + 1
 
 
@@ -977,7 +977,7 @@ Output:  P(2) = Readed byte
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Readed integer
+Output:  P(2) = Requested integer
 
 Low byte is read from address P(1), and high byte from address P(1)+1.
 
