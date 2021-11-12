@@ -962,14 +962,14 @@ functions were called other than function 1 since NestorBASIC was installed.
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Read byte
+Output:  P(2) = The byte received
 
 
 * Function 3: Read a byte from a segment with address autoincrement
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Requested byte
+Output:  P(2) = The byte received
 	 P(1) = P(1) + 1
 
 
@@ -977,7 +977,7 @@ Output:  P(2) = Requested byte
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Requested integer
+Output:  P(2) = The integer received
 
 Low byte is read from address P(1), and high byte from address P(1)+1.
 
@@ -987,7 +987,7 @@ Low byte is read from address P(1), and high byte from address P(1)+1.
 
 Input:	 P(0) = Segment
 	 P(1) = Address
-Output:  P(2) = Readed integer
+Output:  P(2) = The integer received
 	 P(1) = P(1) + 2
 
 Low byte is read from address P(1), and high byte from address P(1)+1.
@@ -1003,7 +1003,7 @@ Output:  -
 
 * Function 7: Write a byte to a segment with address autoincrement
 
-Input:	 P(0) = Segmento
+Input:	 P(0) = Segment
 	 P(1) = Address
 	 P(2) = Byte to be written
 Output:  P(1) = P(1) + 1
@@ -1045,12 +1045,12 @@ Output:  P(1) = P(1) + P(4) if P(5)<>0
 P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
 
 
-* Function 11: Fill a RAM zone with a byte
+* Function 11: Fill a RAM area with a byte
 
 Input:	 P(0) = Segment
 	 P(1) = Begin address
 	 P(2) = Byte
-	 P(3) = Zone length
+	 P(3) = Area length
 Output:  -
 
 P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
@@ -1061,7 +1061,7 @@ P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
 Input:	 P(0) = Segment
 	 P(1) = Begin address
 	 P(2) = Byte
-	 P(3) = Zone length
+	 P(3) = Area length
 Output:  P(1) = P(1) + P(3)
 
 P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
