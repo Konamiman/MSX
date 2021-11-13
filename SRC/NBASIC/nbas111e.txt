@@ -953,8 +953,8 @@ with NestorBASIC.
 WARNING! In fact, this is false. According to tests, performed on real hardware,
 and emulators as well, function returns &H7C60 in P(7), which means that
 NestorBASIC is rather located in segment 1, not 0. And, thus, segment 0 is
-very likely to be occupied by X-BASIC. That is the reverse-opposite of what
-is being described in above sections of this document!
+apparently occupied by X-BASIC. That is the reverse-opposite of what
+is being described in the above sections of this document!
 
 P(8) returns the number of the last function called, but function 1 itself is 
 not counted. So if you call, for example, functions 64, 3, 10, 1, 1, 1 in 
