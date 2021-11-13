@@ -1053,7 +1053,7 @@ Input:	 P(0) = Segment
 	 P(3) = Area length
 Output:  -
 
-P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
+P(1)+P(3) must be lower than &H4000, otherwise the result is unpredictable.
 
 
 * Function 12: Fill a RAM zone with a byte with address autoincrement
@@ -1153,7 +1153,7 @@ Input	 P(0) = Source VRAM block
 Output:  P(1) = P(1) + P(4) if P(5)<>0
 	 P(2):P(3) = P(2):P(3) + P(4) if P(6)<>0
 
-P(1)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
+!!!QUESTIONABLE!!! P(1)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
 
 
 * Function 22: Data block transfer from RAM to VRAM
