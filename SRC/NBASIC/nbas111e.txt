@@ -1064,7 +1064,7 @@ Input:	 P(0) = Segment
 	 P(3) = Area length
 Output:  P(1) = P(1) + P(3)
 
-P(3)+P(4) must be lower than &H4000, otherwise the result is unpredictable.
+P(1)+P(3) must be lower than &H4000, otherwise the result is unpredictable.
 
 
 10.4. FUNCTIONS FOR VRAM ACCESS
