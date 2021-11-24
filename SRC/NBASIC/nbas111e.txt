@@ -9,7 +9,7 @@ It is intended for being used within MSX-BASIC programs. Without losing
 Turbo-BASIC compatibility, NestorBASIC gives you the following capabilities:
 
 - Full access to all the available memory of the computer (all existing memory  
-in case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
+  in case of DOS 1, all free memory in the case of DOS 2), up to 4 Mb.
 - Access to all VRAM, with data block exchange within VRAM and between RAM and 
   VRAM feature.
 - Storing BASIC programs in the mapped RAM, with the capability to jump
