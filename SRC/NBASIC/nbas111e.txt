@@ -792,7 +792,7 @@ ensemble use of NestorBASIC and InterNestor Suite.
 9.4. USING INTERNESTOR LITE
 
 InterNestor Lite is much simpler than InterNestor Suite, thus it's also easier
-to use it from within the NestorBASIC. Only one function is provided (function 
+to use it from within NestorBASIC. Only one function is provided (function 
 86), allowing the execution of any routine from InterNestor Lite code segment.
 To read or write to its data segment, you must use the GET_VAR, SET_VAR and
 COPY_DATA routines of the code segment.
