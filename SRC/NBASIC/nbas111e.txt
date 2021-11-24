@@ -165,7 +165,7 @@ function description).
 only if you will not use the compiler.
 
 - Segment 2 is always connected to page 2 (addreses &H8000 to &HBFFF), and 
-contains the BASIC program being executed and part of its' variables.
+contains the BASIC program being executed and part of its variables.
 
 - Segment 3 is always connected to page 3 (addresses &HC000 to &HFFFF), and 
 contains the MSX work area and part of the BASIC program variables. Be 
