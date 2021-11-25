@@ -207,9 +207,10 @@ of segments found by NestorBASIC is S, then segments 0 to S-1 will correspond to
 RAM segments, as explained above. But segments S to S+7 or S+3 (depending on
 VRAM capacity, 128K or 64K) are also available, and they refer to VRAM.
 
-Let's go back to previos example. When NestorBASIC is installed resident, the   
-returned number of segments value is 72. Thus, segments 72 to 79 (if computer
-has 128K VRAM) or 72 to 75 (if computer has 64K VRAM) are VRAM segments.
+Let's go back to previous example. When NestorBASIC gets loaded resident, or    
+after using the function 1 (see the list of functions), it returns number of
+segments value equal to 72. Thus, segments 72 to 79 (if computer has 128K VRAM)
+or 72 to 75 (if computer has 64K VRAM) are VRAM segments.
 
 The correspondence between segments and VRAM addresses is reverse: the segments 
 with lower numbers refer to the higher VRAM addresses. It is designed this way
