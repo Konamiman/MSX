@@ -187,13 +187,13 @@ stepping from version 0.07 to 1.00. In version 0.07 and previous versions,
 segment 2 was NestorBASIC internal buffer, and segment 4 was BASIC page 2 
 RAM.
 
-When using the data block exchange functions, be careful for not surpassing 
+When using the data block exchange functions, be careful for not surpassing     
 the address &H3FFF when adding the block length to the destination address 
 (for example, don't try to transfer &H2000 bytes specifying address &H3000 as 
-destination address). In this case, segment 0 or segment 3 will be overwriten, 
+destination address). In this case, segment 0 or segment 3 will be overwriten,
 and the result will be unpredictable.
 
-Note: using function 80 it is possible to force NestorBASIC to allocate less 
+Note: using function 80 it is possible to force NestorBASIC to allocate less    
 memory segments than the total amount available. This is useful under DOS 2 
 when other programs which also need to allocate memory (for example RAM disk 
 or NestorMan) are used simultaneously with NestorBASIC. See section 10 for 
@@ -202,10 +202,10 @@ the functions' description.
 
 3.2. USING VRAM AS LOGICAL SEGMENTS
 
-NestorBASIC allows you to use VRAM to emulate extra RAM segments. If NestorBASIC
-found a number S of segments, segments 0 to S-1 correspond to RAM segments,
-as explained above. But segments S to S+7 or S+3 (depending on VRAM capacity,
-128K or 64K) are also available, and they refer to VRAM.
+NestorBASIC allows you to use VRAM to emulate extra RAM segments. If the number 
+of segments found by NestorBASIC is S, then segments 0 to S-1 will correspond to
+RAM segments, as explained above. But segments S to S+7 or S+3 (depending on
+VRAM capacity, 128K or 64K) are also available, and they refer to VRAM.
 
 Let's go back to previos example. When NestorBASIC is installed resident, the   
 returned number of segments value is 72. Thus, segments 72 to 79 (if computer
