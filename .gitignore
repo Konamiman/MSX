@@ -3,5 +3,3 @@ syntax: glob
 .vs/
 .vscode/
 *.suo
-*.com
-
