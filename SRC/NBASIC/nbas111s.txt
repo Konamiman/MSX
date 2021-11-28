@@ -930,7 +930,7 @@ Esta funci¢n nunca devuelve error.
 * Funci¢n 1: Obtenci¢n de informaci¢n general sobre NestorBASIC y sobre un 
 	     segmento l¢gico
 
-Entrada: P(10)= Segmento l¢gico a investigar
+Entrada: P(0)= Segmento l¢gico a investigar
 Salida:  P(0) = N£mero de segmentos de RAM disponibles
 	 P(1) = Versi¢n principal de NestorBASIC
 	 P(2) = Versi¢n secundaria de NestorBASIC, en formato BCD (visualizar
