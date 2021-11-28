@@ -434,9 +434,8 @@ The DOS 2 error codes are the following:
 5. GRAPHICS COMPRESSION AND DESCOMPRESSION
 
 NestorBASIC includes functions for compression of the graphic data from VRAM    
-to RAM, and decompression from RAM to VRAM. The compression format is the 
-one used by the routine, showing Sunrise logo, it is 
-byte-based and is as follows:
+to RAM, and decompression from RAM to VRAM. The compression format is the one
+used by Sunrise to show their logo, it is byte-based and is as follows:
 
 - Unrepeated bytes (up to 63):
 
