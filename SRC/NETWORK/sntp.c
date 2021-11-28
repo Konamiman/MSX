@@ -2,7 +2,9 @@
    By Konamiman 2/2010
    v1.1 by Oduvaldo Pavan Junior ( ducasp@gmail.com )
    v1.1 fixes when the count of seconds will end with HH:MM:60 when
-   it should be HH:MM+1:00
+        it should be HH:MM+1:00
+   v1.2 adds retries and the /z parameter, see
+        https://github.com/Konamiman/MSX/pull/13
 
    Compilation command line:
 
@@ -84,7 +86,7 @@ enum TcpipErrorCodes {
 };
 
 const char* strPresentation=
-    "SNTP time setter v1.2 for the TCP/IP UNAPI 1.1\r\n"
+    "SNTP time setter for the TCP/IP UNAPI 1.2\r\n"
     "By Oduvaldo and Konamiman\r\n"
     "\r\n";
 
