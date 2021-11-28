@@ -84,8 +84,8 @@ enum TcpipErrorCodes {
 };
 
 const char* strPresentation=
-    "SNTP Time Setter v1.2\r\n"
-    "for the TCP/IP UNAPI 1.1\r\n"
+    "SNTP time setter v1.2 for the TCP/IP UNAPI 1.1\r\n"
+    "By Oduvaldo and Konamiman\r\n"
     "\r\n";
 
 const char* strUsage=
@@ -99,9 +99,7 @@ const char* strUsage=
     "/r <retries>: Number of retries to get information from time server (Default:1)\r\n"
     "/d: Do not change MSX clock, only display the received value\r\n"
     "/v: Verbose mode\r\n"
-    "/h: This help\r\n"
-    "\r\n"
-    "original by Konamiman\r\n";
+    "/h: This help\r\n";
 
 const char* strInvalidParameter = "Invalid parameter(s)";
 const char* strNoNetwork = "No network connection available";
