@@ -319,8 +319,8 @@ MSX-DOS capabilities:
 4.1. THE ARRAY F$
 
 For passing filenames and pathnames to these functions, a string array named    
-F$ is used. Functions for search, renaming and moving files, and for parsing  
-pathname require two strings, so F$ of two elements has to be declared
+F$ is used. Functions for search, renaming and moving files, and for parsing
+pathname require two strings, so, an array F$ of two elements has to be declared
 [DIM F$(1)]. Rest of the functions require just one string, therefore, if none
 of that four functions mentioned above are needed, you can define the array
 with only one element [DIM F$(0)]. It is especially recommended in case of
