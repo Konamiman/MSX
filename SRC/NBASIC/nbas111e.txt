@@ -212,7 +212,7 @@ or after using the function 1 (see the list of functions), it returns number of
 segments value equal to 72. Hence - segments 72 through 79 (if computer has 128K
 VRAM) or 72 through 75 (if computer has 64K VRAM) are VRAM segments.
 
-The correspondence between segments and VRAM addresses is reverse: the segments 
+The correspondence between segments and VRAM addresses is reversed: the segments 
 with lower numbers refer to the higher VRAM addresses. It is designed this way
 to facilitate the task for a user when discarding the VRAM segments
 corresponding to screen visualization area: those segments will be the last 
@@ -220,7 +220,7 @@ ones when working in text mode, or when using the page 0 in graphic modes.
 
 Let's return to the given example: the computer with 72 RAM segments and 
 128K VRAM. If the program works in text mode, only the first 2000 bytes of 
-VRAM are used: this VRAM area corresponds to highest VRAM segment, with 
+VRAM are used: this VRAM area corresponds to the highest VRAM segment, with 
 number 79. Thus, the user program can freely use segments 72 to 78, and the
 range of available segments becomes 0 to 78, without having to discard any 
 in-between segments. If the program works in SCREEN 5 and uses graphic page 0
