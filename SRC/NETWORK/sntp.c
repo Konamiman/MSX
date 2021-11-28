@@ -1,18 +1,19 @@
 /* SNTP client for Ethernet UNAPI
    By Konamiman 2/2010
    v1.1 by Oduvaldo Pavan Junior ( ducasp@gmail.com )
-   
-   v1.1 fixes when the count of seconds will end with HH:MM:60 when 
-   it should be HH:MM+1:00
+   v1.1 fixes when the count of seconds will end with HH:MM:60 when
+        it should be HH:MM+1:00
+   v1.2 adds retries and the /z parameter, see
+        https://github.com/Konamiman/MSX/pull/13
 
    Compilation command line:
 
-   sdcc --code-loc 0x180 --data-loc 0 -mz80 --disable-warning 196 
-        --no-std-crt0 crt0msx_msxdos_advanced.rel printf_simple.rel 
-	putchar_msxdos.rel asm.lib sntp.c
+   sdcc --code-loc 0x180 --data-loc 0 -mz80 --disable-warning 196
+        --no-std-crt0 crt0msx_msxdos_advanced.rel printf_simple.rel
+       putchar_msxdos.rel asm.lib sntp.c
 
    hex2bin -e com sntp.ihx
-   
+
    ASM.LIB, MSXCHAR.REL and crt0msx_msxdos_advanced.rel
    are available at www.konamiman.com
 
@@ -20,6 +21,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "asm.h"
 
 #define LowerCase(c) ((c) | 32)
@@ -47,8 +49,6 @@
 #define SECS_1900_TO_2010 ((unsigned long)(3471292800))
 //Secs from 2036-1-1 0:00:00 to 2036-02-07 6:28:16
 #define SECS_2036_TO_2036 ((unsigned long)(3220096))
-
-unsigned long SecsPerMonth[12];
 
 // Just in case you want to define a faster print function
 // for printing plain strings (without formatting).
@@ -86,25 +86,27 @@ enum TcpipErrorCodes {
 };
 
 const char* strPresentation=
-    "SNTP time setter for the TCP/IP UNAPI 1.1\r\n"
-    "by Oduvaldo\r\n"
-	"based on SNTP 1.0 by Konamiman\r\n"
+    "SNTP time setter for the TCP/IP UNAPI 1.2\r\n"
+    "By Oduvaldo and Konamiman\r\n"
     "\r\n";
 
 const char* strUsage=
-    "Usage: sntp <host>|. [<time zone>] [/d] [/v]\r\n"
+    "Usage: sntp [<host>] [/z <time zone>] [/r <retries>] [/d] [/v] [/h]\r\n"
     "\r\n"
     "<host>: Name or IP address of the SNTP time server.\r\n"
-    "        If \".\" is specified, the environment item TIMESERVER will be used.\r\n"
-    "<time zone>: Formatted as [+|-]hh:mm where hh=00-12, mm=00-59\r\n"
+    "        If nothing is specified, the environment item TIMESERVER will be used.\r\n"
+    "/z <time zone>: Formatted as [+|-]hh:mm where hh=00-12, mm=00-59\r\n"
     "    This value will be added or substracted from the received time.\r\n"
     "    The time zone can also be specified in the environment item TIMEZONE.\r\n"
+    "/r <retries>: Number of retries to get information from time server (Default:1)\r\n"
     "/d: Do not change MSX clock, only display the received value\r\n"
-    "/v: Verbose mode\r\n";
+    "/v: Verbose mode\r\n"
+    "/h: This help\r\n";
 
 const char* strInvalidParameter = "Invalid parameter(s)";
 const char* strNoNetwork = "No network connection available";
 const char* strInvalidTimeZone = "Invalid time zone";
+const char* strInvalidRetriesSize = "Retries must be between 0 and 10";
 const char* strOK = "OK\r\n";
 
 Z80_registers regs;
@@ -119,16 +121,16 @@ byte* buffer;
 int year;
 byte month, day, hour, minute, second;
 long seconds;
-char* timeZoneString;
-char* hostString;
 uint timeZoneSeconds;
 uint timeZoneHours;
 uint timeZoneMinutes;
 int ticksWaited;
 int sysTimerHold;
+int retries;
 
-byte paramsBlock[8];
+byte* timeServerBuffer;
 byte timeZoneBuffer[8];
+byte paramsBlock[8];
 
 #define PrintIfVerbose(x) if(verbose) {print(x);}
 
@@ -138,9 +140,13 @@ void PrintUsageAndEnd();
 void SecondsToDate(unsigned long seconds, int* year, byte* month, byte* day, byte* hour, byte* minute, byte* second);
 int IsValidTimeZone(byte* timeZoneString);
 int IsDigit(char theChar);
-void Terminate(char* errorMessage);
+void getTime();
+int queryTimeServer();
 void CheckYear();
-
+void CloseConnection();
+void Terminate(char* errorMessage);
+char* TimeServerEnv();
+char* TimeZoneEnv();
 
 /**********************
  ***  MAIN is here  ***
@@ -149,85 +155,73 @@ void CheckYear();
 int main(char** argv, int argc)
 {
     char paramLetter;
+    int skipNext;
+    char* timeZoneString;
+    char* timeServerString;
 
     //* Initialize variables
-
+    skipNext = 0;
     verbose = 0;
     displayOnly = 0;
-    timeZoneBuffer[0] = 0;
-    timeZoneString = NULL;
+    timeZoneString = TimeZoneEnv();
+    timeServerString = TimeServerEnv();
     buffer = BUFFER;
     conn = 0;
-
-    SecsPerMonth[0]=SECS_IN_MONTH_31;
-    SecsPerMonth[1]=SECS_IN_MONTH_28;
-    SecsPerMonth[2]=SECS_IN_MONTH_31;
-    SecsPerMonth[3]=SECS_IN_MONTH_30;
-    SecsPerMonth[4]=SECS_IN_MONTH_31;
-    SecsPerMonth[5]=SECS_IN_MONTH_30;
-    SecsPerMonth[6]=SECS_IN_MONTH_31;
-    SecsPerMonth[7]=SECS_IN_MONTH_31;
-    SecsPerMonth[8]=SECS_IN_MONTH_30;
-    SecsPerMonth[9]=SECS_IN_MONTH_31;
-    SecsPerMonth[10]=SECS_IN_MONTH_30;
-    SecsPerMonth[11]=SECS_IN_MONTH_31;
-
-    //* Try to get time zone from environment item
-
-    timeZoneBuffer[0] = '\0';
-    regs.Words.HL = (int)"TIMEZONE";
-    regs.Words.DE = (int)timeZoneBuffer;
-    regs.Bytes.B = 8;
-    DosCall(_GENV, &regs, REGS_MAIN, REGS_AF);
-    if(timeZoneBuffer[0] != (unsigned char)'\0' && IsValidTimeZone(timeZoneBuffer)) {
-        timeZoneString = timeZoneBuffer;
-    }
+    retries = 1;
 
     //* Parse parameters after the host name
 
-    if(argc == 0) {
-        print(strPresentation);
+    if(argc == 0 && timeServerString[0] == '\0') {
         PrintUsageAndEnd();
     }
 
-    for(param=1; param<argc; param++) {
+    for(param=0; param<argc; param++) {
+        if (skipNext == 1) {
+            skipNext = 0;
+            continue;
+        }
         if(argv[param][0] == '/') {
             paramLetter = LowerCase(argv[param][1]);
             if(paramLetter == 'v') {
                 verbose = 1;
             } else if(paramLetter == 'd') {
                 displayOnly = 1;
+            } else if(paramLetter == 'r') {
+                retries = atoi(argv[param + 1]);
+                skipNext = 1;
+                if(retries < 0 || retries > 10) {
+                    Terminate(strInvalidRetriesSize);
+                }
+            } else if(paramLetter == 'z') {
+                timeZoneString = argv[param + 1];
+                skipNext = 1;
+                if(!IsValidTimeZone(timeZoneString)) {
+                    Terminate(strInvalidTimeZone);
+                }
+            } else if(paramLetter == 'h') {
+                PrintUsageAndEnd();
             } else {
                 Terminate(strInvalidParameter);
             }
         } else {
-            timeZoneString = argv[param];
-            if(!IsValidTimeZone(timeZoneString)) {
-                Terminate(strInvalidTimeZone);
-            }
+          timeServerString = argv[param];
         }
     }
 
     PrintIfVerbose(strPresentation);
 
-    //* Try to get time server from environment item
-    //  if no time server was specified
+    i = UnapiGetCount("TCP/IP");
+    if(i==0) {
+        Terminate("No TCP/IP UNAPI implementations found");
+    }
+    UnapiBuildCodeBlock(NULL, i, &codeBlock);
 
-    if(argv[0][0]=='.' && argv[0][1]=='\0') {
-        buffer[0] = '\0';
-        regs.Words.HL = (int)"TIMESERVER";
-        regs.Words.DE = (int)buffer;
-        regs.Bytes.B = 255;
-        DosCall(_GENV, &regs, REGS_MAIN, REGS_AF);
-        if(buffer[0] == '\0') {
-            Terminate("No time server specified and no TIMESERVER environment item was found.");
-        }
-        hostString = buffer;
-        if(verbose) {
-            printf("Time server is: %s\r\n", buffer);
-        }
-    } else {
-        hostString = argv[0];
+    if(timeServerString[0] == '\0') {
+        Terminate("No time server specified and no TIMESERVER environment item was found.");
+    }
+
+    if(verbose) {
+        printf("Time server is: %s\r\n", timeServerString);
     }
 
     //* Parse time zone
@@ -248,14 +242,8 @@ int main(char** argv, int argc)
 
     //* Initialize TCP/IP, close transient UDP connections, open connection for time server port
 
-    i = UnapiGetCount("TCP/IP");
-    if(i==0) {
-        Terminate("No TCP/IP UNAPI implementations found");
-    }
-    UnapiBuildCodeBlock(NULL, 1, &codeBlock);
+    CloseConnection();
 
-    regs.Bytes.B = 0;
-    UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
     if(regs.Bytes.A == ERR_NOT_IMP) {
         Terminate("This TCP/IP UNAPI implementation does not support UDP connections");
     }
@@ -279,7 +267,7 @@ int main(char** argv, int argc)
 
     PrintIfVerbose("Resolving host name... ");
 
-    regs.Words.HL = (int)hostString;
+    regs.Words.HL = (int)timeServerString;
     regs.Bytes.B = 0;
     UnapiCall(&codeBlock, TCPIP_DNS_Q, &regs, REGS_MAIN, REGS_MAIN);
     if(regs.Bytes.A == ERR_NO_NETWORK) {
@@ -327,69 +315,7 @@ int main(char** argv, int argc)
         printf("OK, %i.%i.%i.%i\r\n", paramsBlock[0], paramsBlock[1], paramsBlock[2], paramsBlock[3]);
     }
 
-    //* Open a new UDP connection and send request
-
-    PrintIfVerbose("Querying the time server... ");
-
-    *buffer=0x1B;
-    for(i=1; i<48; i++) {
-        buffer[i]=0;
-    }
-
-    paramsBlock[4] = SNTP_PORT;
-    paramsBlock[5] = 0;
-    paramsBlock[6] = 48;
-    paramsBlock[7] = 0;
-
-    regs.Bytes.B = conn;
-    regs.Words.HL=(int)buffer;
-    regs.Words.DE=(int)paramsBlock;
-
-    UnapiCall(&codeBlock, TCPIP_UDP_SEND, &regs, REGS_MAIN, REGS_MAIN);
-    if(regs.Bytes.A != 0) {
-        sprintf(buffer, "Unknown error when sending request to time server (code %i)", regs.Bytes.A);
-        Terminate(buffer);
-    }
-
-    //* Wait for a reply and check that it is correct
-
-    ticksWaited = 0;
-    do {
-        sysTimerHold = *SYSTIMER;
-        UnapiCall(&codeBlock, TCPIP_WAIT, &regs, REGS_MAIN, REGS_NONE);
-        while(*SYSTIMER == sysTimerHold);
-        ticksWaited++;
-        if(ticksWaited >= TICKS_TO_WAIT) {
-            Terminate("The time server did not send a reply");
-        }
-        regs.Bytes.B = conn;
-        regs.Words.HL = (int)buffer;
-        regs.Words.DE = 48;
-        UnapiCall(&codeBlock, TCPIP_UDP_RCV, &regs, REGS_MAIN, REGS_MAIN);
-    } while(regs.Bytes.A == ERR_NO_DATA || (
-        (regs.Bytes.L != paramsBlock[0]) ||
-        (regs.Bytes.H != paramsBlock[1]) ||
-        (regs.Bytes.E != paramsBlock[2]) ||
-        (regs.Bytes.D != paramsBlock[3])));
-
-    if(regs.Bytes.A != 0) {
-        sprintf(buffer, "Unknown error when waiting a reply from the time server (code %i)", regs.Bytes.A);
-        Terminate(buffer);
-    }
-
-    if(regs.UWords.BC < 48) {
-        Terminate("The server returned a too short packet");
-    }
-
-    if(buffer[1] == 0) {
-        Terminate("The server returned a \"Kiss of death\" packet\r\n(are you querying the server too often?)");
-    }
-
-    PrintIfVerbose(strOK);
-
-    if(buffer[0] & 0xC0 == 0xC0 && verbose) {
-        print("WARNING: Error returned by server: clock is not synchronized\r\n");
-    }
+    getTime();
 
     //* Parse the obtained time and add the time zone offset
 
@@ -459,14 +385,148 @@ int main(char** argv, int argc)
 
 void PrintUsageAndEnd()
 {
+    print(strPresentation);
     print(strUsage);
     DosCall(0, &regs, REGS_MAIN, REGS_NONE);
+}
+
+char* TimeServerEnv()
+{
+  timeServerBuffer = BUFFER;
+  timeServerBuffer[0] = '\0';
+  regs.Words.HL = (int)"TIMESERVER";
+  regs.Words.DE = (int)timeServerBuffer;
+  regs.Bytes.B = 255;
+  DosCall(_GENV, &regs, REGS_MAIN, REGS_AF);
+
+  return timeServerBuffer;
+}
+
+char* TimeZoneEnv()
+{
+  timeZoneBuffer[0] = '\0';
+  regs.Words.HL = (int)"TIMEZONE";
+  regs.Words.DE = (int)timeZoneBuffer;
+  regs.Bytes.B = 8;
+  DosCall(_GENV, &regs, REGS_MAIN, REGS_AF);
+  if(timeZoneBuffer[0] != (unsigned char)'\0' && IsValidTimeZone(timeZoneBuffer)) {
+      return timeZoneBuffer;
+  }
+  return '\0';
+}
+
+void getTime()
+{
+    int queryErrorCode;
+    int currentTry;
+
+    currentTry = 0;
+
+    PrintIfVerbose("Querying the time server...");
+
+    do {
+        PrintIfVerbose(".");
+        currentTry++;
+        queryErrorCode = queryTimeServer();
+    } while (queryErrorCode != 0 && currentTry <= retries);
+
+    switch(queryErrorCode) {
+        case 1 :
+            sprintf(buffer, "Unknown error when sending request to time server (code %i)", regs.Bytes.A);
+            Terminate(buffer);
+            break;
+        case 2 :
+            sprintf(buffer, "Unknown error when waiting a reply from the time server (code %i)", regs.Bytes.A);
+            Terminate(buffer);
+            break;
+        case 3 :
+            Terminate("The server returned a too short packet");
+            break;
+        case 4 :
+            Terminate("The server returned a \"Kiss of death\" packet\r\n(are you querying the server too often?)");
+            break;
+    }
+}
+
+int queryTimeServer()
+{
+    //* Open a new UDP connection and send request
+    *buffer=0x1B;
+    for(i=1; i<48; i++) {
+        buffer[i]=0;
+    }
+
+    paramsBlock[4] = SNTP_PORT;
+    paramsBlock[5] = 0;
+    paramsBlock[6] = 48;
+    paramsBlock[7] = 0;
+
+    regs.Bytes.B = conn;
+    regs.Words.HL=(int)buffer;
+    regs.Words.DE=(int)paramsBlock;
+
+    UnapiCall(&codeBlock, TCPIP_UDP_SEND, &regs, REGS_MAIN, REGS_MAIN);
+    if(regs.Bytes.A != 0) {
+        return 1;
+    }
+
+    //* Wait for a reply and check that it is correct
+    ticksWaited = 0;
+    do {
+        sysTimerHold = *SYSTIMER;
+
+        UnapiCall(&codeBlock, TCPIP_WAIT, &regs, REGS_MAIN, REGS_NONE);
+        while(*SYSTIMER == sysTimerHold);
+
+        ticksWaited++;
+        if(ticksWaited >= TICKS_TO_WAIT) {
+            break;
+        }
+        regs.Bytes.B = conn;
+        regs.Words.HL = (int)buffer;
+        regs.Words.DE = 48;
+        UnapiCall(&codeBlock, TCPIP_UDP_RCV, &regs, REGS_MAIN, REGS_MAIN);
+    } while(regs.Bytes.A == ERR_NO_DATA);
+
+    if(regs.Bytes.A != 0) {
+        return 2;
+    }
+
+    if(regs.UWords.BC < 48) {
+        return 3;
+    }
+
+    if(buffer[1] == 0) {
+        return 4;
+    }
+
+    PrintIfVerbose(strOK);
+
+    if(buffer[0] & 0xC0 == 0xC0 && verbose) {
+        print("WARNING: Error returned by server: clock is not synchronized\r\n");
+    }
+
+    return 0;
 }
 
 void SecondsToDate(unsigned long seconds, int* year, byte* month, byte* day, byte* hour, byte* minute, byte* second)
 {
     int IsLeapYear = 0;
     unsigned long SecsInCurrentMoth;
+    unsigned long SecsPerMonth[12];
+
+    SecsPerMonth[0]=SECS_IN_MONTH_31;
+    SecsPerMonth[1]=SECS_IN_MONTH_28;
+    SecsPerMonth[2]=SECS_IN_MONTH_31;
+    SecsPerMonth[3]=SECS_IN_MONTH_30;
+    SecsPerMonth[4]=SECS_IN_MONTH_31;
+    SecsPerMonth[5]=SECS_IN_MONTH_30;
+    SecsPerMonth[6]=SECS_IN_MONTH_31;
+    SecsPerMonth[7]=SECS_IN_MONTH_31;
+    SecsPerMonth[8]=SECS_IN_MONTH_30;
+    SecsPerMonth[9]=SECS_IN_MONTH_31;
+    SecsPerMonth[10]=SECS_IN_MONTH_30;
+    SecsPerMonth[11]=SECS_IN_MONTH_31;
 
     if((seconds & 0x80000000) == 0) {
         *year = 2036;
@@ -577,10 +637,7 @@ void Terminate(char* errorMessage)
         }
     }
 
-    if(conn != 0) {
-        regs.Bytes.B = conn;
-        UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
-    }
+    CloseConnection();
 
     DosCall(_TERM0, &regs, REGS_NONE, REGS_NONE);
 }
@@ -595,4 +652,10 @@ void CheckYear()
     if(year > 2079) {
         Terminate("The server returned a date that is after year 2079");
     }
+}
+
+void CloseConnection()
+{
+    regs.Bytes.B = conn;
+    UnapiCall(&codeBlock, TCPIP_UDP_CLOSE, &regs, REGS_MAIN, REGS_NONE);
 }
