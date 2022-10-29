@@ -7866,6 +7866,18 @@ SDHCP_OKFRM:
 	;Set option length
 
 	ld	(hl),b
+
+	; Begin of changes
+	; Include a #FF at the end of DHCP packet
+	; to properly end Options Section.
+	; Some routers ignore DHCP packets without this.
+
+	ld(ix), #FF 
+	inc ix 
+	inc b 
+
+	; End of changes
+
 SDHCP_OKREQOPS:
 
 	;--- Packet is complete: calculate resulting size
