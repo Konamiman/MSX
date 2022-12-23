@@ -1835,7 +1835,7 @@ P(2) will be S+1 and P(3) will be 0 at the end. In such situation, if S was
 the last available RAM segment, P(2) will be zero at the end.
 
 
-9.6. FUNCTIONS FOR THE EXECUTION OF BASIC PROGRAMS
+10.7. FUNCTIONS FOR THE EXECUTION OF BASIC PROGRAMS
 
 * Function 55: Execution of a BASIC program stored in a segment (S4)
 
@@ -1946,7 +1946,7 @@ to remain open, P(1) will contain the associated file number; otherwise, P(1)
 will be -1.
 
 
-10.7. MISCELLAENOUS FUNCTIONS
+10.8. MISCELLAENOUS FUNCTIONS
 
 * Function 58: Execution of a machine code routine placed on BIOS, SUB-BIOS,
                BASIC main RAM or system work area
@@ -2236,7 +2236,7 @@ function will return an error -1. If you specify a parameter other than 0, 1
 or -1 in P(0), an error 7 will be returned.
 
 
-10.8. PSG SOUND EFFECTS
+10.9. PSG SOUND EFFECTS
 
 * Function 67: Obtain information about the PSG sound effects
 
@@ -2312,7 +2312,7 @@ This function stops the PSG sound effect being played, and silences the
 PSG. It never returns error.
 
 
-10.9. FUNCTIONS FOR MOONBLASTER MUSIC PLAYBACK
+10.10. FUNCTIONS FOR MOONBLASTER MUSIC PLAYBACK
 
 * Function 71: Load and initialization, or uninstall,
 	       of the Moonblaster player (S4)
@@ -2598,7 +2598,7 @@ samplekit is successfully loaded, P(6):P(7) will contain the wavekit size
 (same as the file size if you just load a .MWK file).
 
 
-10.10. FUNCTIONS FOR CONTROLLING THE USAGE OF SEGMENTS
+10.11. FUNCTIONS FOR CONTROLLING THE USAGE OF SEGMENTS
 
 * Function 80: Obtain and set the number of segments
 	       allocated for NestorBASIC
@@ -2643,7 +2643,7 @@ value returned in P(1) is re-computed on each execution of the function, and
 depends on how many segments have been allocated by other resident programs. 
 
 
-10.11. FUNCTIONS FOR NESTORMAN AND INTERNESTOR SUITE/LITE INTERACTION
+10.12. FUNCTIONS FOR NESTORMAN AND INTERNESTOR SUITE/LITE INTERACTION
 
 * Function 81: Obtain information about NestorMan
 	       and InterNestor Suite availability
