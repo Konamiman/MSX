@@ -43,7 +43,7 @@ LINK:	equ	1
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	2
+INL_VER2:	equ	3
 TCPIP_VER1:	equ	1
 TCPIP_VER2:	equ	1
 
@@ -7866,6 +7866,15 @@ SDHCP_OKFRM:
 	;Set option length
 
 	ld	(hl),b
+
+	; Include a #FF at the end of DHCP packet
+	; to properly end Options Section.
+	; Some routers ignore DHCP packets without this.
+
+	ld  (ix),#FF 
+	inc ix 
+	inc b 
+
 SDHCP_OKREQOPS:
 
 	;--- Packet is complete: calculate resulting size
