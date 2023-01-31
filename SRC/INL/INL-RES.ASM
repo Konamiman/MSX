@@ -7867,16 +7867,13 @@ SDHCP_OKFRM:
 
 	ld	(hl),b
 
-	; Begin of changes
 	; Include a #FF at the end of DHCP packet
 	; to properly end Options Section.
 	; Some routers ignore DHCP packets without this.
 
-	ld(ix), #FF 
+	ld  (ix),#FF 
 	inc ix 
 	inc b 
-
-	; End of changes
 
 SDHCP_OKREQOPS:
 
