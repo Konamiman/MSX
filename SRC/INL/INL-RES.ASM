@@ -43,7 +43,7 @@ LINK:	equ	1
 ;--- INL and TCP/IP UNAPI version number
 
 INL_VER1:	equ	2
-INL_VER2:	equ	2
+INL_VER2:	equ	3
 TCPIP_VER1:	equ	1
 TCPIP_VER2:	equ	1
 
