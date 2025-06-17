@@ -1,4 +1,4 @@
-/* HTTP getter 1.3
+/* HTTP getter 1.3.1
    By Konamiman 1/2011 v1.1
    By Oduvaldo Pavan Junior 07/2019 v1.3
 
@@ -102,6 +102,8 @@ typedef unsigned char bool;
 
 #define MAX_REDIRECTIONS 10
 
+#define PROGRESS_BAR_SIZE 25
+
 enum TcpipUnapiFunctions {
     UNAPI_GET_INFO = 0,
     TCPIP_GET_CAPAB = 1,
@@ -141,7 +143,7 @@ enum TcpipErrorCodes {
 #define strDefaultFilename "index.htm";
 
 const char* strTitle=
-    "HTTP file downloader 1.3\r\n"
+    "HTTP file downloader 1.3.1\r\n"
     "By Oduvaldo (ducasp@gmail.com) 7/2019\r\n"
     "Based on HGET 1.1 by Konamiman\r\n"
     "\r\n";
@@ -224,6 +226,7 @@ int remainingInputData = 0;
 byte* inputDataPointer;
 int emptyLineReaded;
 long contentLength,blockSize,currentBlock;
+byte printedProgressBar;
 bool isFirstUpdate;
 int isChunkedTransfer;
 long currentChunkSize = 0;
@@ -1422,7 +1425,8 @@ void DoDirectDatatransfer()
 	print(" ");
 	if (contentLength)
 	{
-		blockSize = contentLength/25;
+		printedProgressBar = 0;
+		blockSize = contentLength/PROGRESS_BAR_SIZE;
 		currentBlock = 0;
 		isFirstUpdate = true;
 	}
@@ -1445,7 +1449,7 @@ void DoChunkedDataTransfer()
 	print(" ");
 	if (contentLength)
 	{
-		blockSize = contentLength/25;
+		blockSize = contentLength/PROGRESS_BAR_SIZE;
 		currentBlock = 0;
 		isFirstUpdate = true;
 	}
@@ -1573,11 +1577,16 @@ void UpdateReceivingMessage()
 				isFirstUpdate=false;
 				print("\r[                         ]\r\x1c");
 			}
-			while (currentBlock>=blockSize)
+			if (!blockSize) {
+				currentBlock = PROGRESS_BAR_SIZE;
+				blockSize = 1;
+			}
+			while (printedProgressBar < PROGRESS_BAR_SIZE && currentBlock>=blockSize)
 			{
+				printedProgressBar++;
 				currentBlock-=blockSize;
 				print("=");
-			}			
+			}
 		}
 		else
 		{
